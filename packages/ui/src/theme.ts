@@ -9,9 +9,14 @@ export interface ThemeColors {
   background: string;
   surface: string;
   border: string;
+  /** A dimmer border for dividers and inactive chrome — quieter than `border`. */
+  borderMuted: string;
   text: string;
   muted: string;
   accent: string;
+  /** A second accent for chrome that needs to read as Nightshift without
+   * competing with the primary accent's meaning ("this is active/selected"). */
+  accentSecondary: string;
   success: string;
   warning: string;
   danger: string;
@@ -24,7 +29,12 @@ export interface Theme {
   colors: ThemeColors;
 }
 
-/** The default theme — deep blues, low glare, made for working after dark. */
+/**
+ * The default theme — deep blue shading into violet, low glare, made for
+ * working after dark. The secondary accent is where the "and purple" half of
+ * the concept lives: the primary accent still means "active/selected", so the
+ * violet stays free for chrome that just needs to read as Nightshift.
+ */
 export const MIDNIGHT_THEME: Theme = {
   name: 'midnight',
   appearance: 'dark',
@@ -32,9 +42,11 @@ export const MIDNIGHT_THEME: Theme = {
     background: '#0b1020',
     surface: '#141a2e',
     border: '#243050',
+    borderMuted: '#1a2138',
     text: '#e6ebff',
     muted: '#8b95b8',
     accent: '#7aa2ff',
+    accentSecondary: '#a78bfa',
     success: '#5ad19b',
     warning: '#f2c66b',
     danger: '#ff6b81',
@@ -49,9 +61,11 @@ export const EMBER_THEME: Theme = {
     background: '#17110f',
     surface: '#231a17',
     border: '#3d2c25',
+    borderMuted: '#2a1f1a',
     text: '#f4e7de',
     muted: '#a8907f',
     accent: '#ff9e64',
+    accentSecondary: '#e0af68',
     success: '#9ece6a',
     warning: '#e0af68',
     danger: '#f7768e',
@@ -66,9 +80,11 @@ export const DAYLIGHT_THEME: Theme = {
     background: '#fbfbfd',
     surface: '#f0f1f6',
     border: '#d3d6e0',
+    borderMuted: '#e4e6ee',
     text: '#1b1f2a',
     muted: '#5f6675',
     accent: '#2f5bd7',
+    accentSecondary: '#7c3aed',
     success: '#1f8a5f',
     warning: '#9a6700',
     danger: '#c0323c',

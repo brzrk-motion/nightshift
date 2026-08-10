@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  activityStrip,
   barChart,
   lineChart,
   normalise,
@@ -204,5 +205,34 @@ describe('truncate', () => {
     ['nightshift', 0, ''],
   ])('truncates %s to %i', (text, width, expected) => {
     expect(truncate(text, width)).toBe(expected);
+  });
+});
+
+describe('activityStrip', () => {
+  it('renders a quiet baseline for an all-zero series', () => {
+    expect(activityStrip([0, 0, 0])).toBe('···');
+  });
+
+  it('renders a quiet baseline when every value is empty', () => {
+    expect(activityStrip([])).toBe('');
+  });
+
+  it('scales against the loudest value in the series', () => {
+    const strip = [...activityStrip([0, 5, 10])];
+    expect(strip[0]).toBe('·');
+    expect(strip[2]).toBe('█');
+    // The midpoint is louder than silence and quieter than the peak.
+    expect(strip[1]).not.toBe('·');
+    expect(strip[1]).not.toBe('█');
+  });
+
+  it('treats a negative or non-finite value as silence', () => {
+    const strip = [...activityStrip([-3, Number.NaN, 4])];
+    expect(strip[0]).toBe('·');
+    expect(strip[1]).toBe('·');
+  });
+
+  it('resamples down to the requested width', () => {
+    expect(activityStrip([1, 2, 3, 4, 5, 6], 3)).toHaveLength(3);
   });
 });

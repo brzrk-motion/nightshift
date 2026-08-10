@@ -202,3 +202,30 @@ export function lineChart(values: readonly number[], options: LineChartOptions):
     row.map((bits) => (bits === 0 ? ' ' : String.fromCodePoint(0x2800 + bits))).join(''),
   );
 }
+
+/** Levels used by `activityStrip`, lowest to highest. */
+const ACTIVITY_CHARS = ['·', '▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'] as const;
+
+/**
+ * A compact strip of recent activity — the "is something happening" cousin of
+ * a sparkline. Values are normalised independently of `sparkline` because a
+ * waveform reads as pulses against a quiet baseline (`·`) rather than as a
+ * trend, so zero has to render as visibly empty rather than as the bottom of
+ * a scaled range.
+ */
+export function activityStrip(values: readonly number[], width?: number): string {
+  const points = width === undefined ? [...values] : resample(values, width);
+  if (points.length === 0) return '';
+
+  const max = Math.max(0, ...points.filter((value) => Number.isFinite(value)));
+  if (max === 0) return ACTIVITY_CHARS[0].repeat(points.length);
+
+  return points
+    .map((value) => {
+      if (!Number.isFinite(value) || value <= 0) return ACTIVITY_CHARS[0];
+      const ratio = Math.min(1, value / max);
+      const index = 1 + Math.round(ratio * (ACTIVITY_CHARS.length - 2));
+      return ACTIVITY_CHARS[index] ?? ACTIVITY_CHARS[ACTIVITY_CHARS.length - 1];
+    })
+    .join('');
+}

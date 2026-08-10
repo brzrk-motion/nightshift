@@ -3,11 +3,14 @@
 A programmable workspace for deep focus — terminal-first, plugin-driven,
 configured in files you own.
 
-> **Status: MVP (Phase 6).** `nightshift` opens a real dashboard, plugins load
-> through the public SDK and contribute widgets, commands and automations, the
-> entity store drives the screen, vibes orchestrate the workspace by name, and
-> the bundled focus plugin is a real timer — not a stub. Packaging and release
-> workflow are what's left before 0.1.0 ships.
+> **Status: Phase 7.** `nightshift` opens a full-screen shell — a header, a
+> left nav rail, and a persistent status bar around the dashboard canvas —
+> plugins load through the public SDK and contribute widgets, commands and
+> automations, the entity store drives the screen, vibes orchestrate the
+> workspace by name, and the bundled focus plugin is a real timer. Rebuilding
+> the shipped dashboard's own content and a visual editor are Phases 8–9;
+> packaging binaries and a release workflow are what's left of the MVP
+> checklist.
 
 ## Requirements
 
@@ -72,6 +75,31 @@ key or triggered by a vibe — including the ones plugins contribute.
 
 Global flags: `--config-dir <path>`, `--log-level <level>`, `-v/--verbose`,
 `--no-color`, `-V/--version`. Most commands also accept `--json`.
+
+## The shell
+
+A persistent header, a left nav rail, and a status bar frame whatever the
+canvas is showing. The header names the active screen, shows the running vibe
+once one is active (`● locked in`) and the clock; the rail — collapsing to
+icons on a narrow terminal — is six destinations, each reachable by mouse
+click, by a `1`–`6` digit key, and as a `Go to <name>` command in the palette:
+
+| #   | Destination | Shows                                         |
+| --- | ----------- | --------------------------------------------- |
+| 1   | Dashboard   | Whatever dashboard is open.                   |
+| 2   | Vibes       | Every vibe, and which one (if any) is active. |
+| 3   | Apps        | Loaded plugins and how much each contributed. |
+| 4   | Entities    | Every entity in the store, live.              |
+| 5   | Automations | Registered automations and their triggers.    |
+| 6   | Settings    | Installed themes; select one to switch.       |
+
+Vibes, Apps and Automations read from three entities the CLI publishes —
+`nightshift.vibe`, `nightshift.plugins`, `nightshift.automations` — so
+`packages/ui` never has to depend on the vibe engine, the plugin host or the
+automation engine directly. A widget or a screen a plugin builds gets the same
+component library the shell itself is built from — `Icon`, `Toolbar`,
+`StatRow`, `Metric`, `Timeline` and the rest are all exported from
+`@nightshift/sdk` alongside `Card` and `Table`.
 
 ## Configuration
 

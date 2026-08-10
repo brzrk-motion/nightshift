@@ -104,16 +104,39 @@ export async function createNightshiftRuntime(
   });
 
   // Plugin commands become app commands, so a keybinding, the palette and a
-  // vibe all reach them the same way.
-  for (const command of plugins.commands()) {
-    const [category] = command.id.split('.');
-    app.commands.register({
-      id: command.id,
-      title: command.title,
-      run: command.run,
-      ...(category === undefined ? {} : { category }),
-    });
+  // vibe all reach them the same way. Tagging each with `source` is what lets
+  // the Apps screen show which plugin contributed what, without needing its
+  // own channel back to the plugin host.
+  for (const plugin of loaded) {
+    for (const command of plugin.commands) {
+      const [category] = command.id.split('.');
+      app.commands.register({
+        id: command.id,
+        title: command.title,
+        run: command.run,
+        source: plugin.manifest.id,
+        ...(category === undefined ? {} : { category }),
+      });
+    }
   }
+
+  // A read-only snapshot of what loaded, for the shell's Apps screen. This is
+  // the entity-based bridge described in `packages/ui/src/app/screens.tsx` —
+  // the UI package reads it by a well-known id rather than depending on the
+  // plugin host directly.
+  entities.register(
+    'nightshift.plugins',
+    {
+      plugins: loaded.map((plugin) => ({
+        id: plugin.manifest.id,
+        name: plugin.manifest.name,
+        version: plugin.manifest.version,
+        commands: plugin.commands.length,
+        widgets: plugin.widgets.length,
+      })),
+    },
+    { owner: 'nightshift', title: 'Loaded plugins' },
+  );
 
   // Same merge rule as dashboards: a user vibe file replaces a built-in of the
   // same name rather than sitting alongside it.
@@ -147,23 +170,49 @@ export async function createNightshiftRuntime(
     });
   }
 
+  // The shell's header reads this to show "● locked in" — see `Header.tsx` —
+  // and it is the other half of the same entity-bridge convention as
+  // `nightshift.plugins` above.
+  entities.register('nightshift.vibe', { active: null, title: null }, { owner: 'nightshift' });
+
   const automations = createAutomationEngine({ entities, commands: app.commands });
   automations.registerAll(plugins.automations());
+  automations.events.on('fired', (result) => {
+    for (const warning of result.warnings) app.toasts.push(warning, { tone: 'warning' });
+  });
 
   // A vibe orchestrates the workspace by name; an automation reacts to it the
   // same way it reacts to an entity or a timer, without either package knowing
   // the other exists.
   vibes.events.on('activated', (result) => {
     for (const warning of result.warnings) app.toasts.push(warning, { tone: 'warning' });
+    entities.set('nightshift.vibe', {
+      active: result.vibe.name,
+      title: result.vibe.title ?? result.vibe.name,
+    });
     automations.notifyVibe(result.vibe.name, 'activate');
   });
   vibes.events.on('deactivated', (name, deactivateWarnings) => {
     for (const warning of deactivateWarnings) app.toasts.push(warning, { tone: 'warning' });
+    entities.set('nightshift.vibe', { active: null, title: null });
     automations.notifyVibe(name, 'deactivate');
   });
-  automations.events.on('fired', (result) => {
-    for (const warning of result.warnings) app.toasts.push(warning, { tone: 'warning' });
-  });
+
+  // A read-only snapshot for the Automations screen, the same convention as
+  // `nightshift.plugins`. Automations are all registered by this point, and
+  // nothing currently adds one later, so a snapshot is enough — a future
+  // dynamic registration path would need this to become a subscription.
+  entities.register(
+    'nightshift.automations',
+    {
+      automations: automations.list().map((automation) => ({
+        name: automation.name,
+        trigger: automation.when.type,
+        enabled: automation.enabled !== false,
+      })),
+    },
+    { owner: 'nightshift', title: 'Registered automations' },
+  );
 
   automations.start();
 

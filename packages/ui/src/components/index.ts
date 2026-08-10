@@ -1,4 +1,4 @@
-export { Card, Panel, type CardProps, type PanelProps } from './Panel.js';
+export { Card, Panel, type CardProps, type PanelDensity, type PanelProps } from './Panel.js';
 export {
   Button,
   TextInput,
@@ -33,3 +33,34 @@ export {
 } from './charts.js';
 export { Modal, type ModalProps } from './Modal.js';
 export { Toasts, useToastList, type ToastsProps } from './Toasts.js';
+export { Icon, ICONS, iconGlyph, type IconName, type IconProps } from './Icon.js';
+export {
+  Divider,
+  KeyHint,
+  Metric,
+  StatRow,
+  StatusDot,
+  type DividerProps,
+  type KeyHintProps,
+  type MetricProps,
+  type StatRowProps,
+  type StatusDotProps,
+} from './Primitives.js';
+export { IconButton, Toolbar, type IconButtonProps, type ToolbarProps } from './Toolbar.js';
+export {
+  EmptyState,
+  ErrorState,
+  LoadingState,
+  type EmptyStateProps,
+  type ErrorStateProps,
+  type LoadingStateProps,
+} from './States.js';
+export {
+  ActivityWaveform,
+  Meter,
+  Timeline,
+  type ActivityWaveformProps,
+  type MeterProps,
+  type TimelineItem,
+  type TimelineProps,
+} from './visuals.js';

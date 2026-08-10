@@ -206,7 +206,9 @@ describe.skipIf(!renderable)('Dashboard', () => {
 
     const setup = await testRender(
       <DashboardApp runtime={runtime} dashboards={[dashboard]} registry={registry()} />,
-      { width: 90, height: 20 },
+      // Wide enough that the persistent nav rail does not squeeze the
+      // entities table's id column into truncation.
+      { width: 120, height: 20 },
     );
 
     try {

@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { NIGHTSHIFT_API_VERSION, NightshiftError } from '@nightshift/core';
-import { CAPABILITIES, definePlugin, isCapability, isCompatible } from './index.js';
+import {
+  CAPABILITIES,
+  definePlugin,
+  Icon,
+  isCapability,
+  isCompatible,
+  StatRow,
+  Timeline,
+  Toolbar,
+} from './index.js';
 
 const base = {
   id: 'demo',
@@ -57,5 +66,16 @@ describe('isCapability', () => {
 
   it('includes automations:register, granted automatically like widgets and commands', () => {
     expect(CAPABILITIES).toContain('automations:register');
+  });
+});
+
+describe('phase 7 component re-exports', () => {
+  it('re-exports the shell primitives a plugin widget can build with', () => {
+    // A type-level check as much as a runtime one: if the SDK stopped
+    // re-exporting one of these, this import would fail to compile.
+    expect(typeof Icon).toBe('function');
+    expect(typeof StatRow).toBe('function');
+    expect(typeof Toolbar).toBe('function');
+    expect(typeof Timeline).toBe('function');
   });
 });

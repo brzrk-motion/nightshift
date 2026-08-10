@@ -13,6 +13,8 @@ export {
   type ThemeOverride,
 } from './theme.js';
 
+export { BORDERS, SPACING, type BorderToken, type SpacingToken } from './tokens.js';
+
 export {
   COMPACT_WIDTH,
   distribute,
@@ -62,6 +64,7 @@ export {
 } from './toasts.js';
 
 export {
+  activityStrip,
   barChart,
   lineChart,
   normalise,
@@ -98,6 +101,17 @@ export { createAppRuntime, type CreateAppRuntimeOptions } from './app/app.js';
 export { AppShell, type AppShellProps, type Overlay } from './app/AppShell.js';
 export { CommandPalette, type CommandPaletteProps } from './app/CommandPalette.js';
 export { HelpOverlay, type HelpOverlayProps } from './app/HelpOverlay.js';
+export { Header, type HeaderProps } from './app/Header.js';
+export { NavRail, type NavRailProps } from './app/NavRail.js';
+export type { Screen } from './app/screen.js';
+export {
+  AppsScreen,
+  AutomationsScreen,
+  DEFAULT_SCREENS,
+  EntitiesScreen,
+  SettingsScreen,
+  VibesScreen,
+} from './app/screens.js';
 export {
   assertRenderable,
   detectRuntime,

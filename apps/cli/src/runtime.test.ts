@@ -263,6 +263,61 @@ describe('createNightshiftRuntime', () => {
     }
   });
 
+  it('publishes the active vibe as an entity for the shell header, and clears it on deactivate', async () => {
+    const runtime = await createNightshiftRuntime(contextFor());
+
+    try {
+      expect(runtime.entities.get('nightshift.vibe')?.state).toEqual({ active: null, title: null });
+
+      await runtime.vibes.activate('locked-in');
+      expect(runtime.entities.get('nightshift.vibe')?.state).toEqual({
+        active: 'locked-in',
+        title: 'Locked In',
+      });
+
+      await runtime.vibes.deactivate();
+      expect(runtime.entities.get('nightshift.vibe')?.state).toEqual({ active: null, title: null });
+    } finally {
+      await runtime.dispose();
+    }
+  });
+
+  it('publishes a plugin snapshot entity for the Apps screen, and tags commands with their source', async () => {
+    await writeFile(join(dir, 'plugins', 'demo.mjs'), PLUGIN);
+    const runtime = await createNightshiftRuntime(contextFor());
+
+    try {
+      expect(runtime.entities.get('nightshift.plugins')?.state).toEqual({
+        plugins: [{ id: 'demo', name: 'Demo', version: '1.0.0', commands: 1, widgets: 1 }],
+      });
+      expect(runtime.app.commands.get('demo.go')?.source).toBe('demo');
+    } finally {
+      await runtime.dispose();
+    }
+  });
+
+  it('publishes a snapshot of registered automations for the Automations screen', async () => {
+    const withAutomation = PLUGIN.replace(
+      "context.registerCommand({ id: 'demo.go', title: 'Go', run: () => {} });",
+      `context.registerCommand({ id: 'demo.go', title: 'Go', run: () => {} });
+    context.registerAutomation({
+      name: 'demo.startup',
+      when: { type: 'startup' },
+      then: [{ command: 'demo.go' }],
+    });`,
+    );
+    await writeFile(join(dir, 'plugins', 'demo.mjs'), withAutomation);
+    const runtime = await createNightshiftRuntime(contextFor());
+
+    try {
+      expect(runtime.entities.get('nightshift.automations')?.state).toEqual({
+        automations: [{ name: 'demo.startup', trigger: 'startup', enabled: true }],
+      });
+    } finally {
+      await runtime.dispose();
+    }
+  });
+
   it('deactivates the active vibe before plugins unload, so its actions still resolve', async () => {
     await writeFile(join(dir, 'plugins', 'demo.mjs'), PLUGIN);
     const runtime = await createNightshiftRuntime(contextFor());

@@ -1,6 +1,12 @@
 import type { ReactNode } from 'react';
 import { useTheme } from '../app/context.js';
 
+/** How much air a panel gives its content. `padding` overrides this when set. */
+export type PanelDensity = 'compact' | 'normal' | 'spacious';
+
+const DENSITY_PADDING: Record<PanelDensity, number> = { compact: 0, normal: 1, spacious: 2 };
+const DENSITY_MIN_HEIGHT: Record<PanelDensity, number> = { compact: 2, normal: 3, spacious: 4 };
+
 export interface PanelProps {
   title?: string;
   /** Shown on the bottom border — a good place for a hint or a count. */
@@ -9,6 +15,8 @@ export interface PanelProps {
   active?: boolean;
   /** Fills the space its parent gives it. On by default. */
   grow?: boolean;
+  /** Preset spacing. Defaults to `normal`; `padding` overrides it directly. */
+  density?: PanelDensity;
   padding?: number;
   children?: ReactNode;
 }
@@ -23,7 +31,8 @@ export function Panel({
   footer,
   active = false,
   grow = true,
-  padding = 1,
+  density = 'normal',
+  padding,
   children,
 }: PanelProps): ReactNode {
   const theme = useTheme();
@@ -41,8 +50,8 @@ export function Panel({
         flexDirection: 'column',
         flexGrow: grow ? 1 : 0,
         flexShrink: 1,
-        minHeight: 3,
-        padding,
+        minHeight: DENSITY_MIN_HEIGHT[density],
+        padding: padding ?? DENSITY_PADDING[density],
       }}
     >
       {children}
