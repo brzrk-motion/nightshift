@@ -18,6 +18,7 @@
     "clean": "turbo run clean && rm -rf node_modules/.cache .turbo",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "start": "node ./nightshift.mjs",
     "nightshift": "node apps/cli/dist/bin.js",
     "changeset": "changeset",
     "version-packages": "changeset version",

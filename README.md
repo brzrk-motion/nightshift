@@ -16,14 +16,28 @@ configured in files you own.
 
 ```bash
 pnpm install
-pnpm build
-pnpm nightshift doctor
+pnpm start doctor
 ```
 
-`pnpm nightshift <args>` runs the built CLI from the repo. To get a real
-`nightshift` on your `PATH`, link the package after building:
+`pnpm start` runs `./nightshift.mjs`, which builds the CLI and everything it
+depends on and then launches it, forwarding all arguments. A successful build
+prints nothing, so the CLI starts on a clean terminal; a failing one prints the
+compiler errors and refuses to start. Add `--no-build` to skip the build when
+nothing has changed:
 
 ```bash
+pnpm start doctor
+pnpm start vibe --list
+pnpm start --no-build dashboard
+./nightshift.mjs doctor          # same thing, without pnpm
+```
+
+`pnpm nightshift <args>` runs the already-built CLI directly, with no build
+step. To get a real `nightshift` on your `PATH`, link the package after
+building:
+
+```bash
+pnpm build
 pnpm --filter @nightshift/cli exec pnpm link --global
 ```
 
@@ -70,6 +84,7 @@ read a file written by a newer one.
 ## Repository layout
 
 ```
+nightshift.mjs         Build-and-launch script for local development
 apps/cli               The nightshift command line interface
 packages/core          Runtime primitives: errors, versions, shared types
 packages/entities      Shared observable state — the contract for plugin state
@@ -85,6 +100,7 @@ plugins/focus          The focus timer — the reference plugin
 ## Development
 
 ```bash
+pnpm start       # build the CLI and run it
 pnpm build       # build every package, in dependency order
 pnpm test        # run the test suites
 pnpm lint        # eslint
