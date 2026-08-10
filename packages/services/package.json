@@ -24,6 +24,9 @@
     "clean": "rm -rf dist *.tsbuildinfo"
   },
   "dependencies": {
-    "@nightshift/core": "workspace:*"
+    "@nightshift/automations": "workspace:*",
+    "@nightshift/core": "workspace:*",
+    "@nightshift/entities": "workspace:*",
+    "@nightshift/sdk": "workspace:*"
   }
 }

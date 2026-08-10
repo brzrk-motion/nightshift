@@ -7,3 +7,16 @@ export {
   type NightshiftErrorCode,
   type NightshiftErrorOptions,
 } from './errors.js';
+export {
+  createEventBus,
+  type EventBus,
+  type EventBusOptions,
+  type EventErrorHandler,
+  type EventListener,
+  type EventMap,
+} from './events.js';
+export {
+  createDisposableBag,
+  type DisposableBag,
+  type DisposableBagOptions,
+} from './disposables.js';

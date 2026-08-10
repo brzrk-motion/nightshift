@@ -27,12 +27,18 @@
     "clean": "rm -rf dist *.tsbuildinfo"
   },
   "dependencies": {
+    "@nightshift/automations": "workspace:*",
     "@nightshift/core": "workspace:*",
     "@nightshift/dashboard": "workspace:*",
+    "@nightshift/entities": "workspace:*",
     "@nightshift/plugin-focus": "workspace:*",
     "@nightshift/services": "workspace:*",
     "@nightshift/ui": "workspace:*",
     "@nightshift/vibes": "workspace:*",
-    "commander": "^14.0.2"
+    "commander": "^14.0.2",
+    "react": "^19.2.8"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.18"
   }
 }

@@ -1,78 +1,109 @@
-import type { Json } from '@nightshift/core';
+export {
+  BUILT_IN_THEMES,
+  createThemeEngine,
+  DAYLIGHT_THEME,
+  EMBER_THEME,
+  extendTheme,
+  getTheme,
+  MIDNIGHT_THEME,
+  type Theme,
+  type ThemeColors,
+  type ThemeEngine,
+  type ThemeEngineOptions,
+  type ThemeOverride,
+} from './theme.js';
 
-/**
- * Terminal component library. Phase 1 fixes the theme contract that every
- * component and dashboard reads from; the components themselves land in
- * Phase 3, once the OpenTUI renderer exists.
- */
+export {
+  COMPACT_WIDTH,
+  distribute,
+  isRenderable,
+  MIN_HEIGHT,
+  MIN_WIDTH,
+  planLayout,
+  resolveBreakpoint,
+  WIDE_WIDTH,
+  type Breakpoint,
+  type LayoutItem,
+  type LayoutPlan,
+  type LayoutRow,
+  type PlacedItem,
+  type PlacedRow,
+  type TerminalSize,
+} from './layout.js';
 
-export interface ThemeColors {
-  background: string;
-  surface: string;
-  border: string;
-  text: string;
-  muted: string;
-  accent: string;
-  success: string;
-  warning: string;
-  danger: string;
-}
+export {
+  createKeymap,
+  DEFAULT_KEYBINDINGS,
+  formatChord,
+  matchesChord,
+  parseChord,
+  type KeyBinding,
+  type KeyChord,
+  type KeyEventLike,
+  type Keymap,
+  type ResolvedBinding,
+} from './keymap.js';
 
-export interface Theme {
-  name: string;
-  /** Hints the terminal about the surrounding colour scheme. */
-  appearance: 'dark' | 'light';
-  colors: ThemeColors;
-}
+export {
+  createCommandRegistry,
+  scoreCommand,
+  type Command,
+  type CommandEvents,
+  type CommandRegistry,
+} from './commands.js';
 
-/** The default theme — deep blues, low glare, made for working after dark. */
-export const MIDNIGHT_THEME: Theme = {
-  name: 'midnight',
-  appearance: 'dark',
-  colors: {
-    background: '#0b1020',
-    surface: '#141a2e',
-    border: '#243050',
-    text: '#e6ebff',
-    muted: '#8b95b8',
-    accent: '#7aa2ff',
-    success: '#5ad19b',
-    warning: '#f2c66b',
-    danger: '#ff6b81',
-  },
-};
+export {
+  createToastStore,
+  type Toast,
+  type ToastOptions,
+  type ToastStore,
+  type ToastStoreOptions,
+  type ToastTone,
+} from './toasts.js';
 
-export const BUILT_IN_THEMES: readonly Theme[] = [MIDNIGHT_THEME];
+export {
+  barChart,
+  lineChart,
+  normalise,
+  resample,
+  resolveScale,
+  sparkline,
+  SPARK_CHARS,
+  truncate,
+  type BarChartOptions,
+  type BarChartRow,
+  type BarDatum,
+  type LineChartOptions,
+  type Scale,
+  type SparklineOptions,
+} from './charts.js';
 
-export function getTheme(name: string): Theme | undefined {
-  return BUILT_IN_THEMES.find((theme) => theme.name === name);
-}
+export {
+  RuntimeProvider,
+  ThemeProvider,
+  useCommands,
+  useEntities,
+  useEntity,
+  useEntityStore,
+  useRequiredRuntime,
+  useRuntime,
+  useTheme,
+  useToasts,
+  type AppRuntime,
+  type RuntimeProviderProps,
+  type ThemeProviderProps,
+} from './app/context.js';
 
-/** Props shared by every Nightshift component. */
-export interface ComponentProps {
-  key?: string;
-  testId?: string;
-}
+export { createAppRuntime, type CreateAppRuntimeOptions } from './app/app.js';
+export { AppShell, type AppShellProps, type Overlay } from './app/AppShell.js';
+export { CommandPalette, type CommandPaletteProps } from './app/CommandPalette.js';
+export { HelpOverlay, type HelpOverlayProps } from './app/HelpOverlay.js';
+export {
+  assertRenderable,
+  detectRuntime,
+  MIN_NODE_FFI,
+  type RuntimeSupport,
+} from './app/runtime.js';
+export { startApp, type AppHandle, type StartAppOptions } from './app/start.js';
 
-/** Names of the components Phase 3 delivers. */
-export const COMPONENT_TYPES = [
-  'card',
-  'panel',
-  'button',
-  'toggle',
-  'progress',
-  'tabs',
-  'input',
-  'table',
-  'list',
-  'badge',
-  'sparkline',
-  'line-chart',
-  'bar-chart',
-  'modal',
-  'toast',
-] as const;
-
-export type ComponentType = (typeof COMPONENT_TYPES)[number];
-
-export type ComponentOptions = Record<string, Json>;
+export * from './components/index.js';

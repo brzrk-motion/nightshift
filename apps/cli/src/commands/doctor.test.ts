@@ -56,14 +56,16 @@ describe('collectReport', () => {
       contextFor({ config: { ...DEFAULT_CONFIG, theme: 'nope', defaultVibe: 'nope' } }),
     );
     expect(report.checks.find((entry) => entry.name === 'theme')?.status).toBe('warn');
-    expect(report.checks.find((entry) => entry.name === 'default vibe')?.status).toBe('warn');
+    const vibes = report.checks.find((entry) => entry.name === 'vibes');
+    expect(vibes?.status).toBe('warn');
+    expect(vibes?.detail).toMatch(/default "nope" not found/);
     expect(report.status).not.toBe('ok');
   });
 
-  it('accepts a null default vibe', async () => {
+  it('accepts a null default vibe, and counts the three built-ins', async () => {
     const report = await collectReport(contextFor());
-    const check = report.checks.find((entry) => entry.name === 'default vibe');
+    const check = report.checks.find((entry) => entry.name === 'vibes');
     expect(check?.status).toBe('ok');
-    expect(check?.detail).toBe('none');
+    expect(check?.detail).toBe('3 available');
   });
 });

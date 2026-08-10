@@ -11,7 +11,10 @@ export type NightshiftErrorCode =
   | 'PERMISSION_DENIED'
   | 'PLUGIN_INCOMPATIBLE'
   | 'PLUGIN_INVALID'
+  | 'PLUGIN_LOAD_FAILED'
+  | 'RUNTIME_UNSUPPORTED'
   | 'VIBE_NOT_FOUND'
+  | 'WIDGET_UNKNOWN'
   | 'NOT_IMPLEMENTED';
 
 export interface NightshiftErrorOptions extends ErrorOptions {

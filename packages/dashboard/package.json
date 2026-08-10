@@ -26,6 +26,13 @@
   "dependencies": {
     "@nightshift/core": "workspace:*",
     "@nightshift/entities": "workspace:*",
-    "@nightshift/ui": "workspace:*"
+    "@nightshift/sdk": "workspace:*",
+    "@nightshift/ui": "workspace:*",
+    "@opentui/react": "^0.5.1",
+    "react": "^19.2.8",
+    "yaml": "^2.9.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.18"
   }
 }

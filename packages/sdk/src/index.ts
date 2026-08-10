@@ -3,24 +3,36 @@ import {
   NightshiftError,
   type Disposable,
   type Json,
+  type Unsubscribe,
 } from '@nightshift/core';
 import type { EntityId, EntityMeta, EntityStore } from '@nightshift/entities';
+import type { AutomationSpec } from '@nightshift/automations';
+import type { ReactNode } from 'react';
 
 /**
  * The public plugin interface. This module is the *only* thing a plugin is
  * allowed to import from Nightshift — everything the runtime offers arrives
- * through the context object passed to `setup`.
+ * through the context object passed to `setup`, and everything a plugin needs
+ * to *draw* with is re-exported at the bottom of this file.
  */
 
 /** Capabilities a plugin must ask for, and the user must grant. */
-export type Capability =
-  | 'entities:read'
-  | 'entities:write'
-  | 'widgets:register'
-  | 'commands:register'
-  | 'network'
-  | 'storage'
-  | 'shell';
+export const CAPABILITIES = [
+  'entities:read',
+  'entities:write',
+  'widgets:register',
+  'commands:register',
+  'automations:register',
+  'network',
+  'storage',
+  'shell',
+] as const;
+
+export type Capability = (typeof CAPABILITIES)[number];
+
+export function isCapability(value: unknown): value is Capability {
+  return typeof value === 'string' && (CAPABILITIES as readonly string[]).includes(value);
+}
 
 export interface PluginManifest {
   /** Unique, kebab-case plugin id, e.g. `focus`. */
@@ -46,8 +58,26 @@ export interface PluginLogger {
 export interface PluginCommand {
   id: string;
   title: string;
-  run(): void | Promise<void>;
+  /** Arguments a vibe's `onActivate` or an automation's `then` can pass in. */
+  run(args?: Record<string, Json>): void | Promise<void>;
 }
+
+/**
+ * What a widget is handed when the dashboard draws it. Everything else —
+ * entity state, the active theme, the command registry — comes from the hooks
+ * this module re-exports, so a widget stays a plain component.
+ */
+export interface WidgetProps {
+  /** Options from the dashboard file, passed through untouched. */
+  options: Record<string, Json>;
+  /** Cells the widget has been given, for anything it draws itself. */
+  width: number;
+  height: number;
+  /** Title from the dashboard file, when it overrode the widget's own. */
+  title?: string;
+}
+
+export type WidgetComponent = (props: WidgetProps) => ReactNode;
 
 /** A widget a plugin contributes to the dashboard widget registry. */
 export interface PluginWidget {
@@ -56,6 +86,10 @@ export interface PluginWidget {
   title: string;
   /** Entities the widget reads; the runtime re-renders when they change. */
   entities: EntityId[];
+  /** Draws the widget. Without one the dashboard shows a placeholder. */
+  render?: WidgetComponent;
+  /** Short line shown when the widget is listed in the palette or docs. */
+  description?: string;
 }
 
 /** Everything the runtime grants a plugin at setup time. */
@@ -69,8 +103,19 @@ export interface PluginContext {
   registerCommand(command: PluginCommand): void;
   registerWidget(widget: PluginWidget): void;
   registerEntity<State extends Json>(id: EntityId, state: State, meta?: EntityMeta): void;
-  /** Ties a resource to the plugin's lifetime; disposed on teardown. */
-  own(disposable: Disposable): void;
+  /**
+   * Declares a trigger-condition-action rule — data, not code, so the runtime
+   * can list, disable or report on it the same way it does for any other
+   * plugin's. Actions reference command ids, exactly like a vibe's
+   * `onActivate`, so an automation can only do what a command already allows.
+   */
+  registerAutomation(automation: AutomationSpec): void;
+  /**
+   * Ties a resource to the plugin's lifetime; released on teardown. Accepts a
+   * disposable or a plain teardown function, since most of what a plugin needs
+   * to clean up is an interval or an unsubscribe.
+   */
+  own(disposable: Disposable | Unsubscribe): void;
 }
 
 export interface PluginStorage {
@@ -132,5 +177,37 @@ export function isCompatible(manifest: PluginManifest): boolean {
 }
 
 export { NIGHTSHIFT_API_VERSION } from '@nightshift/core';
-export type { EntityId, EntityMeta, EntityStore } from '@nightshift/entities';
-export type { Disposable, Json } from '@nightshift/core';
+export type { EntityId, EntityMeta, EntityStore, Entity } from '@nightshift/entities';
+export type { Disposable, Json, Unsubscribe } from '@nightshift/core';
+export type { Action, AutomationSpec, Condition, Trigger } from '@nightshift/automations';
+
+/**
+ * The drawing half of the interface. Re-exporting it here is what makes the
+ * SDK the *only* import a plugin needs: a widget gets the component library,
+ * the theme and the hooks from the same place as the runtime contract, and
+ * never reaches into Nightshift's internals to find them.
+ */
+export {
+  BarChart,
+  Button,
+  Card,
+  LineChart,
+  List,
+  Modal,
+  Panel,
+  ProgressBar,
+  Sparkline,
+  StatusBadge,
+  Table,
+  Tabs,
+  TextInput,
+  Toggle,
+  useCommands,
+  useEntities,
+  useEntity,
+  useTheme,
+  useToasts,
+  type BadgeTone,
+  type Theme,
+  type ThemeColors,
+} from '@nightshift/ui';

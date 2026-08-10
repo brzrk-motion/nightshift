@@ -24,7 +24,13 @@
     "clean": "rm -rf dist *.tsbuildinfo"
   },
   "dependencies": {
+    "@nightshift/automations": "workspace:*",
     "@nightshift/core": "workspace:*",
-    "@nightshift/entities": "workspace:*"
+    "@nightshift/entities": "workspace:*",
+    "@nightshift/ui": "workspace:*",
+    "react": "^19.2.8"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.18"
   }
 }

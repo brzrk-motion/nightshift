@@ -56,6 +56,7 @@ export function buildProgram(): Command {
     .argument('[name]', 'Dashboard to open. Defaults to the configured dashboard.')
     .description('Open a dashboard.')
     .option('-l, --list', 'List available dashboards instead of opening one.')
+    .option('--check', 'Report what would be opened without taking over the terminal.')
     .option('--json', 'Emit machine-readable output.')
     .action(async (name: string | undefined, cmdOptions: OptionValues, command: Command) => {
       const options = globals(command);
@@ -63,6 +64,7 @@ export function buildProgram(): Command {
       try {
         process.exitCode = await runDashboard(context, name, {
           list: cmdOptions['list'] as boolean | undefined,
+          check: cmdOptions['check'] as boolean | undefined,
           ...(options.color === undefined ? {} : { color: options.color }),
         });
       } finally {
@@ -76,6 +78,7 @@ export function buildProgram(): Command {
     .description('Activate a vibe, or list them.')
     .option('-l, --list', 'List available vibes.')
     .option('--set-default', 'Also record this vibe as the startup default.')
+    .option('--check', 'Report what would be activated without taking over the terminal.')
     .option('--json', 'Emit machine-readable output.')
     .action(async (name: string | undefined, cmdOptions: OptionValues, command: Command) => {
       const options = globals(command);
@@ -84,6 +87,7 @@ export function buildProgram(): Command {
         process.exitCode = await runVibe(context, name, {
           list: cmdOptions['list'] as boolean | undefined,
           setDefault: cmdOptions['setDefault'] as boolean | undefined,
+          check: cmdOptions['check'] as boolean | undefined,
           ...(options.color === undefined ? {} : { color: options.color }),
         });
       } finally {

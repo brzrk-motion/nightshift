@@ -1,8 +1,10 @@
-import { access, constants, mkdir, rm, stat } from 'node:fs/promises';
+import { access, constants, mkdir, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { NIGHTSHIFT_VERSION } from '@nightshift/core';
-import { getTheme } from '@nightshift/ui';
-import { findVibe } from '@nightshift/vibes';
+import { loadDashboards } from '@nightshift/dashboard';
+import { discoverPlugins } from '@nightshift/services';
+import { detectRuntime, getTheme } from '@nightshift/ui';
+import { BUILT_IN_VIBES, loadVibes } from '@nightshift/vibes';
 import type { CliContext } from '../context.js';
 import { createStyle, renderPairs, shouldUseColor, type Style } from '../lib/output.js';
 
@@ -112,19 +114,33 @@ function checkTheme(context: CliContext): Check {
       };
 }
 
-function checkDefaultVibe(context: CliContext): Check {
+async function checkVibes(context: CliContext): Promise<Check> {
+  const { vibes, failed } = await loadVibes(context.paths.vibesDir);
+  const names = new Set([
+    ...BUILT_IN_VIBES.map((vibe) => vibe.name),
+    ...vibes.map((vibe) => vibe.name),
+  ]);
+  const detail = `${names.size} available`;
+
   const { defaultVibe } = context.config;
-  if (defaultVibe === null) {
-    return { name: 'default vibe', status: 'ok', detail: 'none' };
+  if (defaultVibe !== null && !names.has(defaultVibe)) {
+    return {
+      name: 'vibes',
+      status: 'warn',
+      detail: `${detail}, default "${defaultVibe}" not found`,
+      hint: 'Run `nightshift vibe --list` to see what is available.',
+    };
   }
-  return findVibe(defaultVibe)
-    ? { name: 'default vibe', status: 'ok', detail: defaultVibe }
-    : {
-        name: 'default vibe',
-        status: 'warn',
-        detail: defaultVibe,
-        hint: 'No vibe by that name. Run `nightshift vibe --list` to see what is available.',
-      };
+
+  if (failed.length === 0) return { name: 'vibes', status: 'ok', detail };
+  return {
+    name: 'vibes',
+    status: 'warn',
+    detail: `${detail}, ${failed.length} unreadable`,
+    hint: failed
+      .map((entry) => `${entry.path}: ${entry.error instanceof Error ? entry.error.message : ''}`)
+      .join('; '),
+  };
 }
 
 async function checkTerminal(): Promise<Check> {
@@ -150,18 +166,50 @@ async function checkTerminal(): Promise<Check> {
 }
 
 async function checkPlugins(context: CliContext): Promise<Check> {
-  const count = context.config.plugins.length;
-  let local = 0;
-  try {
-    const info = await stat(context.paths.pluginsDir);
-    if (info.isDirectory()) local = 1;
-  } catch {
-    local = 0;
-  }
+  // Discovery only reads the filesystem; nothing is imported, so a broken
+  // plugin cannot make `doctor` fail the way it would make startup fail.
+  const sources = await discoverPlugins({
+    plugins: context.config.plugins,
+    pluginsDir: context.paths.pluginsDir,
+  });
+  const local = sources.filter((source) => source.origin === 'local').length;
+
   return {
     name: 'plugins',
     status: 'ok',
-    detail: `${count} configured${local ? `, local dir present` : ''}`,
+    detail:
+      sources.length === 0
+        ? 'none found'
+        : `${sources.length} found${local > 0 ? ` (${local} local)` : ''}`,
+  };
+}
+
+/** Whether the terminal UI can run here at all. */
+function checkRenderer(): Check {
+  const support = detectRuntime();
+  if (support.ffi) {
+    return { name: 'renderer', status: 'ok', detail: `${support.runtime} ${support.version}` };
+  }
+  return {
+    name: 'renderer',
+    status: 'warn',
+    detail: support.reason ?? `${support.runtime} ${support.version}`,
+    ...(support.hint === undefined ? {} : { hint: support.hint }),
+  };
+}
+
+async function checkDashboards(context: CliContext): Promise<Check> {
+  const { dashboards, failed } = await loadDashboards(context.paths.dashboardsDir);
+  const detail = `${dashboards.length + 1} available`;
+
+  if (failed.length === 0) return { name: 'dashboards', status: 'ok', detail };
+  return {
+    name: 'dashboards',
+    status: 'warn',
+    detail: `${detail}, ${failed.length} unreadable`,
+    hint: failed
+      .map((entry) => `${entry.path}: ${entry.error instanceof Error ? entry.error.message : ''}`)
+      .join('; '),
   };
 }
 
@@ -174,12 +222,14 @@ function worst(checks: Check[]): CheckStatus {
 export async function collectReport(context: CliContext): Promise<DoctorReport> {
   const checks: Check[] = [
     await checkNode(),
+    checkRenderer(),
     await checkTerminal(),
     await checkConfigDir(context),
     await checkConfigFile(context),
     await checkLogDir(context),
     checkTheme(context),
-    checkDefaultVibe(context),
+    await checkVibes(context),
+    await checkDashboards(context),
     await checkPlugins(context),
   ];
 

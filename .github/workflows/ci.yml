@@ -21,7 +21,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        node: [22, 24]
+        node: [22, 24, 26]
     steps:
       - uses: actions/checkout@v4
 
@@ -52,3 +52,6 @@ jobs:
 
       - name: Smoke test the CLI
         run: node apps/cli/dist/bin.js doctor --json
+
+      - name: Smoke test the dashboard runtime
+        run: node apps/cli/dist/bin.js dashboard --check

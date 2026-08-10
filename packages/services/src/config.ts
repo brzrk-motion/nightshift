@@ -1,6 +1,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { NightshiftError } from '@nightshift/core';
+import { isCapability, type Capability } from '@nightshift/sdk';
 import { resolvePaths, type NightshiftPaths, type ResolvePathsOptions } from './paths.js';
 
 export type LogLevel = 'silent' | 'error' | 'warn' | 'info' | 'debug' | 'trace';
@@ -27,6 +28,11 @@ export interface NightshiftConfig {
   logLevel: LogLevel;
   /** Plugins to load, by package name or absolute path. */
   plugins: string[];
+  /**
+   * Capabilities granted per plugin, beyond the ones every plugin gets.
+   * `"all"` grants everything the plugin asks for.
+   */
+  pluginPermissions: Record<string, Capability[] | 'all'>;
 }
 
 export const CONFIG_VERSION = 1;
@@ -38,6 +44,7 @@ export const DEFAULT_CONFIG: NightshiftConfig = {
   theme: 'midnight',
   logLevel: 'info',
   plugins: ['@nightshift/plugin-focus'],
+  pluginPermissions: {},
 };
 
 export interface LoadedConfig {
@@ -109,6 +116,23 @@ export function parseConfig(input: unknown, source = 'config'): NightshiftConfig
       invalid('plugins', 'an array of strings');
     }
     config.plugins = [...(plugins as string[])];
+  }
+
+  if (input['pluginPermissions'] !== undefined) {
+    const grants = input['pluginPermissions'];
+    if (!isRecord(grants)) invalid('pluginPermissions', 'an object keyed by plugin id');
+    const parsed: Record<string, Capability[] | 'all'> = {};
+    for (const [plugin, grant] of Object.entries(grants as Record<string, unknown>)) {
+      if (grant === 'all') {
+        parsed[plugin] = 'all';
+        continue;
+      }
+      if (!Array.isArray(grant) || !grant.every(isCapability)) {
+        invalid(`pluginPermissions.${plugin}`, '"all" or an array of capability names');
+      }
+      parsed[plugin] = [...(grant as Capability[])];
+    }
+    config.pluginPermissions = parsed;
   }
 
   return config;

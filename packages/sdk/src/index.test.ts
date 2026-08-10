@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { NIGHTSHIFT_API_VERSION, NightshiftError } from '@nightshift/core';
-import { definePlugin, isCompatible } from './index.js';
+import { CAPABILITIES, definePlugin, isCapability, isCompatible } from './index.js';
 
 const base = {
   id: 'demo',
@@ -40,5 +40,22 @@ describe('isCompatible', () => {
   it('accepts the current contract and rejects anything else', () => {
     expect(isCompatible(definePlugin(base).manifest)).toBe(true);
     expect(isCompatible(definePlugin({ ...base, apiVersion: 99 }).manifest)).toBe(false);
+  });
+});
+
+describe('isCapability', () => {
+  it('accepts every declared capability', () => {
+    for (const capability of CAPABILITIES) {
+      expect(isCapability(capability), capability).toBe(true);
+    }
+  });
+
+  it('rejects anything else', () => {
+    expect(isCapability('nope')).toBe(false);
+    expect(isCapability(3)).toBe(false);
+  });
+
+  it('includes automations:register, granted automatically like widgets and commands', () => {
+    expect(CAPABILITIES).toContain('automations:register');
   });
 });
