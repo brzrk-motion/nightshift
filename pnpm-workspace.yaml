@@ -1,0 +1,7 @@
+packages:
+  - 'apps/*'
+  - 'packages/*'
+  - 'plugins/*'
+# esbuild ships prebuilt binaries and needs its install script to select one.
+allowBuilds:
+  esbuild: true

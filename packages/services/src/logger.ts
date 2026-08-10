@@ -1,0 +1,175 @@
+import { createWriteStream, mkdirSync, type WriteStream } from 'node:fs';
+import { dirname } from 'node:path';
+import type { Json } from '@nightshift/core';
+import { LOG_LEVELS, type LogLevel } from './config.js';
+
+export type LogFields = Record<string, Json | undefined>;
+
+export interface LogRecord {
+  time: string;
+  level: Exclude<LogLevel, 'silent'>;
+  scope: string;
+  message: string;
+  fields?: LogFields;
+}
+
+export interface Logger {
+  readonly level: LogLevel;
+  error(message: string, fields?: LogFields): void;
+  warn(message: string, fields?: LogFields): void;
+  info(message: string, fields?: LogFields): void;
+  debug(message: string, fields?: LogFields): void;
+  trace(message: string, fields?: LogFields): void;
+  /** A logger that tags every record with a nested scope. */
+  child(scope: string): Logger;
+  setLevel(level: LogLevel): void;
+  /** Flushes and closes the log file, if one is open. */
+  close(): Promise<void>;
+}
+
+export interface LoggerOptions {
+  /** Records below this level are dropped. Defaults to `info`. */
+  level?: LogLevel;
+  /** Scope tag for the root logger. Defaults to `nightshift`. */
+  scope?: string;
+  /** Human-readable sink. Defaults to `process.stderr`; pass `null` to silence. */
+  stream?: NodeJS.WritableStream | null;
+  /** Path to a JSON-lines log file. Every record is written regardless of colour. */
+  file?: string | undefined;
+  /** Forces ANSI colour on or off. Defaults to auto-detection. */
+  color?: boolean;
+}
+
+const SEVERITY: Record<LogLevel, number> = {
+  silent: 0,
+  error: 1,
+  warn: 2,
+  info: 3,
+  debug: 4,
+  trace: 5,
+};
+
+const COLORS: Record<Exclude<LogLevel, 'silent'>, string> = {
+  error: '\u001b[31m',
+  warn: '\u001b[33m',
+  info: '\u001b[36m',
+  debug: '\u001b[35m',
+  trace: '\u001b[90m',
+};
+
+const DIM = '\u001b[2m';
+const RESET = '\u001b[0m';
+
+export function isLogLevel(value: unknown): value is LogLevel {
+  return typeof value === 'string' && LOG_LEVELS.includes(value as LogLevel);
+}
+
+function detectColor(stream: NodeJS.WritableStream | null): boolean {
+  if (!stream) return false;
+  if (process.env['NO_COLOR'] !== undefined && process.env['NO_COLOR'] !== '') return false;
+  if (process.env['FORCE_COLOR'] !== undefined && process.env['FORCE_COLOR'] !== '0') return true;
+  return (stream as NodeJS.WriteStream).isTTY === true;
+}
+
+function formatFields(fields: LogFields): string {
+  const parts: string[] = [];
+  for (const [key, value] of Object.entries(fields)) {
+    if (value === undefined) continue;
+    parts.push(`${key}=${typeof value === 'string' ? value : JSON.stringify(value)}`);
+  }
+  return parts.join(' ');
+}
+
+/**
+ * Creates the root logger. Human output goes to stderr so that command output
+ * on stdout stays pipeable; the optional file sink gets JSON lines at full
+ * fidelity, which is what `nightshift doctor` points people at.
+ */
+export function createLogger(options: LoggerOptions = {}): Logger {
+  const stream = options.stream === undefined ? process.stderr : options.stream;
+  const color = options.color ?? detectColor(stream);
+
+  let level: LogLevel = options.level ?? 'info';
+  let file: WriteStream | null = null;
+  let fileFailed = false;
+
+  if (options.file) {
+    try {
+      mkdirSync(dirname(options.file), { recursive: true });
+      file = createWriteStream(options.file, { flags: 'a' });
+      // A broken log file must never take down the app it is logging for.
+      file.on('error', () => {
+        fileFailed = true;
+        file = null;
+      });
+    } catch {
+      fileFailed = true;
+    }
+  }
+
+  const write = (record: LogRecord): void => {
+    if (stream) {
+      const tint = color ? COLORS[record.level] : '';
+      const off = color ? RESET : '';
+      const dim = color ? DIM : '';
+      const tail = record.fields ? formatFields(record.fields) : '';
+      const line =
+        `${dim}${record.time}${off} ${tint}${record.level.padEnd(5)}${off} ` +
+        `${dim}${record.scope}${off} ${record.message}${tail ? ` ${dim}${tail}${off}` : ''}\n`;
+      stream.write(line);
+    }
+    if (file) {
+      file.write(`${JSON.stringify(record)}\n`);
+    }
+  };
+
+  const make = (scope: string): Logger => {
+    const log = (
+      recordLevel: Exclude<LogLevel, 'silent'>,
+      message: string,
+      fields?: LogFields,
+    ): void => {
+      if (SEVERITY[recordLevel] > SEVERITY[level]) return;
+      write({
+        time: new Date().toISOString(),
+        level: recordLevel,
+        scope,
+        message,
+        ...(fields ? { fields } : {}),
+      });
+    };
+
+    return {
+      get level() {
+        return level;
+      },
+      error: (message, fields) => log('error', message, fields),
+      warn: (message, fields) => log('warn', message, fields),
+      info: (message, fields) => log('info', message, fields),
+      debug: (message, fields) => log('debug', message, fields),
+      trace: (message, fields) => log('trace', message, fields),
+      child: (childScope) => make(`${scope}:${childScope}`),
+      setLevel: (next) => {
+        level = next;
+      },
+      close: () =>
+        new Promise<void>((resolve) => {
+          if (!file) return resolve();
+          const stale = file;
+          file = null;
+          stale.end(() => resolve());
+        }),
+    };
+  };
+
+  const logger = make(options.scope ?? 'nightshift');
+  if (fileFailed && options.file) {
+    logger.warn('Log file is unavailable; logging to the terminal only.', { path: options.file });
+  }
+  return logger;
+}
+
+/** A logger that discards everything. Useful in tests. */
+export function createNullLogger(): Logger {
+  return createLogger({ level: 'silent', stream: null });
+}
