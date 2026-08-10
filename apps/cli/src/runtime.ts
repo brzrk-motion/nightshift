@@ -8,10 +8,11 @@ import {
   type PluginHost,
 } from '@nightshift/services';
 import {
+  BUILT_IN_DASHBOARDS,
   BUILT_IN_WIDGETS,
   createWidgetRegistry,
-  DEFAULT_DASHBOARD,
   loadDashboards,
+  mergeDashboards,
   type DashboardSpec,
   type WidgetRegistry,
 } from '@nightshift/dashboard';
@@ -88,14 +89,9 @@ export async function createNightshiftRuntime(
     ),
   );
 
-  // A user dashboard named `home` replaces the built-in one rather than
+  // A user dashboard replaces the built-in of the same name rather than
   // appearing alongside it.
-  const dashboards = [
-    ...foundDashboards.dashboards,
-    ...(foundDashboards.dashboards.some((dashboard) => dashboard.name === DEFAULT_DASHBOARD.name)
-      ? []
-      : [DEFAULT_DASHBOARD]),
-  ].sort((a, b) => a.name.localeCompare(b.name));
+  const dashboards = mergeDashboards(foundDashboards.dashboards, BUILT_IN_DASHBOARDS);
 
   const app = createAppRuntime({
     entities,

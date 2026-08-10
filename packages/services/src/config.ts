@@ -33,9 +33,11 @@ export interface NightshiftConfig {
    * `"all"` grants everything the plugin asks for.
    */
   pluginPermissions: Record<string, Capability[] | 'all'>;
+  /** Whether the one-time onboarding modal has already been shown. */
+  onboarded: boolean;
 }
 
-export const CONFIG_VERSION = 1;
+export const CONFIG_VERSION = 5;
 
 export const DEFAULT_CONFIG: NightshiftConfig = {
   version: CONFIG_VERSION,
@@ -43,8 +45,15 @@ export const DEFAULT_CONFIG: NightshiftConfig = {
   defaultVibe: null,
   theme: 'midnight',
   logLevel: 'info',
-  plugins: ['@nightshift/plugin-focus'],
-  pluginPermissions: {},
+  plugins: [
+    '@nightshift/plugin-clock',
+    '@nightshift/plugin-focus',
+    '@nightshift/plugin-spotify',
+    '@nightshift/plugin-todo',
+    '@nightshift/plugin-weather',
+  ],
+  pluginPermissions: { weather: ['network'], spotify: ['network'], clock: ['network'] },
+  onboarded: false,
 };
 
 export interface LoadedConfig {
@@ -52,10 +61,105 @@ export interface LoadedConfig {
   paths: NightshiftPaths;
   /** False when no config file exists yet and defaults were used. */
   exists: boolean;
+  /** True when an on-disk config was upgraded in memory (and should be written back). */
+  migrated: boolean;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+const WEATHER_PLUGIN = '@nightshift/plugin-weather';
+const CLOCK_PLUGIN = '@nightshift/plugin-clock';
+const SPOTIFY_PLUGIN = '@nightshift/plugin-spotify';
+
+/**
+ * Brings an older on-disk config forward. v1 → v2 ships the weather plugin and
+ * its network grant; v2 → v3 ships the clock plugin; v3 → v4 ships the Spotify
+ * plugin and its network grant; v4 → v5 grants the clock plugin network access,
+ * needed once it can look up a location's timezone — so existing installs see
+ * the same defaults as a fresh one.
+ */
+export function migrateConfig(config: NightshiftConfig): {
+  config: NightshiftConfig;
+  migrated: boolean;
+} {
+  if (config.version >= CONFIG_VERSION) {
+    return { config, migrated: false };
+  }
+
+  let next: NightshiftConfig = { ...config };
+  let migrated = false;
+
+  if (next.version < 2) {
+    if (!next.plugins.includes(WEATHER_PLUGIN)) {
+      next = { ...next, plugins: [...next.plugins, WEATHER_PLUGIN] };
+      migrated = true;
+    }
+    const weatherGrant = next.pluginPermissions['weather'];
+    if (weatherGrant !== 'all' && !(Array.isArray(weatherGrant) && weatherGrant.includes('network'))) {
+      const grants = Array.isArray(weatherGrant) ? weatherGrant : [];
+      next = {
+        ...next,
+        pluginPermissions: {
+          ...next.pluginPermissions,
+          weather: [...grants, 'network'],
+        },
+      };
+      migrated = true;
+    }
+    next = { ...next, version: 2 };
+    migrated = true;
+  }
+
+  if (next.version < 3) {
+    if (!next.plugins.includes(CLOCK_PLUGIN)) {
+      next = { ...next, plugins: [...next.plugins, CLOCK_PLUGIN] };
+      migrated = true;
+    }
+    next = { ...next, version: 3 };
+    migrated = true;
+  }
+
+  if (next.version < 4) {
+    if (!next.plugins.includes(SPOTIFY_PLUGIN)) {
+      next = { ...next, plugins: [...next.plugins, SPOTIFY_PLUGIN] };
+      migrated = true;
+    }
+    const spotifyGrant = next.pluginPermissions['spotify'];
+    if (spotifyGrant !== 'all' && !(Array.isArray(spotifyGrant) && spotifyGrant.includes('network'))) {
+      const grants = Array.isArray(spotifyGrant) ? spotifyGrant : [];
+      next = {
+        ...next,
+        pluginPermissions: {
+          ...next.pluginPermissions,
+          spotify: [...grants, 'network'],
+        },
+      };
+      migrated = true;
+    }
+    next = { ...next, version: 4 };
+    migrated = true;
+  }
+
+  if (next.version < 5) {
+    const clockGrant = next.pluginPermissions['clock'];
+    if (clockGrant !== 'all' && !(Array.isArray(clockGrant) && clockGrant.includes('network'))) {
+      const grants = Array.isArray(clockGrant) ? clockGrant : [];
+      next = {
+        ...next,
+        pluginPermissions: {
+          ...next.pluginPermissions,
+          clock: [...grants, 'network'],
+        },
+      };
+      migrated = true;
+    }
+    next = { ...next, version: 5 };
+    migrated = true;
+  }
+
+  return { config: next, migrated };
 }
 
 /**
@@ -135,7 +239,14 @@ export function parseConfig(input: unknown, source = 'config'): NightshiftConfig
     config.pluginPermissions = parsed;
   }
 
-  return config;
+  if (input['onboarded'] !== undefined) {
+    if (typeof input['onboarded'] !== 'boolean') {
+      invalid('onboarded', 'a boolean');
+    }
+    config.onboarded = input['onboarded'] as boolean;
+  }
+
+  return migrateConfig(config).config;
 }
 
 /** Reads the config file, falling back to defaults when it does not exist. */
@@ -147,7 +258,7 @@ export async function loadConfig(options: ResolvePathsOptions = {}): Promise<Loa
     raw = await readFile(paths.configFile, 'utf8');
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-      return { config: { ...DEFAULT_CONFIG }, paths, exists: false };
+      return { config: { ...DEFAULT_CONFIG }, paths, exists: false, migrated: false };
     }
     throw new NightshiftError('CONFIG_UNREADABLE', `Could not read ${paths.configFile}.`, {
       cause: error,
@@ -165,7 +276,21 @@ export async function loadConfig(options: ResolvePathsOptions = {}): Promise<Loa
     });
   }
 
-  return { config: parseConfig(parsed, paths.configFile), paths, exists: true };
+  // parseConfig already applies migrateConfig; re-run so we know whether to
+  // persist — comparing versions is enough for the current v1→v2 step.
+  const before = (() => {
+    if (!isRecord(parsed)) return CONFIG_VERSION;
+    const version = parsed['version'];
+    return typeof version === 'number' ? version : 0;
+  })();
+  const config = parseConfig(parsed, paths.configFile);
+  const migrated = before < CONFIG_VERSION;
+
+  if (migrated) {
+    await saveConfig(config, options);
+  }
+
+  return { config, paths, exists: true, migrated };
 }
 
 /** Writes the config file, creating the config directory if needed. */

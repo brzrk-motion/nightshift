@@ -63,6 +63,8 @@ export {
   type ToastTone,
 } from './toasts.js';
 
+export { createKeyboardCapture, type KeyboardCapture } from './keyboardCapture.js';
+
 export {
   activityStrip,
   barChart,

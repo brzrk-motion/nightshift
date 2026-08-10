@@ -92,6 +92,14 @@ export interface PluginWidget {
   description?: string;
 }
 
+/** Init bag for `PluginContext.fetch` — a small, JSON-friendly slice of `RequestInit`. */
+export interface PluginFetchInit {
+  method?: string;
+  headers?: Record<string, string>;
+  body?: string;
+  signal?: AbortSignal;
+}
+
 /** Everything the runtime grants a plugin at setup time. */
 export interface PluginContext {
   manifest: Readonly<PluginManifest>;
@@ -100,6 +108,11 @@ export interface PluginContext {
   entities: EntityStore;
   /** Per-plugin key/value storage. Present when `storage` was granted. */
   storage: PluginStorage;
+  /**
+   * HTTPS fetch gated by the `network` capability. Non-HTTPS URLs are refused;
+   * without an explicit `signal`, the host applies a 15s timeout.
+   */
+  fetch(url: string, init?: PluginFetchInit): Promise<Response>;
   registerCommand(command: PluginCommand): void;
   registerWidget(widget: PluginWidget): void;
   registerEntity<State extends Json>(id: EntityId, state: State, meta?: EntityMeta): void;

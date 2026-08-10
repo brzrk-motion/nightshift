@@ -23,6 +23,15 @@ export const ICONS = {
   warning: '!',
   info: '·',
   dot: '●',
+  // Weather — geometric/block forms (not emoji) so forecast rows stay monospace-safe.
+  weatherClear: '◉',
+  weatherPartly: '◐',
+  weatherCloudy: '◌',
+  weatherFog: '≡',
+  weatherRain: '▾',
+  weatherSnow: '✧',
+  weatherStorm: '⚡',
+  weatherUnknown: '·',
 } as const;
 
 export type IconName = keyof typeof ICONS;

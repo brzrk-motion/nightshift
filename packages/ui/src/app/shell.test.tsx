@@ -91,6 +91,36 @@ describe.skipIf(!renderable)('AppShell shell', () => {
     }
   });
 
+  it('ignores a digit key while a widget input has captured the keyboard', async () => {
+    const runtime = createAppRuntime();
+    const setup = await testRender(
+      <AppShell runtime={runtime} title="Home" screens={CUSTOM_SCREENS}>
+        <text>Dashboard body</text>
+      </AppShell>,
+      { width: 100, height: 24 },
+    );
+
+    try {
+      await setup.renderOnce();
+      // Simulates a plugin's focused `TextInput` — see `TextInput` in
+      // `components/controls.tsx`, which acquires this while composing text
+      // so typing a digit into it does not also jump screens.
+      const release = runtime.keyboardCapture.acquire();
+      await press(() => setup.mockInput.pressKey('2'));
+      await setup.renderOnce();
+
+      expect(setup.captureCharFrame()).toContain('Dashboard body');
+      expect(setup.captureCharFrame()).not.toContain('Notes screen');
+
+      release();
+      await press(() => setup.mockInput.pressKey('2'));
+      await setup.renderOnce();
+      expect(setup.captureCharFrame()).toContain('Notes screen');
+    } finally {
+      setup.renderer.destroy();
+    }
+  });
+
   it('registers a nav command for every screen, reachable from the palette', async () => {
     const runtime = createAppRuntime();
     const setup = await testRender(

@@ -3,13 +3,15 @@
 A programmable workspace for deep focus — terminal-first, plugin-driven,
 configured in files you own.
 
-> **Status: Phase 7.** `nightshift` opens a full-screen shell — a header, a
+> **Status: Phase 9.** `nightshift` opens a full-screen shell — a header, a
 > left nav rail, and a persistent status bar around the dashboard canvas —
 > plugins load through the public SDK and contribute widgets, commands and
 > automations, the entity store drives the screen, vibes orchestrate the
-> workspace by name, and the bundled focus plugin is a real timer. Rebuilding
-> the shipped dashboard's own content and a visual editor are Phases 8–9;
-> packaging binaries and a release workflow are what's left of the MVP
+> workspace by name, and the bundled focus, todo, and weather plugins ship
+> with the CLI. A dashboard is config all the way down — three ship by
+> default, and `home` includes weather, focus, and todo widgets. Dashboards
+> can be edited in place, saved back to disk and reloaded without a restart.
+> Packaging binaries and a release workflow are what's left of the MVP
 > checklist.
 
 ## Requirements
@@ -58,7 +60,7 @@ pnpm --filter @nightshift/cli exec pnpm link --global
 | `nightshift dashboard [name]`  | Opens a dashboard; `--list` shows what is available.                                                                                 |
 | `nightshift dashboard --check` | Reports what would open, without taking the terminal.                                                                                |
 | `nightshift vibe [name]`       | Opens the dashboard with a vibe active; `--list` lists them, `--set-default` persists the choice, `--check` reports without opening. |
-| `nightshift doctor`            | Checks the environment, config, vibes, dashboards and plugins.                                                                       |
+| `nightshift doctor`            | Checks the environment, terminal capabilities, config, vibes, dashboards and plugins.                                                |
 
 Inside a dashboard:
 
@@ -68,10 +70,32 @@ Inside a dashboard:
 | `?`             | Show the keyboard shortcuts  |
 | `ctrl+k`        | Switch to the next dashboard |
 | `ctrl+r`        | Refresh every widget         |
+| `e`             | Edit this dashboard          |
 | `q` or `ctrl+c` | Quit                         |
 
 Everything the palette offers is a command, and every command can be bound to a
 key or triggered by a vibe — including the ones plugins contribute.
+
+`e` (or `dashboard.edit.toggle` from the palette) is available whenever a
+dashboard actually renders interactively — not under `--json` or `--check`,
+where nothing is open to edit. While editing:
+
+| Key         | What it does                              |
+| ----------- | ----------------------------------------- |
+| `tab`       | Select the next widget (`shift+tab` back) |
+| `←→` / `↑↓` | Move the selected widget                  |
+| `shift+←→`  | Resize the selected widget's span         |
+| `shift+↑↓`  | Resize its row's height                   |
+| `a`         | Add a widget, from a searchable picker    |
+| `w`         | Swap the selected widget for another type |
+| `d`         | Remove the selected widget                |
+| `ctrl+s`    | Save                                      |
+| `r`         | Reset to the last saved version           |
+| `esc`       | Cancel and discard changes                |
+
+A widget can also be selected with a click. Changing widget _settings_ —
+editing an existing widget's title or options in place — is not built; swap
+it out and back in through the picker to change what it's configured with.
 
 Global flags: `--config-dir <path>`, `--log-level <level>`, `-v/--verbose`,
 `--no-color`, `-V/--version`. Most commands also accept `--json`.
@@ -117,15 +141,25 @@ set every file — data and logs included — lives underneath it.
 
 ```json
 {
-  "version": 1,
+  "version": 5,
   "defaultDashboard": "home",
   "defaultVibe": null,
   "theme": "midnight",
   "logLevel": "info",
-  "plugins": ["@nightshift/plugin-focus"],
-  "pluginPermissions": {}
+  "plugins": [
+    "@nightshift/plugin-clock",
+    "@nightshift/plugin-focus",
+    "@nightshift/plugin-spotify",
+    "@nightshift/plugin-todo",
+    "@nightshift/plugin-weather"
+  ],
+  "pluginPermissions": { "weather": ["network"], "spotify": ["network"], "clock": ["network"] },
+  "onboarded": false
 }
 ```
+
+`onboarded` tracks whether the one-time welcome modal has been shown; opening
+a dashboard once flips it to `true` and writes it back.
 
 Unknown keys are ignored rather than rejected, so an older Nightshift can still
 read a file written by a newer one.
@@ -134,33 +168,68 @@ Themes: `midnight` (the default), `ember`, `daylight`.
 
 ## Dashboards
 
-A dashboard is a YAML file in `dashboards/`, named after its file. Rows stack
-down the screen and widgets sit across them; `span` and `height` are relative
-weights, not cell counts, so the same file works at any terminal size. On a
-narrow terminal a row's widgets restack rather than being squeezed.
+A dashboard is a YAML file in `dashboards/`, named after its file — nothing
+about its layout is hard-coded into the application shell, including the
+three Nightshift ships with. Rows stack down the screen and widgets sit
+across them; `span` and `height` are relative weights, not cell counts, so
+the same file works at any terminal size. On a narrow terminal a row's
+widgets restack rather than being squeezed.
 
 ```yaml
+version: 1
 title: Home
 theme: midnight
 refresh: 30 # seconds; omit or use 0 for no automatic refresh
 rows:
   - widgets:
-      - type: core.clock
+      - type: clock.now
       - type: core.note
-        title: Getting started
+        title: Reminder
         span: 2
+        minWidth: 30 # falls to its own row below this many columns
         options:
-          text: Press ctrl+p for commands.
+          text: Ship the thing.
+        when: # only drawn while this holds against the entity store
+          type: equals
+          entity: timer.focus
+          key: status
+          value: running
   - height: 2
     widgets: [core.entities, core.commands]
 ```
 
 A widget may be written as a bare `type` when it needs nothing else, and a row
-as a bare list of widgets when it needs no height.
+as a bare list of widgets when it needs no height. `version` defaults to the
+current schema and is validated against it, so a file written by a newer
+Nightshift is refused with an explicit message rather than misread.
 
-Nightshift ships four widgets — `core.clock`, `core.note`, `core.entities` and
-`core.commands` — and everything else comes from plugins. A widget type nothing
-has registered draws a labelled placeholder rather than failing the dashboard.
+Nightshift ships three built-in widgets — `core.note`, `core.entities` and
+`core.commands` — and everything else, clock included, comes from plugins. A
+widget type nothing has registered draws a labelled placeholder rather than
+failing the dashboard.
+
+Three dashboards ship by default — `home`, `minimal` and `nightshift`.
+`minimal` and `nightshift` stick to the three built-ins, so they always
+render with no plugins installed; `home` also draws on every plugin
+Nightshift bundles by default (clock, focus, todo, weather). A user file of
+the same name replaces the built-in rather than sitting alongside it. The
+`dashboard.reload` command —
+from the palette, a keybinding, or a vibe's `onActivate` — re-reads
+`dashboards/` without restarting.
+
+### Editing a dashboard
+
+Press `e` inside a dashboard to edit it in place — select a widget, move or
+resize it, add one from a searchable picker, swap one for a different type,
+or remove it — then `ctrl+s` to save, or `esc` to discard. See the key table
+above. Saving writes fully-explicit YAML back to `dashboards/<name>.yaml`
+through the same parser that reads it, so a hand-edited file and one saved
+from edit mode are interchangeable.
+
+The first time Nightshift opens, a one-time welcome modal explains the
+palette, the shortcut list and where dashboards live, instead of that living
+permanently on the shipped dashboard as a widget; any key dismisses it for
+good.
 
 ## Vibes
 
@@ -192,6 +261,9 @@ Nightshift ships three: `locked-in`, `morning` and `night-shift`. Switching to
 a new vibe runs the outgoing one's `onDeactivate` first. A step that fails —
 an unknown theme, a command with no such id — is reported as a warning rather
 than aborting the rest, the same way a broken plugin does not stop startup.
+`locked-in` is the one that opens the `nightshift` dashboard rather than
+`home`, so activating it demonstrates a vibe changing the dashboard, the
+theme and starting a timer all at once, not just the theme.
 
 ## Automations
 
@@ -235,13 +307,20 @@ export default definePlugin({
   id: 'weather',
   name: 'Weather',
   version: '1.0.0',
-  capabilities: ['entities:write', 'widgets:register', 'automations:register'],
+  capabilities: [
+    'entities:write',
+    'widgets:register',
+    'automations:register',
+    'network',
+    'storage',
+  ],
   setup(context) {
+    // Real Open-Meteo fetch goes through context.fetch (needs pluginPermissions).
     context.registerEntity('weather.now', { temperature: 11 });
     context.registerWidget({
       type: 'weather.now',
       title: 'Weather',
-      entities: ['weather.now'],
+      entities: ['weather.locations'],
       render: () => {
         const entity = useEntity<{ temperature: number }>('weather.now');
         return <Card value={`${entity?.state.temperature ?? '—'}°`} />;
@@ -260,6 +339,45 @@ export default definePlugin({
 A plugin dropped into `plugins/` is imported as-is, so it has to be an installed
 package with its dependencies alongside it, or a bundle.
 
+Nightshift ships five bundled plugins:
+
+- **clock** — the time and date, in the machine's own timezone when it can be
+  detected (`Intl.DateTimeFormat().resolvedOptions().timeZone`, no network
+  needed) or a location you set otherwise, geocoded to a timezone the same
+  way weather resolves a place to coordinates. Settings (12/24-hour, seconds,
+  a date format picked from a few presets, and the timezone) live behind the
+  widget's own "Settings" toggle rather than dashboard `options`, and persist
+  across restarts. A clock added through the widget picker opens straight
+  into that settings panel.
+- **focus** — the reference timer (session + today’s count).
+- **todo** — a todo list with no backend; a single `todo.md` in your home
+  directory is the source of truth (`- [ ]` / `- [x]`), mirrored into
+  `todo.items`.
+- **weather** — current conditions and a multi-day forecast from Open-Meteo.
+  Each widget binds to a location **slot** via dashboard `options.location`
+  (zip, city, postal code, or `lat,lon`). Enter a place in the widget, or run
+  `weather.configure-location`. Multiple weather widgets can use different
+  slots; the shipped `home` dashboard shares `location: home` between now and
+  forecast. Frost warnings watch the primary slot mirrored on `weather.now`.
+- **spotify** — control the Spotify client on your machine (playlists,
+  podcasts, play/pause/skip). Does not stream audio. The `spotify.player`
+  widget asks for a Spotify Developer app Client ID and Secret, then Connect
+  via browser OAuth. See
+  [Spotify apps](https://developer.spotify.com/documentation/web-api/concepts/apps);
+  allowlist redirect URI `http://127.0.0.1:43891/callback`. Playback control
+  needs Spotify Premium.
+
+Defaults grant weather, Spotify and clock network access (the clock only
+calls out when you set a location — the machine's own timezone needs none):
+
+```json
+{ "pluginPermissions": { "weather": ["network"], "spotify": ["network"], "clock": ["network"] } }
+```
+
+Existing configs are migrated on load when the config version bumps (bundled
+plugins and their network grants are added automatically).
+
+
 ### Capabilities
 
 A plugin declares what it needs and gets only that. Everything that touches
@@ -273,8 +391,10 @@ process are not, and wait for a line in `config.json`:
 | `storage`                                                       | automatically |
 | `network`, `shell`                                              | by you        |
 
+`network` unlocks `context.fetch` (HTTPS only). `shell` is still declare-only.
+
 ```json
-{ "pluginPermissions": { "weather": ["network"] } }
+{ "pluginPermissions": { "weather": ["network"], "spotify": ["network"], "clock": ["network"] } }
 ```
 
 A plugin that asks for something it has not been granted is refused at load
@@ -294,7 +414,10 @@ packages/dashboard     Dashboard model, layout parser, widget registry
 packages/vibes         The vibe engine
 packages/automations   Triggers, conditions and actions
 packages/services      Config, logging, settings and the plugin runtime
+plugins/clock          The time and date, with 12/24-hour and date format settings
 plugins/focus          The focus timer — the reference plugin
+plugins/todo           A todo list backed by a plain todo.md file
+plugins/weather        Current conditions + forecast via Open-Meteo
 ```
 
 ## Development

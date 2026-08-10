@@ -68,4 +68,19 @@ describe('collectReport', () => {
     expect(check?.status).toBe('ok');
     expect(check?.detail).toBe('3 available');
   });
+
+  it('counts the built-in dashboards, and lets a user one add to rather than replace them', async () => {
+    const report = await collectReport(contextFor());
+    const check = report.checks.find((entry) => entry.name === 'dashboards');
+    expect(check?.status).toBe('ok');
+    expect(check?.detail).toBe('3 available');
+  });
+
+  it('reports on terminal capabilities', async () => {
+    const report = await collectReport(contextFor());
+    const check = report.checks.find((entry) => entry.name === 'capabilities');
+    expect(check).toBeDefined();
+    expect(['ok', 'warn', 'fail']).toContain(check?.status);
+    expect(check?.detail).toMatch(/unicode (yes|no), colour (none|basic|truecolor)/);
+  });
 });

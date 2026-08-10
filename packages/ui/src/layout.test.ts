@@ -61,6 +61,27 @@ describe('distribute', () => {
   it('returns nothing for no children', () => {
     expect(distribute(80, [])).toEqual([]);
   });
+
+  it('honours a different minimum per child', () => {
+    const parts = distribute(60, [1, 1], [30, 10]);
+    expect(parts[0]).toBeGreaterThanOrEqual(30);
+    expect(parts.reduce((sum, part) => sum + part, 0)).toBe(60);
+  });
+
+  it('gives the flexible remainder to weight once every floor is met', () => {
+    // The even split (30/30) fails the first child's floor, so each child
+    // gets its own minimum first and the remaining 10 columns split 1:1.
+    const parts = distribute(60, [1, 1], [40, 10]);
+    expect(parts).toEqual([45, 15]);
+  });
+
+  it('falls back to an even split when per-child minimums do not fit', () => {
+    expect(distribute(10, [1, 1], [8, 8])).toEqual([5, 5]);
+  });
+
+  it('treats a per-child array of one minimum the same as a single number', () => {
+    expect(distribute(60, [1, 1], [20, 20])).toEqual(distribute(60, [1, 1], 20));
+  });
 });
 
 const rows = [{ items: [{ span: 2 }, { span: 1 }] }, { height: 2, items: [{}, {}, {}] }];
@@ -123,5 +144,40 @@ describe('planLayout', () => {
   it('reports a terminal that is too small rather than drawing into it', () => {
     const plan = planLayout(rows, { width: 30, height: 8 });
     expect(plan.renderable).toBe(false);
+  });
+
+  it('splits a row earlier when one widget names a wider minWidth', () => {
+    // Two 40-column widgets fit the default 24-column floor three-wide, but
+    // not once the first one insists on 40.
+    const plan = planLayout([{ items: [{ minWidth: 40 }, {}, {}] }], { width: 80, height: 30 });
+
+    expect(plan.rows.map((row) => row.items.length)).toEqual([2, 1]);
+    expect(plan.rows[0]?.items[0]?.width).toBeGreaterThanOrEqual(40);
+  });
+
+  it('gives a widget its own row when its minWidth alone exceeds the terminal', () => {
+    const plan = planLayout([{ items: [{ minWidth: 100 }] }], { width: 80, height: 30 });
+    expect(plan.rows).toHaveLength(1);
+  });
+
+  it('grows a row past its floor to fit a widget’s minHeight', () => {
+    const plan = planLayout([{ items: [{ minHeight: 10 }] }, { items: [{}] }, { items: [{}] }], {
+      width: 120,
+      height: 20,
+    });
+
+    expect(plan.rows[0]?.height).toBeGreaterThanOrEqual(10);
+    expect(plan.rows.reduce((sum, row) => sum + row.height, 0)).toBe(20);
+  });
+
+  it('does not let minHeight starve the other rows entirely', () => {
+    const plan = planLayout([{ items: [{ minHeight: 5 }] }, { items: [{}] }], {
+      width: 120,
+      height: 12,
+    });
+
+    const total = plan.rows.reduce((sum, row) => sum + row.height, 0);
+    expect(total).toBe(12);
+    expect(plan.rows[1]?.height).toBeGreaterThan(0);
   });
 });

@@ -1,7 +1,37 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createEntityStore } from '@nightshift/entities';
-import { createAutomationEngine, type CommandRunner } from './engine.js';
-import type { AutomationSpec } from './schema.js';
+import { checkCondition, createAutomationEngine, type CommandRunner } from './engine.js';
+import type { AutomationSpec, Condition } from './schema.js';
+
+describe('checkCondition', () => {
+  it('is false for an entity that does not exist', () => {
+    expect(
+      checkCondition(createEntityStore(), {
+        type: 'equals',
+        entity: 'timer.focus',
+        key: 'status',
+        value: 'idle',
+      }),
+    ).toBe(false);
+  });
+
+  it.each([
+    [{ type: 'equals', entity: 'timer.focus', key: 'status', value: 'finished' }, true],
+    [{ type: 'equals', entity: 'timer.focus', key: 'status', value: 'idle' }, false],
+    [{ type: 'above', entity: 'timer.focus', key: 'completedToday', value: 2 }, true],
+    [{ type: 'above', entity: 'timer.focus', key: 'completedToday', value: 10 }, false],
+    [{ type: 'below', entity: 'timer.focus', key: 'completedToday', value: 10 }, true],
+    [{ type: 'below', entity: 'timer.focus', key: 'completedToday', value: 2 }, false],
+  ] as const satisfies readonly (readonly [Condition, boolean])[])(
+    'evaluates %o',
+    (condition, expected) => {
+      const entities = createEntityStore();
+      entities.register('timer.focus', { status: 'finished', completedToday: 3 });
+
+      expect(checkCondition(entities, condition)).toBe(expected);
+    },
+  );
+});
 
 function commands(): CommandRunner & { calls: { id: string; args: unknown }[] } {
   const calls: { id: string; args: unknown }[] = [];

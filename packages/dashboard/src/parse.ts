@@ -1,9 +1,15 @@
-import { readdir, readFile } from 'node:fs/promises';
+import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import { basename, extname, join } from 'node:path';
-import { parse as parseYaml } from 'yaml';
+import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 import { NightshiftError, type Json } from '@nightshift/core';
+import type { Condition } from '@nightshift/automations';
 import { isEntityId, type EntityId } from '@nightshift/entities';
-import type { DashboardSpec, RowSpec, WidgetSpec } from './schema.js';
+import {
+  DASHBOARD_SCHEMA_VERSION,
+  type DashboardSpec,
+  type RowSpec,
+  type WidgetSpec,
+} from './schema.js';
 
 /**
  * Parsing and validating dashboard files.
@@ -30,6 +36,32 @@ function positiveNumber(value: unknown, path: string): number {
   return value;
 }
 
+const CONDITION_TYPES = new Set(['equals', 'above', 'below']);
+
+function parseCondition(input: unknown, path: string): Condition {
+  if (!isRecord(input)) fail(path, 'a condition object');
+
+  const type = input['type'];
+  if (typeof type !== 'string' || !CONDITION_TYPES.has(type)) {
+    fail(`${path}.type`, 'one of equals, above, below');
+  }
+  const entity = input['entity'];
+  if (!isEntityId(entity)) fail(`${path}.entity`, 'an entity id like `timer.focus`');
+  const key = input['key'];
+  if (typeof key !== 'string' || key.trim() === '') fail(`${path}.key`, 'a state field name');
+
+  if (type === 'equals') {
+    if (!('value' in input)) fail(`${path}.value`, 'present');
+    return { type: 'equals', entity, key, value: input['value'] as Json };
+  }
+
+  const value = input['value'];
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    fail(`${path}.value`, 'a number');
+  }
+  return { type: type as 'above' | 'below', entity, key, value };
+}
+
 function parseWidget(input: unknown, path: string): WidgetSpec {
   // `- focus.session` is shorthand for `- type: focus.session`, which keeps
   // the common dashboard readable.
@@ -50,6 +82,12 @@ function parseWidget(input: unknown, path: string): WidgetSpec {
   }
 
   if (input['span'] !== undefined) widget.span = positiveNumber(input['span'], `${path}.span`);
+  if (input['minWidth'] !== undefined) {
+    widget.minWidth = positiveNumber(input['minWidth'], `${path}.minWidth`);
+  }
+  if (input['minHeight'] !== undefined) {
+    widget.minHeight = positiveNumber(input['minHeight'], `${path}.minHeight`);
+  }
 
   if (input['entities'] !== undefined) {
     const entities = input['entities'];
@@ -64,6 +102,10 @@ function parseWidget(input: unknown, path: string): WidgetSpec {
   if (input['options'] !== undefined) {
     if (!isRecord(input['options'])) fail(`${path}.options`, 'an object');
     widget.options = input['options'] as Record<string, Json>;
+  }
+
+  if (input['when'] !== undefined) {
+    widget.when = parseCondition(input['when'], `${path}.when`);
   }
 
   return widget;
@@ -123,9 +165,24 @@ export function parseDashboard(source: string, options: ParseDashboardOptions = 
   }
 
   const dashboard: DashboardSpec = {
+    version: DASHBOARD_SCHEMA_VERSION,
     name: name.trim(),
     rows: rows.map((row, index) => parseRow(row, `${label}.rows[${index}]`)),
   };
+
+  if (document['version'] !== undefined) {
+    const version = document['version'];
+    if (typeof version !== 'number' || !Number.isInteger(version) || version < 1) {
+      fail(`${label}.version`, 'a positive integer');
+    }
+    if (version > DASHBOARD_SCHEMA_VERSION) {
+      fail(
+        `${label}.version`,
+        `at most ${DASHBOARD_SCHEMA_VERSION} (this Nightshift does not understand a newer schema)`,
+      );
+    }
+    dashboard.version = version;
+  }
 
   if (document['title'] !== undefined) {
     if (typeof document['title'] !== 'string') fail(`${label}.title`, 'a string');
@@ -144,6 +201,60 @@ export function parseDashboard(source: string, options: ParseDashboardOptions = 
   }
 
   return dashboard;
+}
+
+function serializeWidget(widget: WidgetSpec): Record<string, unknown> {
+  const output: Record<string, unknown> = { type: widget.type };
+  if (widget.title !== undefined) output['title'] = widget.title;
+  if (widget.span !== undefined) output['span'] = widget.span;
+  if (widget.minWidth !== undefined) output['minWidth'] = widget.minWidth;
+  if (widget.minHeight !== undefined) output['minHeight'] = widget.minHeight;
+  if (widget.entities !== undefined) output['entities'] = widget.entities;
+  if (widget.options !== undefined) output['options'] = widget.options;
+  if (widget.when !== undefined) output['when'] = widget.when;
+  return output;
+}
+
+/**
+ * The inverse of `parseDashboard` — always in the fully-explicit form (no
+ * bare-string widgets, no bare-list rows), since a machine writing the file
+ * has no reason to use the shorthand meant for a person typing it by hand.
+ * Round-trips: `parseDashboard(serializeDashboard(spec))` describes the same
+ * dashboard `spec` does, give or take key order.
+ */
+export function serializeDashboard(dashboard: DashboardSpec): string {
+  const output: Record<string, unknown> = {
+    version: dashboard.version ?? DASHBOARD_SCHEMA_VERSION,
+    name: dashboard.name,
+  };
+  if (dashboard.title !== undefined) output['title'] = dashboard.title;
+  if (dashboard.theme !== undefined) output['theme'] = dashboard.theme;
+  if (dashboard.refresh !== undefined) output['refresh'] = dashboard.refresh;
+  output['rows'] = dashboard.rows.map((row) => {
+    const serialized: Record<string, unknown> = {};
+    if (row.height !== undefined) serialized['height'] = row.height;
+    serialized['widgets'] = row.widgets.map(serializeWidget);
+    return serialized;
+  });
+
+  return stringifyYaml(output);
+}
+
+/**
+ * Writes a dashboard to `<directory>/<name>.yaml`, creating the directory if
+ * needed. This is the convention edit mode saves under — a dashboard whose
+ * file does not already match `<name>.yaml` gets a new file rather than the
+ * old one being overwritten, since nothing tracks a spec's original path.
+ */
+export async function saveDashboard(directory: string, dashboard: DashboardSpec): Promise<string> {
+  const path = join(directory, `${dashboard.name}.yaml`);
+  try {
+    await mkdir(directory, { recursive: true });
+    await writeFile(path, serializeDashboard(dashboard), 'utf8');
+  } catch (error) {
+    throw new NightshiftError('CONFIG_UNWRITABLE', `Could not write ${path}.`, { cause: error });
+  }
+  return path;
 }
 
 const EXTENSIONS = new Set(['.yaml', '.yml']);
@@ -190,4 +301,20 @@ export async function loadDashboards(directory: string): Promise<DashboardLoadRe
   }
 
   return result;
+}
+
+/**
+ * Combines dashboards loaded from disk with the built-ins, a user file
+ * winning over a built-in of the same name rather than sitting alongside it
+ * — the one merge rule `apps/cli`'s startup and `dashboard.reload` both need,
+ * kept in one place so they cannot drift apart.
+ */
+export function mergeDashboards(
+  loaded: readonly DashboardSpec[],
+  builtIn: readonly DashboardSpec[],
+): DashboardSpec[] {
+  const names = new Set(loaded.map((dashboard) => dashboard.name));
+  return [...loaded, ...builtIn.filter((dashboard) => !names.has(dashboard.name))].sort((a, b) =>
+    a.name.localeCompare(b.name),
+  );
 }

@@ -246,6 +246,32 @@ export function createPluginHost(options: PluginHostOptions): PluginHost {
           owned.add(id);
           options.entities.register(id, state, { owner: manifest.id, ...meta });
         },
+        async fetch(url, init) {
+          requires('network');
+          let parsed: URL;
+          try {
+            parsed = new URL(url);
+          } catch (error) {
+            throw new NightshiftError('NETWORK_DENIED', `Invalid URL "${url}".`, {
+              cause: error,
+              hint: 'Pass an absolute https URL.',
+            });
+          }
+          if (parsed.protocol !== 'https:') {
+            throw new NightshiftError(
+              'NETWORK_DENIED',
+              `Plugin "${manifest.id}" may only fetch https URLs.`,
+              { hint: `Refused "${url}".` },
+            );
+          }
+          const signal = init?.signal ?? AbortSignal.timeout(15_000);
+          return globalThis.fetch(url, {
+            ...(init?.method === undefined ? {} : { method: init.method }),
+            ...(init?.headers === undefined ? {} : { headers: init.headers }),
+            ...(init?.body === undefined ? {} : { body: init.body }),
+            signal,
+          });
+        },
         own(disposable) {
           bag.add(disposable);
         },

@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { testRender } from '@opentui/react/test-utils';
-import { act, type ReactNode } from 'react';
+import { act, useState, type ReactNode } from 'react';
 import { createEntityStore } from '@nightshift/entities';
 import { detectRuntime } from '../app/runtime.js';
 import { createAppRuntime } from '../app/app.js';
 import { AppShell } from '../app/AppShell.js';
-import { ThemeProvider, useEntity } from '../app/context.js';
+import { RuntimeProvider, ThemeProvider, useEntity } from '../app/context.js';
 import { MIDNIGHT_THEME } from '../theme.js';
 import { Card, Panel } from './Panel.js';
 import { Button, TextInput, Toggle } from './controls.js';
@@ -121,6 +121,58 @@ describe.skipIf(!renderable)('components', () => {
 
     expect(frame).toContain('›');
     expect(frame).toContain('Type a command');
+  });
+
+  it('a focused text input captures the keyboard, and releases it when it unmounts', async () => {
+    const runtime = createAppRuntime();
+    let hide: (() => void) | undefined;
+
+    function Wrapper(): ReactNode {
+      const [visible, setVisible] = useState(true);
+      hide = () => setVisible(false);
+      return visible ? <TextInput focused /> : null;
+    }
+
+    const setup = await testRender(
+      <ThemeProvider theme={MIDNIGHT_THEME}>
+        <RuntimeProvider runtime={runtime}>
+          <Wrapper />
+        </RuntimeProvider>
+      </ThemeProvider>,
+      { width: 40, height: 3 },
+    );
+
+    try {
+      await setup.renderOnce();
+      // So AppShell's/DashboardApp's global shortcuts don't also fire while
+      // this is being typed into — see `keyboardCapture.ts`.
+      expect(runtime.keyboardCapture.isCaptured()).toBe(true);
+
+      act(() => hide?.());
+      await setup.renderOnce();
+      expect(runtime.keyboardCapture.isCaptured()).toBe(false);
+    } finally {
+      setup.renderer.destroy();
+    }
+  });
+
+  it('an unfocused text input does not capture the keyboard', async () => {
+    const runtime = createAppRuntime();
+    const setup = await testRender(
+      <ThemeProvider theme={MIDNIGHT_THEME}>
+        <RuntimeProvider runtime={runtime}>
+          <TextInput />
+        </RuntimeProvider>
+      </ThemeProvider>,
+      { width: 40, height: 3 },
+    );
+
+    try {
+      await setup.renderOnce();
+      expect(runtime.keyboardCapture.isCaptured()).toBe(false);
+    } finally {
+      setup.renderer.destroy();
+    }
   });
 
   it('draws a progress bar with a percentage', async () => {

@@ -1,5 +1,6 @@
 import { createEntityStore, type EntityStore } from '@nightshift/entities';
 import { createCommandRegistry, type Command, type CommandRegistry } from '../commands.js';
+import { createKeyboardCapture, type KeyboardCapture } from '../keyboardCapture.js';
 import { createKeymap, type KeyBinding, type Keymap } from '../keymap.js';
 import { createThemeEngine, type ThemeEngine } from '../theme.js';
 import { createToastStore, type ToastStore } from '../toasts.js';
@@ -11,6 +12,7 @@ export interface CreateAppRuntimeOptions {
   commands?: CommandRegistry;
   keymap?: Keymap;
   toasts?: ToastStore;
+  keyboardCapture?: KeyboardCapture;
   /** Name of the theme to start on. */
   theme?: string;
   /** Bindings layered over the defaults. */
@@ -37,6 +39,7 @@ export function createAppRuntime(options: CreateAppRuntimeOptions = {}): AppRunt
     commands: options.commands ?? createCommandRegistry(options.commandList ?? []),
     keymap: options.keymap ?? createKeymap().extend(options.keybindings ?? []),
     toasts: options.toasts ?? createToastStore(),
+    keyboardCapture: options.keyboardCapture ?? createKeyboardCapture(),
     size: options.size ?? { width: 80, height: 24 },
     quit: options.onQuit ?? (() => {}),
   };

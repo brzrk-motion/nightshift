@@ -62,12 +62,16 @@ afterEach(async () => {
 });
 
 describe('createNightshiftRuntime', () => {
-  it('starts with the built-in widgets and dashboard and no plugins', async () => {
+  it('starts with the built-in widgets and dashboards and no plugins', async () => {
     const runtime = await createNightshiftRuntime(contextFor());
 
     try {
-      expect(runtime.dashboards.map((dashboard) => dashboard.name)).toEqual(['home']);
-      expect(runtime.widgets.list().map((widget) => widget.type)).toContain('core.clock');
+      expect(runtime.dashboards.map((dashboard) => dashboard.name)).toEqual([
+        'home',
+        'minimal',
+        'nightshift',
+      ]);
+      expect(runtime.widgets.list().map((widget) => widget.type)).toContain('core.note');
       expect(runtime.plugins.list()).toEqual([]);
       expect(runtime.warnings).toEqual([]);
     } finally {
@@ -99,32 +103,37 @@ describe('createNightshiftRuntime', () => {
     try {
       expect(runtime.warnings).toHaveLength(1);
       expect(runtime.warnings[0]).toMatch(/Plugin "broken" did not load/);
-      expect(runtime.dashboards).toHaveLength(1);
+      expect(runtime.dashboards).toHaveLength(3);
     } finally {
       await runtime.dispose();
     }
   });
 
-  it('loads user dashboards alongside the built-in one', async () => {
-    await writeFile(join(dir, 'dashboards', 'work.yaml'), 'rows:\n  - [core.clock]');
+  it('loads user dashboards alongside the built-in ones', async () => {
+    await writeFile(join(dir, 'dashboards', 'work.yaml'), 'rows:\n  - [core.note]');
 
     const runtime = await createNightshiftRuntime(contextFor());
 
     try {
-      expect(runtime.dashboards.map((dashboard) => dashboard.name)).toEqual(['home', 'work']);
+      expect(runtime.dashboards.map((dashboard) => dashboard.name)).toEqual([
+        'home',
+        'minimal',
+        'nightshift',
+        'work',
+      ]);
     } finally {
       await runtime.dispose();
     }
   });
 
   it('lets a user dashboard called home replace the built-in one', async () => {
-    await writeFile(join(dir, 'dashboards', 'home.yaml'), 'title: Mine\nrows:\n  - [core.clock]');
+    await writeFile(join(dir, 'dashboards', 'home.yaml'), 'title: Mine\nrows:\n  - [core.note]');
 
     const runtime = await createNightshiftRuntime(contextFor());
 
     try {
-      expect(runtime.dashboards).toHaveLength(1);
-      expect(runtime.dashboards[0]?.title).toBe('Mine');
+      expect(runtime.dashboards).toHaveLength(3);
+      expect(runtime.dashboards.find((dashboard) => dashboard.name === 'home')?.title).toBe('Mine');
     } finally {
       await runtime.dispose();
     }

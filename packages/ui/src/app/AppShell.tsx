@@ -185,6 +185,10 @@ export function AppShell({
   );
 
   useKeyboard((key) => {
+    // A focused widget input (a plugin's `TextInput`, say) wants every
+    // keystroke to itself — see `keyboardCapture.ts`.
+    if (runtime.keyboardCapture.isCaptured()) return;
+
     // While an overlay is up it owns the keyboard; only the universal escape
     // hatch still applies.
     if (overlay !== null) {

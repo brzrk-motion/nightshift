@@ -38,7 +38,10 @@ export const BUILT_IN_VIBES: readonly VibeSpec[] = [
     title: 'Locked In',
     description: 'Deep work. Timer running, nothing else asking for attention.',
     theme: 'midnight',
-    dashboard: 'home',
+    // The one built-in vibe that opens a dashboard other than `home`, so
+    // activating it visibly demonstrates a vibe switching the dashboard, not
+    // just the theme and starting a timer.
+    dashboard: 'nightshift',
     onActivate: [{ command: 'focus.start', args: { minutes: 50 } }],
   },
   {

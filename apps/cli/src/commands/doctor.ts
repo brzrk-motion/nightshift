@@ -1,7 +1,7 @@
 import { access, constants, mkdir, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { NIGHTSHIFT_VERSION } from '@nightshift/core';
-import { loadDashboards } from '@nightshift/dashboard';
+import { BUILT_IN_DASHBOARDS, loadDashboards, mergeDashboards } from '@nightshift/dashboard';
 import { discoverPlugins } from '@nightshift/services';
 import { detectRuntime, getTheme } from '@nightshift/ui';
 import { BUILT_IN_VIBES, loadVibes } from '@nightshift/vibes';
@@ -200,7 +200,7 @@ function checkRenderer(): Check {
 
 async function checkDashboards(context: CliContext): Promise<Check> {
   const { dashboards, failed } = await loadDashboards(context.paths.dashboardsDir);
-  const detail = `${dashboards.length + 1} available`;
+  const detail = `${mergeDashboards(dashboards, BUILT_IN_DASHBOARDS).length} available`;
 
   if (failed.length === 0) return { name: 'dashboards', status: 'ok', detail };
   return {
@@ -211,6 +211,45 @@ async function checkDashboards(context: CliContext): Promise<Check> {
       .map((entry) => `${entry.path}: ${entry.error instanceof Error ? entry.error.message : ''}`)
       .join('; '),
   };
+}
+
+/** Whether the environment says it can render Unicode box-drawing and glyph
+ * characters — the terminal itself cannot be asked directly, so this reads
+ * the same locale signal every other line-mode tool relies on. */
+function detectUnicodeSupport(): boolean {
+  const locale = process.env['LC_ALL'] ?? process.env['LC_CTYPE'] ?? process.env['LANG'] ?? '';
+  return /utf-?8/i.test(locale);
+}
+
+function detectColorDepth(): 'none' | 'basic' | 'truecolor' {
+  if (!shouldUseColor()) return 'none';
+  return /truecolor|24bit/i.test(process.env['COLORTERM'] ?? '') ? 'truecolor' : 'basic';
+}
+
+/** Nightshift draws with box-drawing borders and coloured text; a terminal
+ * missing either still runs, just less legibly, so this only ever warns. */
+function checkCapabilities(): Check {
+  const unicode = detectUnicodeSupport();
+  const color = detectColorDepth();
+  const detail = `unicode ${unicode ? 'yes' : 'no'}, colour ${color}`;
+
+  if (!unicode) {
+    return {
+      name: 'capabilities',
+      status: 'warn',
+      detail,
+      hint: 'No UTF-8 locale detected (LANG/LC_ALL/LC_CTYPE). Borders and icons may not render correctly.',
+    };
+  }
+  if (color === 'none') {
+    return {
+      name: 'capabilities',
+      status: 'warn',
+      detail,
+      hint: 'Colour is disabled (NO_COLOR set, or not a colour terminal). Nightshift will draw in monochrome.',
+    };
+  }
+  return { name: 'capabilities', status: 'ok', detail };
 }
 
 function worst(checks: Check[]): CheckStatus {
@@ -224,6 +263,7 @@ export async function collectReport(context: CliContext): Promise<DoctorReport> 
     await checkNode(),
     checkRenderer(),
     await checkTerminal(),
+    checkCapabilities(),
     await checkConfigDir(context),
     await checkConfigFile(context),
     await checkLogDir(context),

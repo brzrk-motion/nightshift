@@ -9,37 +9,6 @@ import type { WidgetDefinition } from './registry.js';
  * everything domain-specific belongs in a plugin.
  */
 
-function pad(value: number): string {
-  return String(value).padStart(2, '0');
-}
-
-function Clock({ options }: WidgetProps): ReactNode {
-  const theme = useTheme();
-  const showSeconds = options['seconds'] !== false;
-  const [now, setNow] = useState(() => new Date());
-
-  useEffect(() => {
-    const timer = setInterval(() => setNow(new Date()), showSeconds ? 1000 : 15_000);
-    timer.unref?.();
-    return () => clearInterval(timer);
-  }, [showSeconds]);
-
-  const time = showSeconds
-    ? `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`
-    : `${pad(now.getHours())}:${pad(now.getMinutes())}`;
-
-  return (
-    <box style={{ flexGrow: 1, alignItems: 'center', justifyContent: 'center' }}>
-      <text fg={theme.colors.accent}>
-        <b>{time}</b>
-      </text>
-      <text fg={theme.colors.muted}>
-        {now.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })}
-      </text>
-    </box>
-  );
-}
-
 function Note({ options }: WidgetProps): ReactNode {
   const theme = useTheme();
   const text = typeof options['text'] === 'string' ? options['text'] : '';
@@ -125,13 +94,6 @@ export function MissingWidget({ type }: { type: string }): ReactNode {
 }
 
 export const BUILT_IN_WIDGETS: readonly WidgetDefinition[] = [
-  {
-    type: 'core.clock',
-    title: 'Clock',
-    entities: [],
-    description: 'The time and date. Set `seconds: false` to update once a minute.',
-    render: Clock,
-  },
   {
     type: 'core.note',
     title: 'Note',

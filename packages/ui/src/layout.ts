@@ -57,23 +57,32 @@ function weighted(total: number, weights: readonly number[], floor: number): num
 
 /**
  * Splits `total` cells between weighted children, keeping every child at
- * `minimum` or above.
+ * `minimum` or above — a single floor for all of them, or one per child when
+ * their minimums differ.
  *
  * The weights come first: the minimum is a rescue, not a tax. Only when a
- * straight weighted split would starve a child does every child get the
+ * straight weighted split would starve a child does every child get its
  * minimum up front and share out what is left — so the common case of `2:1`
  * across a wide terminal really is two thirds and one third.
  */
-export function distribute(total: number, weights: readonly number[], minimum = 0): number[] {
+export function distribute(
+  total: number,
+  weights: readonly number[],
+  minimum: number | readonly number[] = 0,
+): number[] {
   const count = weights.length;
   if (count === 0) return [];
 
   const safeWeights = weights.map((weight) => (weight > 0 ? weight : 1));
-  const floor = Math.max(0, Math.floor(minimum));
+  const perChild: readonly number[] = Array.isArray(minimum)
+    ? minimum
+    : new Array<number>(count).fill(minimum as number);
+  const floors = perChild.map((value) => Math.max(0, Math.floor(value ?? 0)));
+  const floorSum = floors.reduce((sum, floor) => sum + floor, 0);
 
   // Not enough room to honour the minimums: fall back to an even split of
   // whatever there is, which at least keeps every child visible.
-  if (floor * count > total) {
+  if (floorSum > total) {
     const even = Math.floor(total / count);
     const sizes = new Array<number>(count).fill(even);
     let spare = total - even * count;
@@ -84,8 +93,29 @@ export function distribute(total: number, weights: readonly number[], minimum = 
   }
 
   const proportional = weighted(total, safeWeights, 0);
-  if (proportional.every((size) => size >= floor)) return proportional;
-  return weighted(total, safeWeights, floor);
+  if (proportional.every((size, index) => size >= (floors[index] ?? 0))) return proportional;
+
+  // A per-child floor cannot be expressed as `weighted`'s single uniform
+  // floor, so give each child its own minimum first and share out the rest
+  // by weight — the same two-pass idea, generalised.
+  if (floors.some((floor) => floor !== floors[0])) {
+    const flexible = total - floorSum;
+    const sum = safeWeights.reduce((accumulator, weight) => accumulator + weight, 0);
+    const exact = safeWeights.map((weight) => (flexible * weight) / sum);
+    const sizes = exact.map((value, index) => (floors[index] ?? 0) + Math.floor(value));
+
+    let remainder = total - sizes.reduce((accumulator, size) => accumulator + size, 0);
+    const order = exact
+      .map((value, index) => ({ index, fraction: value - Math.floor(value) }))
+      .sort((a, b) => b.fraction - a.fraction || a.index - b.index);
+    for (let cursor = 0; remainder > 0; cursor = (cursor + 1) % order.length, remainder -= 1) {
+      const target = order[cursor]?.index ?? 0;
+      sizes[target] = (sizes[target] ?? 0) + 1;
+    }
+    return sizes;
+  }
+
+  return weighted(total, safeWeights, floors[0] ?? 0);
 }
 
 export interface LayoutItem {
@@ -93,6 +123,8 @@ export interface LayoutItem {
   span?: number | undefined;
   /** Columns below which this item is better off on a row of its own. */
   minWidth?: number | undefined;
+  /** Rows below which the item's whole row grows to fit it. */
+  minHeight?: number | undefined;
 }
 
 export interface LayoutRow {
@@ -127,18 +159,59 @@ export interface LayoutPlan<Item extends LayoutItem = LayoutItem> {
   rows: PlacedRow<Item>[];
 }
 
-/** Rows narrower than this are not worth splitting further. */
+/** A widget's floor when it does not name its own. */
 const MIN_COLUMN_WIDTH = 24;
+const MIN_ROW_HEIGHT = 3;
+
+/**
+ * Greedily packs `items` into same-row groups, each staying under `width`
+ * without starving any item below its own `minWidth` (or the default, for an
+ * item that does not name one). Compact terminals skip the packing and stack
+ * one item per row outright — the same "give up on side-by-side" rule the
+ * old fixed-count chunking used.
+ */
+function packRow<Item extends LayoutItem>(
+  items: readonly Item[],
+  width: number,
+  stacked: boolean,
+): Item[][] {
+  if (stacked) return items.map((item) => [item]);
+
+  const fits = (group: readonly Item[]): boolean => {
+    const gaps = Math.max(0, group.length - 1);
+    const usable = width - gaps;
+    if (usable <= 0) return false;
+    const widths = distribute(
+      usable,
+      group.map((item) => item.span ?? 1),
+    );
+    return widths.every((size, index) => size >= (group[index]?.minWidth ?? MIN_COLUMN_WIDTH));
+  };
+
+  const groups: Item[][] = [];
+  let current: Item[] = [];
+  for (const item of items) {
+    const candidate = [...current, item];
+    if (current.length === 0 || fits(candidate)) {
+      current = candidate;
+    } else {
+      groups.push(current);
+      current = [item];
+    }
+  }
+  if (current.length > 0) groups.push(current);
+  return groups;
+}
 
 /**
  * Turns authored rows into rows the renderer can draw at this terminal size.
  *
  * Two things happen here. A row whose widgets would each end up narrower than
- * a readable column is split into several rows — that is what makes the
- * dashboard responsive rather than merely squashed. And every row and widget
- * is given both a flex weight, which the renderer uses, and a concrete cell
- * size, which widgets that draw their own content (charts, tables) need in
- * advance.
+ * a readable column — theirs, or the default — is split into several rows;
+ * that is what makes the dashboard responsive rather than merely squashed.
+ * And every row and widget is given both a flex weight, which the renderer
+ * uses, and a concrete cell size, which widgets that draw their own content
+ * (charts, tables) need in advance.
  */
 export function planLayout<Item extends LayoutItem>(
   rows: readonly { height?: number | undefined; items: readonly Item[] }[],
@@ -158,17 +231,10 @@ export function planLayout<Item extends LayoutItem>(
     const items = row.items.filter(Boolean);
     if (items.length === 0) continue;
 
-    // How many widgets fit side by side before they stop being readable.
-    const perRow = Math.max(1, Math.min(items.length, Math.floor(size.width / MIN_COLUMN_WIDTH)));
-    const chunks = breakpoint === 'compact' ? 1 : perRow;
-
-    for (let start = 0; start < items.length; start += chunks) {
-      groups.push({
-        source,
-        offset: start,
-        height: row.height,
-        items: items.slice(start, start + chunks),
-      });
+    let offset = 0;
+    for (const chunk of packRow(items, size.width, breakpoint === 'compact')) {
+      groups.push({ source, offset, height: row.height, items: chunk });
+      offset += chunk.length;
     }
   }
 
@@ -177,11 +243,17 @@ export function planLayout<Item extends LayoutItem>(
   }
 
   // A row that was split contributes its authored height once per piece, so
-  // splitting does not quietly shrink it relative to its neighbours.
+  // splitting does not quietly shrink it relative to its neighbours. A group
+  // holding a widget that asked for more than the default floor gets that
+  // instead, so its own row grows to fit it rather than clipping it.
+  const rowFloor = Math.min(MIN_ROW_HEIGHT, Math.floor(size.height / groups.length));
+  const heightFloors = groups.map((group) =>
+    Math.max(rowFloor, ...group.items.map((item) => item.minHeight ?? 0)),
+  );
   const heights = distribute(
     size.height,
     groups.map((group) => group.height ?? 1),
-    Math.min(3, Math.floor(size.height / groups.length)),
+    heightFloors,
   );
 
   return {
@@ -189,10 +261,13 @@ export function planLayout<Item extends LayoutItem>(
     size,
     renderable,
     rows: groups.map((group, rowIndex) => {
+      const widthFloors = group.items.map((item) =>
+        Math.min(item.minWidth ?? MIN_COLUMN_WIDTH, Math.floor(size.width / group.items.length)),
+      );
       const widths = distribute(
         size.width,
         group.items.map((item) => item.span ?? 1),
-        Math.min(MIN_COLUMN_WIDTH, Math.floor(size.width / group.items.length)),
+        widthFloors,
       );
 
       return {

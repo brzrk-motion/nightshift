@@ -1,8 +1,8 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { act } from 'react';
 import { testRender } from '@opentui/react/test-utils';
 import { createEntityStore } from '@nightshift/entities';
-import { createAppRuntime, detectRuntime, useEntity } from '@nightshift/ui';
+import { createAppRuntime, detectRuntime, RuntimeProvider, useEntity } from '@nightshift/ui';
 import { Dashboard } from './Dashboard.js';
 import { DashboardApp } from './DashboardApp.js';
 import { createWidgetRegistry } from './registry.js';
@@ -22,6 +22,18 @@ function registry() {
       render: ({ width }) => {
         const entity = useEntity<{ status: string }>('timer.focus');
         return <text>{`session ${entity?.state.status ?? 'unknown'} @${width}`}</text>;
+      },
+    },
+  ]);
+  widgets.registerPlugin('clock', [
+    {
+      type: 'clock.now',
+      title: 'Clock',
+      entities: [],
+      render: () => {
+        const now = new Date();
+        const pad = (value: number) => String(value).padStart(2, '0');
+        return <text>{`${pad(now.getHours())}:${pad(now.getMinutes())}`}</text>;
       },
     },
   ]);
@@ -153,8 +165,8 @@ describe.skipIf(!renderable)('Dashboard', () => {
   });
 
   it('applies the theme a dashboard asks for, and warns about one it does not know', async () => {
-    const tinted = parseDashboard('name: tinted\ntheme: ember\nrows:\n  - [core.clock]');
-    const unknown = parseDashboard('name: odd\ntheme: nope\nrows:\n  - [core.clock]');
+    const tinted = parseDashboard('name: tinted\ntheme: ember\nrows:\n  - [clock.now]');
+    const unknown = parseDashboard('name: odd\ntheme: nope\nrows:\n  - [clock.now]');
     const runtime = createAppRuntime();
 
     const setup = await testRender(
@@ -198,11 +210,11 @@ describe.skipIf(!renderable)('Dashboard', () => {
     }
   });
 
-  it('draws the built-in clock and entity widgets', async () => {
+  it('draws a plugin clock widget alongside the built-in entities widget', async () => {
     const entities = createEntityStore();
     entities.register('timer.focus', { status: 'running' }, { owner: 'focus' });
     const runtime = createAppRuntime({ entities });
-    const dashboard = parseDashboard('name: built\nrows:\n  - [core.clock, core.entities]');
+    const dashboard = parseDashboard('name: built\nrows:\n  - [clock.now, core.entities]');
 
     const setup = await testRender(
       <DashboardApp runtime={runtime} dashboards={[dashboard]} registry={registry()} />,
@@ -217,6 +229,121 @@ describe.skipIf(!renderable)('Dashboard', () => {
       expect(frame).toMatch(/\d\d:\d\d/);
       expect(frame).toContain('timer.focus');
       expect(frame).toContain('status=running');
+    } finally {
+      setup.renderer.destroy();
+    }
+  });
+
+  it('hides a widget whose `when` condition does not hold, and shows it once it does', async () => {
+    const entities = createEntityStore();
+    entities.register('timer.focus', { status: 'idle' });
+    const runtime = createAppRuntime({ entities });
+    const conditional = parseDashboard(
+      `name: conditional
+rows:
+  - widgets:
+      - type: core.note
+        title: Reminder
+        options: { text: Ship the thing }
+        when: { type: equals, entity: timer.focus, key: status, value: running }
+`,
+    );
+
+    const setup = await testRender(
+      <RuntimeProvider runtime={runtime}>
+        <Dashboard dashboard={conditional} registry={registry()} />
+      </RuntimeProvider>,
+      { width: 60, height: 12 },
+    );
+
+    try {
+      await setup.renderOnce();
+      const initial = await setup.waitForFrame((frame) => !frame.includes('Ship the thing'));
+      expect(initial).not.toContain('Ship the thing');
+
+      await act(async () => {
+        entities.update('timer.focus', { status: 'running' });
+        await Promise.resolve();
+      });
+      const shown = await setup.waitForFrame((frame) => frame.includes('Ship the thing'));
+      expect(shown).toContain('Ship the thing');
+
+      await act(async () => {
+        entities.update('timer.focus', { status: 'idle' });
+        await Promise.resolve();
+      });
+      const hidden = await setup.waitForFrame((frame) => !frame.includes('Ship the thing'));
+      expect(hidden).not.toContain('Ship the thing');
+    } finally {
+      setup.renderer.destroy();
+    }
+  });
+
+  it('calls onSelectWidget with a clicked widget’s address while editing', async () => {
+    const onSelectWidget = vi.fn();
+    const setup = await testRender(
+      <Dashboard dashboard={home} registry={registry()} editing onSelectWidget={onSelectWidget} />,
+      { width: 90, height: 20 },
+    );
+
+    try {
+      await setup.renderOnce();
+      // The "Reminder" panel is the second widget in row 0.
+      await setup.mockMouse.click(65, 1);
+      await setup.renderOnce();
+
+      expect(onSelectWidget).toHaveBeenCalledWith({ row: 0, widget: 1 });
+    } finally {
+      setup.renderer.destroy();
+    }
+  });
+
+  it('does not call onSelectWidget from a click when not editing', async () => {
+    const onSelectWidget = vi.fn();
+    const setup = await testRender(
+      <Dashboard dashboard={home} registry={registry()} onSelectWidget={onSelectWidget} />,
+      { width: 90, height: 20 },
+    );
+
+    try {
+      await setup.renderOnce();
+      await setup.mockMouse.click(65, 1);
+      await setup.renderOnce();
+
+      expect(onSelectWidget).not.toHaveBeenCalled();
+    } finally {
+      setup.renderer.destroy();
+    }
+  });
+
+  it('shows a hidden widget as a dimmed placeholder while editing, instead of an empty slot', async () => {
+    const entities = createEntityStore();
+    entities.register('timer.focus', { status: 'idle' });
+    const conditional = parseDashboard(
+      `name: conditional
+rows:
+  - widgets:
+      - type: core.note
+        title: Reminder
+        options: { text: Ship the thing }
+        when: { type: equals, entity: timer.focus, key: status, value: running }
+`,
+    );
+    const runtime = createAppRuntime({ entities });
+
+    const setup = await testRender(
+      <RuntimeProvider runtime={runtime}>
+        <Dashboard dashboard={conditional} registry={registry()} editing />
+      </RuntimeProvider>,
+      { width: 60, height: 12 },
+    );
+
+    try {
+      await setup.renderOnce();
+      const frame = setup.captureCharFrame();
+      expect(frame).toContain('Reminder');
+      expect(frame).toContain('hidden');
+      expect(frame).not.toContain('Ship the thing');
     } finally {
       setup.renderer.destroy();
     }

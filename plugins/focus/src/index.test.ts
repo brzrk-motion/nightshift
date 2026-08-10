@@ -68,6 +68,9 @@ function fakeContext() {
       set: async (key, value) => void storageData.set(key, value),
       delete: async (key) => void storageData.delete(key),
     },
+    fetch: async () => {
+      throw new Error('focus tests do not use network');
+    },
     registerCommand: (command) => void commands.set(command.id, command),
     registerWidget: (widget) => void widgets.push(widget),
     registerAutomation: (automation) => void automations.push(automation),

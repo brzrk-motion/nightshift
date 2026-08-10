@@ -5,6 +5,7 @@ export {
   LOG_LEVELS,
   ensureConfigDirs,
   loadConfig,
+  migrateConfig,
   parseConfig,
   saveConfig,
   type LoadedConfig,

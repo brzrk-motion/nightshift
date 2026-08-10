@@ -42,7 +42,13 @@ export interface AutomationEngineOptions {
   commands: CommandRunner;
 }
 
-function checkCondition(entities: EntityStore, condition: Condition): boolean {
+/**
+ * Whether a single condition holds against the entity store right now.
+ * Exported so anything else that gates on the same shape of condition — a
+ * dashboard widget's conditional visibility, for one — does not have to
+ * reimplement `equals`/`above`/`below`.
+ */
+export function checkCondition(entities: EntityStore, condition: Condition): boolean {
   const entity = entities.get(condition.entity);
   if (!entity) return false;
   const value = (entity.state as Record<string, Json>)[condition.key];

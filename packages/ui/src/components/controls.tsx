@@ -1,6 +1,6 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import type { InputProps } from '@opentui/react';
-import { useTheme } from '../app/context.js';
+import { useRuntime, useTheme } from '../app/context.js';
 
 export interface ButtonProps {
   label: string;
@@ -116,6 +116,17 @@ export function TextInput({
   prefix,
 }: TextInputProps): ReactNode {
   const theme = useTheme();
+  const runtime = useRuntime();
+
+  // Global shortcuts (`e` for edit mode, `q` to quit, digit keys for nav, ...)
+  // fire on every keypress regardless of what has native focus — OpenTUI does
+  // not make a focused `<input>` swallow them the way a browser would. This is
+  // what stops "e" typed into a todo's text from also toggling edit mode: see
+  // `keyboardCapture.ts`.
+  useEffect(() => {
+    if (!focused) return;
+    return runtime?.keyboardCapture.acquire();
+  }, [focused, runtime]);
 
   // OpenTUI declares `onSubmit` twice — once as the React prop that receives
   // the value and once as the renderable option that receives an event — and
@@ -138,7 +149,11 @@ export function TextInput({
   } as unknown as InputProps;
 
   return (
-    <box style={{ flexDirection: 'row', gap: 1, height: 1, flexShrink: 0 }}>
+    // `flexGrow` here, not just on the `<input>` itself, is what lets the
+    // field actually claim the row's remaining width when it sits next to
+    // fixed-size siblings (a button, say) — without it the input has nothing
+    // to grow into and renders at a sliver of its intended width.
+    <box style={{ flexDirection: 'row', gap: 1, height: 1, flexGrow: 1, flexShrink: 0 }}>
       {prefix !== undefined && <text fg={theme.colors.accent}>{prefix}</text>}
       <input {...inputProps} />
     </box>

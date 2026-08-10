@@ -1,5 +1,5 @@
 import { createElement } from 'react';
-import { DashboardApp } from '@nightshift/dashboard';
+import { BUILT_IN_DASHBOARDS, DashboardApp } from '@nightshift/dashboard';
 import { saveConfig } from '@nightshift/services';
 import { detectRuntime, startApp, type CommandRegistry } from '@nightshift/ui';
 import { initConfigDirs, type CliContext } from '../context.js';
@@ -173,6 +173,15 @@ export async function runVibe(
           dashboards: runtime.dashboards,
           registry: runtime.widgets,
           initial: dashboard,
+          dashboardsDir: context.paths.dashboardsDir,
+          builtInDashboards: BUILT_IN_DASHBOARDS,
+          onboarding: !context.config.onboarded,
+          onOnboardingDismissed: () => {
+            void saveConfig(
+              { ...context.config, onboarded: true },
+              { configDir: context.paths.configDir },
+            );
+          },
         }),
       onExit: () => context.log.info('Dashboard closed'),
     });

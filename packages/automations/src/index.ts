@@ -1,5 +1,6 @@
 export type { Action, AutomationSpec, Condition, Trigger } from './schema.js';
 export {
+  checkCondition,
   createAutomationEngine,
   type AutomationEngine,
   type AutomationEngineEvents,

@@ -157,6 +157,73 @@ describe('createPluginHost', () => {
     await expect(plugins.load(source)).resolves.toBeTruthy();
   });
 
+  it('gates context.fetch on the network capability', async () => {
+    let denied: unknown;
+    const plugins = createPluginHost({
+      entities,
+      dataDir,
+      policy: createPermissionPolicy({ autoGrant: ['entities:read'] }),
+      importer: async () =>
+        demo({
+          capabilities: ['entities:read'],
+          setup: async (context) => {
+            try {
+              await context.fetch('https://example.com/');
+            } catch (error) {
+              denied = error;
+            }
+          },
+        }),
+    });
+
+    await plugins.load(source);
+
+    expect(isNightshiftError(denied) && denied.code).toBe('PERMISSION_DENIED');
+  });
+
+  it('refuses non-https URLs from context.fetch', async () => {
+    let denied: unknown;
+    const plugins = host(
+      demo({
+        capabilities: ['network'],
+        setup: async (context) => {
+          try {
+            await context.fetch('http://example.com/');
+          } catch (error) {
+            denied = error;
+          }
+        },
+      }),
+      { demo: ['network'] },
+    );
+
+    await plugins.load(source);
+
+    expect(isNightshiftError(denied) && denied.code).toBe('NETWORK_DENIED');
+  });
+
+  it('fetches https URLs when network is granted', async () => {
+    const fetchMock = vi.fn(async (_url: string) => new Response('ok', { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const plugins = host(
+      demo({
+        capabilities: ['network'],
+        setup: async (context) => {
+          const response = await context.fetch('https://example.com/weather');
+          expect(response.status).toBe(200);
+        },
+      }),
+      { demo: ['network'] },
+    );
+
+    await plugins.load(source);
+
+    expect(fetchMock).toHaveBeenCalledOnce();
+    expect(String(fetchMock.mock.calls[0]?.[0])).toBe('https://example.com/weather');
+    vi.unstubAllGlobals();
+  });
+
   it('denies a registration the plugin did not ask for', async () => {
     let denied: unknown;
     const plugins = createPluginHost({

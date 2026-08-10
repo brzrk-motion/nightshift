@@ -4,6 +4,7 @@ import type { Json } from '@nightshift/core';
 import type { Entity, EntityId, EntityStore } from '@nightshift/entities';
 import { MIDNIGHT_THEME, type Theme, type ThemeEngine } from '../theme.js';
 import type { CommandRegistry } from '../commands.js';
+import type { KeyboardCapture } from '../keyboardCapture.js';
 import type { Keymap } from '../keymap.js';
 import type { ToastStore } from '../toasts.js';
 
@@ -18,6 +19,7 @@ export interface AppRuntime {
   commands: CommandRegistry;
   keymap: Keymap;
   toasts: ToastStore;
+  keyboardCapture: KeyboardCapture;
   /** Terminal size, kept up to date by the shell. */
   size: { width: number; height: number };
   /** Shuts the app down cleanly. */

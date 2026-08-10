@@ -29,6 +29,8 @@ async function draw(node: ReactNode, width = 60, height = 12): Promise<string> {
 describe('iconGlyph', () => {
   it('resolves a known icon', () => {
     expect(iconGlyph('dashboard')).toBe('▦');
+    expect(iconGlyph('weatherClear')).toBe('◉');
+    expect(iconGlyph('weatherStorm')).toBe('⚡');
   });
 
   it('falls back to the first letter of an unknown name', () => {

@@ -38,7 +38,8 @@ Phase 7 — Build the Nightshift Visual System
 [x] Show shortcut hints
 [x] Show ctrl+p command palette shortcut
 [x] Show ? help shortcut
-[ ] Show edit-mode shortcut (deferred to Phase 9, which builds edit mode itself)
+[x] Show edit-mode shortcut (built in Phase 9 along with edit mode itself —
+the status bar's key hints switch to the editing set while active)
 [x] Show quit / back shortcut
 [x] Make shortcut labels update based on current screen
 7.5 Nightshift design tokens
@@ -92,6 +93,11 @@ Phase 7 Acceptance Criteria
 [x] Core visual primitives are reusable by plugins
 [x] Layout remains usable when resizing the terminal
 Phase 8 — Build the Concept Dashboard
+(Skipped by explicit request — see Phase 9's notes for what that means for
+items below that assumed it shipped: no Now Playing / Weather / Ambient
+Sound / Goals / Activity widgets exist. Phase 9 was built on the four
+widgets Nightshift already had — clock, note, entities, commands — plus
+whatever a plugin contributes, not this concept dashboard's content.)
 8.1 Dashboard grid system
 [ ] Add a real multi-column dashboard grid
 [ ] Support row / column spans
@@ -204,84 +210,136 @@ Phase 8 Acceptance Criteria
 [ ] Keyboard and mouse interaction both feel intentional
 Phase 9 — Make Dashboards Feel Programmable
 9.1 Dashboard configuration schema
-[ ] Expand dashboard YAML schema to support:
-[ ] Columns
-[ ] Rows
-[ ] Widget placement
-[ ] Row span
-[ ] Column span
-[ ] Minimum size
-[ ] Widget-specific options
-[ ] Conditional visibility
-[ ] Add schema validation
-[ ] Add readable validation errors
-[ ] Add version field for future migrations
+[x] Expand dashboard YAML schema to support:
+[ ] Columns (the layout model is rows of widgets with a relative `span`, not a
+column grid — deliberate, matches the architecture from Phase 2/3; not
+revisited here)
+[x] Rows
+[x] Widget placement
+[x] Row span (a row's `height`)
+[x] Column span (a widget's `span`)
+[x] Minimum size (`minWidth`, `minHeight` — `layout.ts`'s `distribute()` now
+takes a per-child minimum, not just a uniform one)
+[x] Widget-specific options (`options`, pre-existing)
+[x] Conditional visibility (`when`, reusing `@nightshift/automations`'
+`checkCondition` rather than reimplementing equals/above/below)
+[x] Add schema validation
+[x] Add readable validation errors
+[x] Add version field for future migrations (`version`, validated against
+`DASHBOARD_SCHEMA_VERSION`; a file from a newer Nightshift is refused
+with an explicit hint rather than misread)
 9.2 Default dashboard config
-[ ] Recreate the shipped concept dashboard entirely from config
-[ ] Ensure no layout is hard-coded into the application shell
-[ ] Make every concept widget removable / replaceable
-[ ] Ship at least:
-[ ] default
-[ ] minimal
-[ ] nightshift
+[ ] Recreate the shipped concept dashboard entirely from config (there is no
+concept dashboard — Phase 8 was skipped; what ships is `DEFAULT_DASHBOARD`,
+itself entirely config, just not that content)
+[x] Ensure no layout is hard-coded into the application shell (was already
+true before this phase — `Dashboard.tsx` has always solved layout from
+`DashboardSpec`, never from JSX)
+[x] Make every concept widget removable / replaceable (edit mode's
+add/swap/remove work on whatever widgets a dashboard has)
+[x] Ship at least:
+[x] default (`home`)
+[x] minimal
+[x] nightshift
 9.3 Dashboard edit mode
-[ ] Add e / command palette action to enter edit mode
-[ ] Show selected widget
-[ ] Move widget with arrow keys
-[ ] Resize widget with modified arrow keys
-[ ] Add widget
-[ ] Remove widget
-[ ] Swap widget
-[ ] Change widget settings
-[ ] Save layout
-[ ] Cancel changes
-[ ] Reset dashboard to defaults
-[ ] Support mouse selection where practical
+[x] Add e / command palette action to enter edit mode
+[x] Show selected widget (active border; a hidden one shows as a dimmed,
+still-selectable placeholder rather than disappearing)
+[x] Move widget with arrow keys
+[x] Resize widget with modified arrow keys (shift+arrows)
+[x] Add widget
+[x] Remove widget
+[x] Swap widget (`w`, via the same picker "add" uses — keeps span, drops the
+old widget's title/options/when since none of it is guaranteed to mean
+anything to the new type)
+[ ] Change widget settings (editing an existing widget's `options` in place
+is not built — `options` is an arbitrary per-type bag with no schema a
+generic editor could render a form from; swap it out and back in as the
+workaround)
+[x] Save layout
+[x] Cancel changes
+[x] Reset dashboard to defaults (reverts in-progress edits to the last saved
+version, the standard "reset" an editor offers — not a wipe back to the
+shipped built-in, which `rm`ing the file and reloading does instead)
+[x] Support mouse selection where practical (click a widget to select it)
 9.4 Widget picker
-[ ] List all installed plugin widgets
-[ ] Group widgets by plugin
-[ ] Search widgets
-[ ] Show widget description
-[ ] Show minimum / preferred size
-[ ] Preview widget where feasible
-[ ] Insert selected widget into current dashboard
+[x] List all installed plugin widgets
+[ ] Group widgets by plugin (sorted by plugin then type, and each row shows
+its source, but there is no visual group header between plugins)
+[x] Search widgets
+[x] Show widget description
+[ ] Show minimum / preferred size (`WidgetDefinition` — the type-level
+registration a plugin contributes — carries no size hint today; only a
+dashboard's own `WidgetSpec` does, per placement, which the picker has no
+placement for yet)
+[ ] Preview widget where feasible (not built — would need a widget to render
+against a synthetic runtime with no real data)
+[x] Insert selected widget into current dashboard
 9.5 Vibe-driven presentation
-[ ] Allow vibes to switch dashboards
-[ ] Allow vibes to switch themes
-[ ] Allow vibes to alter widget settings
-[ ] Allow vibe activation to update dashboard state immediately
-[ ] Add default Locked In vibe that demonstrates:
-[ ] Dashboard switch
-[ ] Focus timer start
-[ ] Theme / accent change
-[ ] Plugin action
+[x] Allow vibes to switch dashboards (pre-existing since Phase 2/3's
+`vibe.dashboard`, not new to this phase)
+[x] Allow vibes to switch themes (pre-existing, `vibe.theme`)
+[x] Allow vibes to alter widget settings (pre-existing, via `vibe.entities` —
+a vibe changes what a widget shows by changing the entity state it reads,
+not the dashboard file's `options`)
+[x] Allow vibe activation to update dashboard state immediately (pre-existing)
+[x] Add default Locked In vibe that demonstrates:
+[x] Dashboard switch (updated to open `nightshift` rather than `home`, so it
+is an actual demonstration rather than a no-op switch to the same one)
+[x] Focus timer start
+[x] Theme / accent change
+[x] Plugin action (`focus.start`)
 9.6 Dashboard persistence
-[ ] Store user dashboards in Nightshift config directory
-[ ] Auto-create default config on first run
-[ ] Load changes without reinstalling / rebuilding
-[ ] Add dashboard reload command
-[ ] Watch config file for changes if practical
-[ ] Preserve user dashboards during upgrades
+[x] Store user dashboards in Nightshift config directory (pre-existing)
+[x] Auto-create default config on first run (pre-existing)
+[x] Load changes without reinstalling / rebuilding (`saveDashboard` writes;
+the running dashboard reflects a save immediately with no reload needed)
+[x] Add dashboard reload command (`dashboard.reload`, re-reads the directory
+and re-merges against the built-ins)
+[ ] Watch config file for changes if practical (not built — reload is
+command-triggered, not filesystem-watched)
+[x] Preserve user dashboards during upgrades (inherent to living in the
+config directory, untouched by a package upgrade — nothing to build)
 9.7 Final UX cleanup
-[ ] First-run experience lands directly on the polished dashboard
-[ ] Remove “Getting Started” panel from normal use
-[ ] Move onboarding into a one-time modal / help view
-[ ] Add useful empty states when plugins are not configured
-[ ] Ensure configuration failures do not break the dashboard
-[ ] Add nightshift doctor checks for terminal capabilities
-[ ] Test at common terminal sizes
-[ ] Test on Linux
-[ ] Test on macOS
-[ ] Test on Windows terminals if supported by the MVP
-[ ] Profile CPU / memory under continuous dashboard updates
-[ ] Capture final screenshots / demo GIFs
+[x] First-run experience lands directly on the polished dashboard (the
+welcome modal is an overlay on top of the real dashboard, not a separate
+screen blocking it)
+[x] Remove "Getting Started" panel from normal use (dropped from
+`DEFAULT_DASHBOARD`'s permanent widget layout)
+[x] Move onboarding into a one-time modal / help view (`OnboardingModal`,
+gated by `config.onboarded`)
+[ ] Add useful empty states when plugins are not configured (not built this
+phase — `EmptyState` exists as a component from Phase 7 but nothing
+surfaces "no plugins installed" with it yet)
+[x] Ensure configuration failures do not break the dashboard (verified: a
+malformed `config.json` reports `CONFIG_INVALID` and exits cleanly rather
+than crashing; a malformed dashboard file is reported as a warning and
+skipped, same as before this phase)
+[x] Add nightshift doctor checks for terminal capabilities (`capabilities`
+check: UTF-8 locale detection and colour depth, both warn-only)
+[ ] Test at common terminal sizes (only what the OpenTUI test harness and
+ad-hoc pty runs at 100×24–30 covered; no systematic size sweep)
+[x] Test on Linux (this environment)
+[ ] Test on macOS (not available in this environment)
+[ ] Test on Windows terminals if supported by the MVP (not available in this
+environment)
+[ ] Profile CPU / memory under continuous dashboard updates (not done)
+[ ] Capture final screenshots / demo GIFs (not done)
 Phase 9 Acceptance Criteria
-[ ] The shipped dashboard can be recreated entirely from user config
-[ ] Users can visually edit their dashboard from inside Nightshift
-[ ] Installed plugins automatically contribute available widgets
-[ ] Vibes can change both behavior and presentation
-[ ] Nightshift looks and feels like the original programmable flow-workspace concept
-[ ] The product is ready to demo without explaining away the UI
+[ ] The shipped dashboard can be recreated entirely from user config (true of
+`DEFAULT_DASHBOARD` as it exists; there is no concept dashboard to
+recreate, per Phase 8 being skipped)
+[x] Users can visually edit their dashboard from inside Nightshift
+[x] Installed plugins automatically contribute available widgets (pre-existing)
+[x] Vibes can change both behavior and presentation (pre-existing, and now
+demonstrated by `locked-in` actually switching dashboards)
+[ ] Nightshift looks and feels like the original programmable flow-workspace
+concept (the _programmable_ half is real — dashboards are genuinely
+config, editable, reloadable; the _flow-workspace_ visual richness is
+Phase 8's content, which was skipped)
+[x] The product is ready to demo without explaining away the UI (for what it
+is: four built-in widgets, edit mode, and three example layouts — not
+the richer concept dashboard)
 Final Definition of Done
 Nightshift should no longer feel like a terminal debugging interface.
 Launching:
