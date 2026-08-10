@@ -1,0 +1,7 @@
+# Normalise line endings to LF in the repository and in every working tree,
+# including Windows checkouts. Without this, git's autocrlf turns every file
+# into a Prettier `endOfLine: lf` violation on Windows CI.
+* text=auto eol=lf
+
+# Generated; keep it out of diffs and reviews.
+pnpm-lock.yaml linguist-generated=true -diff
