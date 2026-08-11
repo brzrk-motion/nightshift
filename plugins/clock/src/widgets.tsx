@@ -67,9 +67,8 @@ function LocationEditor({
       {settings.locationStatus === 'loading' ? (
         <text fg={theme.colors.muted}>Looking up timezone…</text>
       ) : null}
-      {settings.locationStatus === 'error' && settings.locationError ? (
-        <text fg={theme.colors.warning}>{settings.locationError}</text>
-      ) : null}
+      {/* A lookup that failed is announced by the plugin, so the editor keeps
+          its shape instead of growing a line under the field. */}
     </box>
   );
 }
@@ -167,7 +166,13 @@ function SettingsPanel({
   );
 }
 
-function ClockFace({ settings, showDate }: { settings: ClockSettings; showDate: boolean }): ReactNode {
+function ClockFace({
+  settings,
+  showDate,
+}: {
+  settings: ClockSettings;
+  showDate: boolean;
+}): ReactNode {
   const theme = useTheme();
   const [now, setNow] = useState(() => new Date());
 
@@ -183,7 +188,12 @@ function ClockFace({ settings, showDate }: { settings: ClockSettings; showDate: 
 
   return (
     <box
-      style={{ flexDirection: 'column', flexGrow: 1, alignItems: 'center', justifyContent: 'center' }}
+      style={{
+        flexDirection: 'column',
+        flexGrow: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
     >
       <text fg={theme.colors.accent}>
         <b>

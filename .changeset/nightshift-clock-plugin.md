@@ -1,8 +1,8 @@
 ---
-"@nightshift/cli": patch
-"@nightshift/dashboard": patch
-"@nightshift/plugin-clock": patch
-"@nightshift/services": patch
+'@nightshift/cli': patch
+'@nightshift/dashboard': patch
+'@nightshift/plugin-clock': patch
+'@nightshift/services': patch
 ---
 
 Pull the clock out of `packages/dashboard`'s built-ins and ship it as a bundled plugin (`clock.now`), with a settings panel on the widget itself for 12/24-hour, showing seconds, and a date format picked from a few presets (long, medium, short, ISO, or hidden) — all persisted across restarts. `minimal` and `nightshift` stay on built-in-only widgets so they still render with no plugins installed; `home` now draws its clock from the plugin like it already does for weather, focus and todo. Existing v2 configs are migrated to load the clock plugin alongside the others.

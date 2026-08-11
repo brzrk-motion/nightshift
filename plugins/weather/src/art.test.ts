@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { ART_WIDTH, WEATHER_ART, heroDigits, weatherArt } from './art.js';
+import {
+  ART_WIDTH,
+  ART_WIDTH_SMALL,
+  WEATHER_ART,
+  WEATHER_ART_SMALL,
+  heroDigits,
+  weatherArt,
+} from './art.js';
 import { weatherCodeInfo } from './codes.js';
 
 describe('weather art', () => {
@@ -8,6 +15,16 @@ describe('weather art', () => {
       expect(lines).toHaveLength(5);
       for (const line of lines) {
         expect(line).toHaveLength(ART_WIDTH);
+      }
+    }
+  });
+
+  it('keeps the small set to its own fixed box', () => {
+    expect(Object.keys(WEATHER_ART_SMALL)).toEqual(Object.keys(WEATHER_ART));
+    for (const lines of Object.values(WEATHER_ART_SMALL)) {
+      expect(lines).toHaveLength(3);
+      for (const line of lines) {
+        expect(line).toHaveLength(ART_WIDTH_SMALL);
       }
     }
   });

@@ -14,11 +14,19 @@ export interface Toast {
   /** Milliseconds to stay on screen. `0` keeps it until dismissed. */
   timeout: number;
   createdAt: number;
+  /** Identity across pushes; see `ToastOptions.key`. */
+  key?: string;
 }
 
 export interface ToastOptions {
   tone?: ToastTone;
   timeout?: number;
+  /**
+   * Identity for a recurring notification. A push with a key already on screen
+   * replaces that toast instead of stacking a copy — which is what keeps a
+   * failing poll from burying the dashboard in identical warnings.
+   */
+  key?: string;
 }
 
 export interface ToastStore {
@@ -86,7 +94,13 @@ export function createToastStore(options: ToastStoreOptions = {}): ToastStore {
         message,
         timeout: toastOptions.timeout ?? defaultTimeout,
         createdAt: now(),
+        ...(toastOptions.key === undefined ? {} : { key: toastOptions.key }),
       };
+
+      if (toast.key !== undefined) {
+        const previous = toasts.find((entry) => entry.key === toast.key);
+        if (previous) drop(previous.id);
+      }
 
       toasts = [...toasts, toast];
       while (toasts.length > max) {

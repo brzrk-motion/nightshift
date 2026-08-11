@@ -69,9 +69,10 @@ describe('loginRedirectHtml', () => {
 
 describe('parseAuthRedirect', () => {
   it('parses a full callback URL', () => {
-    expect(
-      parseAuthRedirect('http://127.0.0.1:43891/callback?code=abc&state=xyz'),
-    ).toEqual({ code: 'abc', state: 'xyz' });
+    expect(parseAuthRedirect('http://127.0.0.1:43891/callback?code=abc&state=xyz')).toEqual({
+      code: 'abc',
+      state: 'xyz',
+    });
   });
 
   it('parses a bare query string', () => {
@@ -110,9 +111,7 @@ describe('createAuthWaiter paste path', () => {
       enableLoopback: false,
       timeoutMs: 5_000,
     });
-    expect(waiter.submitRedirect('http://127.0.0.1:43891/callback?code=x&state=wrong')).toBe(
-      true,
-    );
+    expect(waiter.submitRedirect('http://127.0.0.1:43891/callback?code=x&state=wrong')).toBe(true);
     await expect(waiter.result).rejects.toThrow(/state mismatch/i);
   });
 });

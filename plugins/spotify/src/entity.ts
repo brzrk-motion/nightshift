@@ -3,6 +3,7 @@ import type { Json } from '@nightshift/sdk';
 export const SPOTIFY_SESSION_ENTITY = 'spotify.session';
 export const SPOTIFY_PLAYER_ENTITY = 'spotify.player';
 export const SPOTIFY_LIBRARY_ENTITY = 'spotify.library';
+export const SPOTIFY_EPISODES_ENTITY = 'spotify.episodes';
 
 export const SPOTIFY_APP_DOCS_URL =
   'https://developer.spotify.com/documentation/web-api/concepts/apps';
@@ -23,11 +24,7 @@ export const SPOTIFY_SCOPES = [
 ] as const;
 
 export type SpotifySessionStatus =
-  | 'needs_credentials'
-  | 'needs_auth'
-  | 'connecting'
-  | 'ready'
-  | 'error';
+  'needs_credentials' | 'needs_auth' | 'connecting' | 'ready' | 'error';
 
 export interface SpotifySessionState {
   status: SpotifySessionStatus;
@@ -58,7 +55,7 @@ export interface SpotifyPlayerState {
   [key: string]: Json;
 }
 
-export type SpotifyLibraryKind = 'playlist' | 'show';
+export type SpotifyLibraryKind = 'playlist' | 'show' | 'episode';
 
 export interface SpotifyLibraryItem {
   id: string;
@@ -74,6 +71,18 @@ export interface SpotifyLibraryState {
   shows: SpotifyLibraryItem[];
   updatedAt: string | null;
   error: string | null;
+  [key: string]: Json;
+}
+
+/** Episodes of the one show being browsed — loaded on demand, not with the
+ * library, since a podcast's back catalogue is far larger than its shelf. */
+export interface SpotifyEpisodesState {
+  showId: string | null;
+  showName: string | null;
+  items: SpotifyLibraryItem[];
+  loading: boolean;
+  error: string | null;
+  updatedAt: string | null;
   [key: string]: Json;
 }
 
@@ -124,6 +133,20 @@ export function initialLibraryState(): SpotifyLibraryState {
     shows: [],
     updatedAt: null,
     error: null,
+  };
+}
+
+export function initialEpisodesState(
+  overrides: Partial<SpotifyEpisodesState> = {},
+): SpotifyEpisodesState {
+  return {
+    showId: null,
+    showName: null,
+    items: [],
+    loading: false,
+    error: null,
+    updatedAt: null,
+    ...overrides,
   };
 }
 

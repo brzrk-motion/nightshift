@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type {
   Disposable,
   Entity,
@@ -23,6 +23,7 @@ function fakeContext(fetchImpl?: PluginContext['fetch']) {
   const widgets: PluginWidget[] = [];
   const disposers: (() => void)[] = [];
   const storageData = new Map<string, Json>();
+  const notify = vi.fn();
 
   const entity = (id: string): Entity | undefined =>
     entities.has(id)
@@ -32,6 +33,7 @@ function fakeContext(fetchImpl?: PluginContext['fetch']) {
   const context: PluginContext = {
     manifest: { id: 'clock', name: 'Clock', version: '0.1.0', apiVersion: 1, capabilities: [] },
     log: { error() {}, warn() {}, info() {}, debug() {} },
+    notify,
     entities: {
       get: <State extends Json = Json>(id: EntityId) => entity(id) as Entity<State> | undefined,
       has: (id) => entities.has(id),
@@ -234,7 +236,12 @@ describe('setup', () => {
       expect(url).toContain('Austin');
       return jsonResponse({
         results: [
-          { name: 'Austin', admin1: 'Texas', country: 'United States', timezone: 'America/Chicago' },
+          {
+            name: 'Austin',
+            admin1: 'Texas',
+            country: 'United States',
+            timezone: 'America/Chicago',
+          },
         ],
       });
     }) as PluginContext['fetch'];

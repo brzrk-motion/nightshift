@@ -14,17 +14,50 @@ const API = 'https://api.spotify.com/v1';
 export class SpotifyApiError extends Error {
   readonly status: number;
   readonly body: string;
+  readonly reason: string | null;
 
-  constructor(status: number, body: string, message?: string) {
-    super(message ?? `Spotify API error (${status})`);
+  constructor(status: number, body: string, message?: string, reason?: string | null) {
+    super(message ?? parseSpotifyErrorMessage(status, body).message);
     this.name = 'SpotifyApiError';
     this.status = status;
     this.body = body;
+    this.reason = reason ?? parseSpotifyErrorMessage(status, body).reason;
   }
 
   get premiumRequired(): boolean {
     return this.status === 403;
   }
+
+  get noActiveDevice(): boolean {
+    return this.status === 404 && this.reason === 'NO_ACTIVE_DEVICE';
+  }
+}
+
+/** Pull Spotify's `{ error: { message, reason } }` out of a response body. */
+export function parseSpotifyErrorMessage(
+  status: number,
+  body: string,
+): { message: string; reason: string | null } {
+  try {
+    const json = JSON.parse(body) as {
+      error?: { message?: string; reason?: string };
+    };
+    const message = json.error?.message?.trim();
+    const reason = json.error?.reason?.trim() || null;
+    if (message) {
+      return {
+        message: reason ? `${message} (${reason})` : message,
+        reason,
+      };
+    }
+  } catch {
+    // not JSON — fall through
+  }
+  const trimmed = body.trim();
+  return {
+    message: trimmed || `Spotify API error (${status})`,
+    reason: null,
+  };
 }
 
 async function api(
@@ -47,7 +80,8 @@ async function api(
 
 async function readError(response: Response): Promise<never> {
   const body = await response.text();
-  throw new SpotifyApiError(response.status, body);
+  const parsed = parseSpotifyErrorMessage(response.status, body);
+  throw new SpotifyApiError(response.status, body, parsed.message, parsed.reason);
 }
 
 /** Empty 204/200 responses are success for player control endpoints. */
@@ -55,6 +89,56 @@ async function ensureOk(response: Response): Promise<void> {
   if (response.status === 204 || response.ok) return;
   await readError(response);
 }
+
+export interface SpotifyDevice {
+  id: string;
+  name: string;
+  isActive: boolean;
+}
+
+/** Prefer the active Connect device; otherwise the first available one. */
+export function pickDeviceId(devices: readonly SpotifyDevice[]): string | undefined {
+  return devices.find((device) => device.isActive)?.id ?? devices[0]?.id;
+}
+
+export async function fetchDevices(
+  fetchFn: SpotifyFetch,
+  accessToken: string,
+): Promise<SpotifyDevice[]> {
+  const response = await api(fetchFn, accessToken, '/me/player/devices');
+  if (!response.ok) await readError(response);
+  const body = (await response.json()) as {
+    devices?: Array<{ id?: string | null; name?: string; is_active?: boolean }>;
+  };
+  const devices: SpotifyDevice[] = [];
+  for (const entry of body.devices ?? []) {
+    if (!entry.id) continue;
+    devices.push({
+      id: entry.id,
+      name: entry.name ?? entry.id,
+      isActive: Boolean(entry.is_active),
+    });
+  }
+  return devices;
+}
+
+async function resolveDeviceId(
+  fetchFn: SpotifyFetch,
+  accessToken: string,
+  preferred?: string,
+): Promise<string | undefined> {
+  if (preferred) return preferred;
+  return pickDeviceId(await fetchDevices(fetchFn, accessToken));
+}
+
+function withDeviceQuery(path: string, deviceId: string | undefined): string {
+  if (!deviceId) return path;
+  const join = path.includes('?') ? '&' : '?';
+  return `${path}${join}device_id=${encodeURIComponent(deviceId)}`;
+}
+
+const NO_DEVICE_HINT =
+  'No Spotify device found. Open the Spotify app on a phone or computer, then try again.';
 
 export interface SpotifyProfile {
   id: string;
@@ -102,7 +186,10 @@ export function mapCurrentlyPlaying(body: CurrentlyPlayingJson | null): SpotifyP
   const artists =
     kind === 'episode'
       ? (item.show?.name ?? null)
-      : (item.artists?.map((a) => a.name).filter(Boolean).join(', ') ?? null);
+      : (item.artists
+          ?.map((a) => a.name)
+          .filter(Boolean)
+          .join(', ') ?? null);
 
   return {
     isPlaying: Boolean(body.is_playing),
@@ -118,11 +205,18 @@ export function mapCurrentlyPlaying(body: CurrentlyPlayingJson | null): SpotifyP
   };
 }
 
+/**
+ * `additional_types` is not cosmetic: without it the endpoint only admits to
+ * tracks, so a playing podcast episode comes back as nothing playing at all.
+ * @see https://developer.spotify.com/documentation/web-api/reference/get-the-users-currently-playing-track
+ */
+const CURRENTLY_PLAYING_PATH = '/me/player/currently-playing?additional_types=track,episode';
+
 export async function fetchCurrentlyPlaying(
   fetchFn: SpotifyFetch,
   accessToken: string,
 ): Promise<SpotifyPlayerState> {
-  const response = await api(fetchFn, accessToken, '/me/player/currently-playing');
+  const response = await api(fetchFn, accessToken, CURRENTLY_PLAYING_PATH);
   if (response.status === 204) {
     return { ...initialPlayerState(), updatedAt: new Date().toISOString() };
   }
@@ -131,35 +225,150 @@ export async function fetchCurrentlyPlaying(
   return mapCurrentlyPlaying(body);
 }
 
+export interface PlayOptions {
+  /** Album / artist / playlist URI (not shows — use `uris` or `playContext`). */
+  contextUri?: string;
+  /** Explicit track/episode URIs to play. */
+  uris?: string[];
+  deviceId?: string;
+}
+
 export async function play(
   fetchFn: SpotifyFetch,
   accessToken: string,
-  options?: { contextUri?: string },
+  options: PlayOptions = {},
 ): Promise<void> {
-  const body =
-    options?.contextUri === undefined
-      ? undefined
-      : JSON.stringify({ context_uri: options.contextUri });
-  const response = await api(fetchFn, accessToken, '/me/player/play', {
+  const deviceId = await resolveDeviceId(fetchFn, accessToken, options.deviceId);
+  if (!deviceId) {
+    throw new SpotifyApiError(404, '', NO_DEVICE_HINT, 'NO_ACTIVE_DEVICE');
+  }
+
+  const payload: Record<string, unknown> = {};
+  if (options.contextUri !== undefined) payload.context_uri = options.contextUri;
+  if (options.uris !== undefined) payload.uris = options.uris;
+  const body = Object.keys(payload).length === 0 ? undefined : JSON.stringify(payload);
+
+  const response = await api(fetchFn, accessToken, withDeviceQuery('/me/player/play', deviceId), {
     method: 'PUT',
     ...(body === undefined ? {} : { body }),
   });
-  await ensureOk(response);
+  try {
+    await ensureOk(response);
+  } catch (error) {
+    if (error instanceof SpotifyApiError && error.noActiveDevice) {
+      throw new SpotifyApiError(404, error.body, NO_DEVICE_HINT, 'NO_ACTIVE_DEVICE');
+    }
+    throw error;
+  }
+}
+
+/**
+ * Start playback from a library URI. Playlists/albums/artists use `context_uri`;
+ * shows are not valid contexts — we play their recent episode URIs instead.
+ * @see https://developer.spotify.com/documentation/web-api/reference/start-a-users-playback
+ */
+export async function playContext(
+  fetchFn: SpotifyFetch,
+  accessToken: string,
+  uri: string,
+): Promise<void> {
+  if (uri.startsWith('spotify:show:')) {
+    const showId = uri.slice('spotify:show:'.length);
+    const uris = await fetchShowEpisodeUris(fetchFn, accessToken, showId);
+    if (uris.length === 0) {
+      throw new SpotifyApiError(404, '', 'That podcast has no playable episodes.');
+    }
+    await play(fetchFn, accessToken, { uris });
+    return;
+  }
+  await play(fetchFn, accessToken, { contextUri: uri });
+}
+
+function episodeMeta(entry: { duration_ms?: number; release_date?: string }): string | null {
+  const parts: string[] = [];
+  if (typeof entry.duration_ms === 'number') {
+    parts.push(`${Math.max(1, Math.round(entry.duration_ms / 60_000))} min`);
+  }
+  if (entry.release_date) parts.push(entry.release_date);
+  return parts.length === 0 ? null : parts.join(' · ');
+}
+
+/** A show's most recent episodes, newest first — what the browse page lists. */
+export async function fetchShowEpisodes(
+  fetchFn: SpotifyFetch,
+  accessToken: string,
+  showId: string,
+  limit = 50,
+): Promise<SpotifyLibraryItem[]> {
+  const response = await api(
+    fetchFn,
+    accessToken,
+    `/shows/${encodeURIComponent(showId)}/episodes?limit=${limit}`,
+  );
+  if (!response.ok) await readError(response);
+  const body = (await response.json()) as Paging<{
+    id?: string;
+    name?: string;
+    uri?: string;
+    duration_ms?: number;
+    release_date?: string;
+  } | null>;
+
+  const items: SpotifyLibraryItem[] = [];
+  for (const entry of body.items ?? []) {
+    if (!entry?.id || !entry.uri || !entry.name) continue;
+    items.push({
+      id: entry.id,
+      name: entry.name,
+      uri: entry.uri,
+      kind: 'episode',
+      meta: episodeMeta(entry),
+    });
+  }
+  return items;
+}
+
+export async function fetchShowEpisodeUris(
+  fetchFn: SpotifyFetch,
+  accessToken: string,
+  showId: string,
+  limit = 20,
+): Promise<string[]> {
+  const episodes = await fetchShowEpisodes(fetchFn, accessToken, showId, limit);
+  return episodes.map((episode) => episode.uri);
+}
+
+async function playerControl(
+  fetchFn: SpotifyFetch,
+  accessToken: string,
+  path: string,
+  method: 'PUT' | 'POST',
+): Promise<void> {
+  const deviceId = await resolveDeviceId(fetchFn, accessToken);
+  if (!deviceId) {
+    throw new SpotifyApiError(404, '', NO_DEVICE_HINT, 'NO_ACTIVE_DEVICE');
+  }
+  const response = await api(fetchFn, accessToken, withDeviceQuery(path, deviceId), { method });
+  try {
+    await ensureOk(response);
+  } catch (error) {
+    if (error instanceof SpotifyApiError && error.noActiveDevice) {
+      throw new SpotifyApiError(404, error.body, NO_DEVICE_HINT, 'NO_ACTIVE_DEVICE');
+    }
+    throw error;
+  }
 }
 
 export async function pause(fetchFn: SpotifyFetch, accessToken: string): Promise<void> {
-  const response = await api(fetchFn, accessToken, '/me/player/pause', { method: 'PUT' });
-  await ensureOk(response);
+  await playerControl(fetchFn, accessToken, '/me/player/pause', 'PUT');
 }
 
 export async function skipNext(fetchFn: SpotifyFetch, accessToken: string): Promise<void> {
-  const response = await api(fetchFn, accessToken, '/me/player/next', { method: 'POST' });
-  await ensureOk(response);
+  await playerControl(fetchFn, accessToken, '/me/player/next', 'POST');
 }
 
 export async function skipPrevious(fetchFn: SpotifyFetch, accessToken: string): Promise<void> {
-  const response = await api(fetchFn, accessToken, '/me/player/previous', { method: 'POST' });
-  await ensureOk(response);
+  await playerControl(fetchFn, accessToken, '/me/player/previous', 'POST');
 }
 
 interface Paging<T> {
@@ -177,14 +386,16 @@ export async function fetchPlaylists(
   while (path) {
     const response = await api(fetchFn, accessToken, path);
     if (!response.ok) await readError(response);
+    // Spotify pads these arrays with nulls for anything unavailable in the
+    // user's market, so every entry is optional until proven otherwise.
     const body = (await response.json()) as Paging<{
       id?: string;
       name?: string;
       uri?: string;
       tracks?: { total?: number };
-    }>;
+    } | null>;
     for (const entry of body.items ?? []) {
-      if (!entry.id || !entry.uri || !entry.name) continue;
+      if (!entry?.id || !entry.uri || !entry.name) continue;
       items.push({
         id: entry.id,
         name: entry.name,
@@ -210,10 +421,10 @@ export async function fetchShows(
     const response = await api(fetchFn, accessToken, path);
     if (!response.ok) await readError(response);
     const body = (await response.json()) as Paging<{
-      show?: { id?: string; name?: string; uri?: string; publisher?: string };
-    }>;
+      show?: { id?: string; name?: string; uri?: string; publisher?: string } | null;
+    } | null>;
     for (const entry of body.items ?? []) {
-      const show = entry.show;
+      const show = entry?.show;
       if (!show?.id || !show.uri || !show.name) continue;
       items.push({
         id: show.id,

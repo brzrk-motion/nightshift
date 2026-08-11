@@ -24,6 +24,7 @@ function fakeContext() {
   const automations: AutomationSpec[] = [];
   const disposers: (() => void)[] = [];
   const storageData = new Map<string, Json>();
+  const notify = vi.fn();
 
   const entity = (id: string): Entity | undefined =>
     entities.has(id)
@@ -39,6 +40,7 @@ function fakeContext() {
       capabilities: [],
     },
     log: { error() {}, warn() {}, info() {}, debug() {} },
+    notify,
     entities: {
       get: <State extends Json = Json>(id: EntityId) => entity(id) as Entity<State> | undefined,
       has: (id) => entities.has(id),

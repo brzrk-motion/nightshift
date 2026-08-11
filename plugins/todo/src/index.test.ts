@@ -48,6 +48,7 @@ function fakeContext() {
   const widgets: PluginWidget[] = [];
   const automations: AutomationSpec[] = [];
   const disposers: (() => void)[] = [];
+  const notify = vi.fn();
 
   const entity = (id: string): Entity | undefined =>
     entities.has(id)
@@ -57,6 +58,7 @@ function fakeContext() {
   const context: PluginContext = {
     manifest: { id: 'todo', name: 'Todo', version: '0.1.0', apiVersion: 1, capabilities: [] },
     log: { error() {}, warn() {}, info() {}, debug() {} },
+    notify,
     entities: {
       get: <State extends Json = Json>(id: EntityId) => entity(id) as Entity<State> | undefined,
       has: (id) => entities.has(id),

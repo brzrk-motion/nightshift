@@ -120,8 +120,7 @@ export function upsertSlot(
       : {}),
   };
   const locations = { ...state.locations, [id]: next };
-  const primaryId =
-    state.primaryId && locations[state.primaryId] ? state.primaryId : id;
+  const primaryId = state.primaryId && locations[state.primaryId] ? state.primaryId : id;
   return { ...state, primaryId, locations };
 }
 
@@ -130,8 +129,7 @@ export function removeSlot(state: WeatherLocationsState, id: string): WeatherLoc
   const locations = { ...state.locations };
   delete locations[id];
   const ids = Object.keys(locations);
-  const primaryId =
-    state.primaryId === id ? (ids[0] ?? 'default') : state.primaryId;
+  const primaryId = state.primaryId === id ? (ids[0] ?? 'default') : state.primaryId;
   return { ...state, primaryId, locations };
 }
 

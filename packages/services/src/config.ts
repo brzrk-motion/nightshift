@@ -97,7 +97,10 @@ export function migrateConfig(config: NightshiftConfig): {
       migrated = true;
     }
     const weatherGrant = next.pluginPermissions['weather'];
-    if (weatherGrant !== 'all' && !(Array.isArray(weatherGrant) && weatherGrant.includes('network'))) {
+    if (
+      weatherGrant !== 'all' &&
+      !(Array.isArray(weatherGrant) && weatherGrant.includes('network'))
+    ) {
       const grants = Array.isArray(weatherGrant) ? weatherGrant : [];
       next = {
         ...next,
@@ -127,7 +130,10 @@ export function migrateConfig(config: NightshiftConfig): {
       migrated = true;
     }
     const spotifyGrant = next.pluginPermissions['spotify'];
-    if (spotifyGrant !== 'all' && !(Array.isArray(spotifyGrant) && spotifyGrant.includes('network'))) {
+    if (
+      spotifyGrant !== 'all' &&
+      !(Array.isArray(spotifyGrant) && spotifyGrant.includes('network'))
+    ) {
       const grants = Array.isArray(spotifyGrant) ? spotifyGrant : [];
       next = {
         ...next,

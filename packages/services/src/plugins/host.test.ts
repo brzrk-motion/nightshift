@@ -108,6 +108,52 @@ describe('createPluginHost', () => {
     expect(loadedEvent).toHaveBeenCalledOnce();
   });
 
+  it('passes a notification raised during setup on to whoever is listening', async () => {
+    const plugins = host(
+      demo({
+        capabilities: [],
+        setup: (context) => {
+          context.notify('Spotify would not answer.', { tone: 'warning', key: 'request' });
+        },
+      }),
+    );
+    const notified = vi.fn();
+    plugins.events.on('notification', notified);
+
+    await plugins.load(source);
+
+    expect(notified).toHaveBeenCalledWith({
+      pluginId: 'demo',
+      message: 'Spotify would not answer.',
+      tone: 'warning',
+      // Namespaced, so one plugin's "request" cannot replace another's.
+      key: 'demo:request',
+    });
+  });
+
+  it('defaults a notification to the info tone and trims the message', async () => {
+    // No capabilities declared: `notify` comes for free, like `log`.
+    const plugins = host(
+      demo({ capabilities: [], setup: (context) => context.notify('  Ready.  ') }),
+    );
+    const notified = vi.fn();
+    plugins.events.on('notification', notified);
+
+    await plugins.load(source);
+
+    expect(notified).toHaveBeenCalledWith({ pluginId: 'demo', message: 'Ready.', tone: 'info' });
+  });
+
+  it('ignores an empty notification', async () => {
+    const plugins = host(demo({ capabilities: [], setup: (context) => context.notify('   ') }));
+    const notified = vi.fn();
+    plugins.events.on('notification', notified);
+
+    await plugins.load(source);
+
+    expect(notified).not.toHaveBeenCalled();
+  });
+
   it('rejects a module that is not a plugin', async () => {
     await expect(host({ default: { nope: true } }).load(source)).rejects.toThrowError(
       /does not export a Nightshift plugin/,

@@ -1,5 +1,10 @@
 import { definePlugin, type Json, type PluginContext } from '@nightshift/sdk';
-import { CLOCK_ENTITY, hydrateClockSettings, initialClockSettings, type ClockSettings } from './entity.js';
+import {
+  CLOCK_ENTITY,
+  hydrateClockSettings,
+  initialClockSettings,
+  type ClockSettings,
+} from './entity.js';
 import { isClockDateFormat } from './format.js';
 import { detectSystemTimezone, geocodeTimezone } from './location.js';
 import { ClockWidget } from './widgets.js';
@@ -93,14 +98,18 @@ export default definePlugin({
         if (!query) return;
 
         write({ ...read(), locationQuery: query, locationStatus: 'loading', locationError: null });
+        // The lookup is reachable from the palette and from a vibe, not just
+        // from the widget's editor, so the failure is announced rather than
+        // left as a line only whoever has the editor open would ever see.
+        const failed = (message: string): void => {
+          write({ ...read(), locationStatus: 'error', locationError: message });
+          context.notify(`Clock: ${message}`, { tone: 'warning', key: 'location' });
+        };
+
         try {
           const place = await geocodeTimezone(context.fetch, query);
           if (!place) {
-            write({
-              ...read(),
-              locationStatus: 'error',
-              locationError: `No place found for "${query}".`,
-            });
+            failed(`No place found for "${query}".`);
             return;
           }
           write({
@@ -113,11 +122,7 @@ export default definePlugin({
             locationError: null,
           });
         } catch (error) {
-          write({
-            ...read(),
-            locationStatus: 'error',
-            locationError: error instanceof Error ? error.message : `${error}`,
-          });
+          failed(error instanceof Error ? error.message : `${error}`);
           context.log.warn('Clock location lookup failed', { error: `${error}` });
         }
       },

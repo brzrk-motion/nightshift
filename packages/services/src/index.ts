@@ -56,4 +56,5 @@ export {
   type PluginHost,
   type PluginHostEvents,
   type PluginHostOptions,
+  type PluginNotification,
 } from './plugins/host.js';

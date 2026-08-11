@@ -15,11 +15,7 @@ const TOKEN_URL = 'https://accounts.spotify.com/api/token';
 
 /** Base64url without padding (RFC 7636). */
 export function base64Url(buffer: Buffer): string {
-  return buffer
-    .toString('base64')
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/u, '');
+  return buffer.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/u, '');
 }
 
 export function generateCodeVerifier(): string {
@@ -379,8 +375,7 @@ export function createAuthWaiter(options: {
 
     server.listen(listenPort, '127.0.0.1', () => {
       const address = server?.address();
-      boundPort =
-        typeof address === 'object' && address !== null ? address.port : listenPort;
+      boundPort = typeof address === 'object' && address !== null ? address.port : listenPort;
     });
   }
 

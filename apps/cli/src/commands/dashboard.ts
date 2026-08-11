@@ -5,6 +5,7 @@ import { detectRuntime, startApp } from '@nightshift/ui';
 import { initConfigDirs, type CliContext } from '../context.js';
 import { createNightshiftRuntime } from '../runtime.js';
 import { createStyle, shouldUseColor } from '../lib/output.js';
+import { attachLogToasts } from '../lib/toastLog.js';
 
 export interface DashboardOptions {
   list?: boolean | undefined;
@@ -38,6 +39,7 @@ export async function runDashboard(
   await initConfigDirs(context);
   const style = createStyle(shouldUseColor(options.color));
   const runtime = await createNightshiftRuntime(context);
+  let detachLog: (() => void) | undefined;
 
   try {
     const available = runtime.dashboards.map((dashboard) => dashboard.name);
@@ -128,6 +130,10 @@ export async function runDashboard(
 
     context.log.info('Opening dashboard', { dashboard: target });
 
+    // From here the renderer owns the terminal: log lines go to the file, and
+    // the ones a user needs to see come back as toasts.
+    detachLog = attachLogToasts({ log: context.log, toasts: runtime.app.toasts });
+
     const app = await startApp({
       title: `nightshift · ${target}`,
       render: () =>
@@ -161,6 +167,7 @@ export async function runDashboard(
     await app.waitUntilExit();
     return 0;
   } finally {
+    detachLog?.();
     await runtime.dispose();
   }
 }

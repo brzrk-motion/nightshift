@@ -13,7 +13,7 @@ import {
   useTheme,
   type WidgetProps,
 } from '@nightshift/sdk';
-import { ART_WIDTH, heroDigits, weatherArt } from './art.js';
+import { heroDigits, weatherArt } from './art.js';
 import { weatherCodeInfo } from './codes.js';
 import {
   WEATHER_LOCATIONS_ENTITY,
@@ -24,6 +24,7 @@ import {
   type WeatherLocationsState,
   type WeatherUnits,
 } from './entity.js';
+import { COMPACT_TOOLBAR_HEIGHT, nowScale, type HeroFont, type NowScale } from './scale.js';
 import { formatHiLo, formatTemp, slotId, weekdayShort } from './state.js';
 
 function resolveSlot(
@@ -31,8 +32,7 @@ function resolveSlot(
   options: WidgetProps['options'],
 ): { id: string; location: WeatherLocation | undefined; bootstrapQuery: string } {
   const id = slotId(options['location']);
-  const bootstrapQuery =
-    typeof options['query'] === 'string' ? options['query'].trim() : '';
+  const bootstrapQuery = typeof options['query'] === 'string' ? options['query'].trim() : '';
   return {
     id,
     location: state?.locations[id],
@@ -118,7 +118,7 @@ function placeLabel(slot: WeatherLocation, id: string): string {
 function AsciiBlock({ lines, color }: { lines: readonly string[]; color: string }): ReactNode {
   // Explicit width + no wrap: trailing spaces alone do not reserve layout width
   // in OpenTUI text, so without this the right edge of the art gets clipped.
-  const width = Math.max(...lines.map((line) => [...line].length), ART_WIDTH);
+  const width = Math.max(...lines.map((line) => [...line].length));
   return (
     <box style={{ flexDirection: 'column', flexShrink: 0, width, minWidth: width }}>
       {lines.map((line, index) => (
@@ -130,34 +130,59 @@ function AsciiBlock({ lines, color }: { lines: readonly string[]; color: string 
   );
 }
 
-/** Block-font value + unit, matching the temperature hero treatment. */
+/** A value + unit drawn in one of the ascii fonts, or plain text at the smallest. */
 function HeroStat({
   digits,
   unit,
   color,
   label,
   detail,
+  font,
+  scale,
 }: {
   digits: string;
   unit: string;
   color: string;
   label: string;
   detail?: string;
+  font: HeroFont;
+  scale: NowScale;
 }): ReactNode {
   const theme = useTheme();
   return (
     <box style={{ flexDirection: 'column', gap: 0, flexShrink: 0 }}>
       <box style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 1, flexShrink: 0 }}>
-        <ascii-font text={digits} font="block" color={color} />
+        {font === 'text' ? (
+          <text fg={color} wrapMode="none">
+            <b>{digits}</b>
+          </text>
+        ) : (
+          <ascii-font text={digits} font={font} color={color} />
+        )}
         <text fg={color} wrapMode="none">
           <b>{unit}</b>
         </text>
       </box>
-      <text fg={theme.colors.text}>
-        <b>{label}</b>
-      </text>
-      {/* Always reserve the detail row so sibling heroes share the same height. */}
-      <text fg={theme.colors.muted}>{detail ?? '\u00A0'}</text>
+      {scale.showLabel ? (
+        <text fg={theme.colors.text} wrapMode="none">
+          <b>{label}</b>
+        </text>
+      ) : null}
+      {/* Always reserve the detail row so sibling heroes share the same height —
+          the temperature can be drawn in a bigger font than the two beside it,
+          and bottom-aligning them is what keeps the labels on one line. */}
+      {scale.showDetail ? <text fg={theme.colors.muted}>{detail ?? '\u00A0'}</text> : null}
+    </box>
+  );
+}
+
+/** A pressable label, one row tall rather than `Button`'s three — what a short
+ * widget needs so the rows go to the weather instead of to borders. */
+function Chip({ label, onPress }: { label: string; onPress: () => void }): ReactNode {
+  const theme = useTheme();
+  return (
+    <box onMouseDown={onPress} style={{ flexShrink: 0, height: 1 }}>
+      <text fg={theme.colors.accent}>{`[${label}]`}</text>
     </box>
   );
 }
@@ -167,26 +192,36 @@ function ActionBar({
   units,
   onEditLocation,
   showUnits = false,
+  compact = false,
 }: {
   id: string;
   units: WeatherUnits;
   onEditLocation: () => void;
   showUnits?: boolean;
+  compact?: boolean;
 }): ReactNode {
   const commands = useCommands();
+  const refresh = (): void => void commands.run('weather.refresh', { id });
+  const unitsLabel = units === 'metric' ? '°F' : '°C';
+  const toggleUnits = (): void =>
+    void commands.run('weather.set-units', {
+      units: units === 'metric' ? 'imperial' : 'metric',
+    });
+
+  if (compact) {
+    return (
+      <Toolbar>
+        <Chip label="Refresh" onPress={refresh} />
+        {showUnits ? <Chip label={unitsLabel} onPress={toggleUnits} /> : null}
+        <Chip label="Loc" onPress={onEditLocation} />
+      </Toolbar>
+    );
+  }
+
   return (
     <Toolbar>
-      <Button label="Refresh" onPress={() => void commands.run('weather.refresh', { id })} />
-      {showUnits ? (
-        <Button
-          label={units === 'metric' ? '°F' : '°C'}
-          onPress={() =>
-            void commands.run('weather.set-units', {
-              units: units === 'metric' ? 'imperial' : 'metric',
-            })
-          }
-        />
-      ) : null}
+      <Button label="Refresh" onPress={refresh} />
+      {showUnits ? <Button label={unitsLabel} onPress={toggleUnits} /> : null}
       <Button label="Location" onPress={onEditLocation} />
     </Toolbar>
   );
@@ -251,8 +286,8 @@ function visibleDayCountHorizontal(width: number): number {
   return Math.max(3, Math.min(7, Math.floor((width - 2) / 6)));
 }
 
-/** Current conditions — ASCII weather art + block temperature as the hero. */
-export function NowWidget({ options, width }: WidgetProps): ReactNode {
+/** Current conditions — ASCII weather art + ascii-font temperature as the hero. */
+export function NowWidget({ options, width, height }: WidgetProps): ReactNode {
   const theme = useTheme();
   const { id, state, location, bootstrapQuery } = useWeatherSlot(options);
   const [editing, setEditing] = useState(false);
@@ -276,7 +311,9 @@ export function NowWidget({ options, width }: WidgetProps): ReactNode {
 
   if (slot.status === 'error' && slot.temperature === null) {
     return (
-      <box style={{ flexDirection: 'column', flexGrow: 1, gap: 1, justifyContent: 'space-between' }}>
+      <box
+        style={{ flexDirection: 'column', flexGrow: 1, gap: 1, justifyContent: 'space-between' }}
+      >
         <ErrorState message={slot.error ?? 'Could not load weather'} hint="Try another location" />
         <Button label="Change location" onPress={() => setEditing(true)} />
       </box>
@@ -285,11 +322,10 @@ export function NowWidget({ options, width }: WidgetProps): ReactNode {
 
   const place = placeLabel(slot, id);
   const toneColor = code.tone === 'neutral' ? theme.colors.accent : theme.colors[code.tone];
-  const art = weatherArt(code.art);
   const tempUnit = `°${state.units === 'imperial' ? 'F' : 'C'}`;
   const windUnit = state.units === 'imperial' ? 'mph' : 'km/h';
-  const compact = width < 48;
-  const heroesInline = width >= 64;
+  const scale = nowScale(width, height);
+  const art = scale.art === 'none' ? null : weatherArt(code.art, scale.art);
 
   const tempStat = (
     <HeroStat
@@ -298,6 +334,8 @@ export function NowWidget({ options, width }: WidgetProps): ReactNode {
       color={toneColor}
       label={slot.condition || code.label}
       detail={`Feels ${formatTemp(slot.feelsLike, state.units)}`}
+      font={scale.font}
+      scale={scale}
     />
   );
   const humidityStat = (
@@ -306,6 +344,8 @@ export function NowWidget({ options, width }: WidgetProps): ReactNode {
       unit="%"
       color={toneColor}
       label="Humidity"
+      font={scale.secondaryFont}
+      scale={scale}
     />
   );
   const windStat = (
@@ -314,21 +354,46 @@ export function NowWidget({ options, width }: WidgetProps): ReactNode {
       unit={windUnit}
       color={toneColor}
       label="Wind"
+      font={scale.secondaryFont}
+      scale={scale}
     />
   );
+
+  // The two rows `HERO_GAP_ROWS` accounts for: header-to-hero and hero-to-
+  // toolbar. `nowScale` hands them to the hero when that is what a bigger
+  // font costs, so the gaps here have to follow what it decided.
+  const gap = scale.tightGaps ? 0 : 1;
 
   return (
     <box
       style={{
         flexDirection: 'column',
         flexGrow: 1,
-        gap: 1,
+        gap,
         justifyContent: 'space-between',
+        overflow: 'hidden',
       }}
     >
-      <box style={{ flexDirection: 'column', gap: 1, flexGrow: 1 }}>
-        <box style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-          <text fg={theme.colors.muted}>{place}</text>
+      {/* `overflow: 'hidden'` keeps a squeezed hero inside its own region
+          rather than drawing over the toolbar below or past the panel border —
+          OpenTUI boxes don't clip by default. `nowScale` should already have
+          picked something that fits; this is the backstop when it hasn't. */}
+      <box style={{ flexDirection: 'column', gap, flexGrow: 1, overflow: 'hidden' }}>
+        {/* Pinned: in a widget too short for both, the place and status keep
+            their row and the hero is what gets clipped, not the other way
+            around. */}
+        <box
+          style={{
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexShrink: 0,
+            height: 1,
+          }}
+        >
+          <text fg={theme.colors.muted} wrapMode="none">
+            {place}
+          </text>
           <StatusBadge
             label={slot.status === 'loading' ? 'updating' : 'live'}
             tone={slot.status === 'error' ? 'warning' : 'success'}
@@ -338,19 +403,28 @@ export function NowWidget({ options, width }: WidgetProps): ReactNode {
 
         <box
           style={{
-            flexDirection: compact ? 'column' : 'row',
-            gap: compact ? 1 : 3,
-            alignItems: compact ? 'flex-start' : 'center',
+            flexDirection: 'row',
+            gap: scale.art === 'large' ? 3 : 1,
+            // The bare glyph sits on the values' own line rather than floating
+            // above them; drawn art is tall enough to centre against them.
+            alignItems: scale.art === 'none' ? 'flex-end' : 'center',
             flexGrow: 1,
             justifyContent: 'center',
           }}
         >
-          <AsciiBlock lines={art} color={toneColor} />
-          {heroesInline ? (
+          {art ? (
+            <AsciiBlock lines={art} color={toneColor} />
+          ) : scale.showSecondary ? (
+            // Too small to draw at all — the condition still gets a glyph.
+            <Icon name={code.icon} color={toneColor} />
+          ) : null}
+          {!scale.showSecondary ? (
+            <box style={{ flexGrow: 1 }}>{tempStat}</box>
+          ) : scale.heroesInline ? (
             <box
               style={{
                 flexDirection: 'row',
-                alignItems: 'flex-start',
+                alignItems: 'flex-end',
                 flexGrow: 1,
                 justifyContent: 'space-between',
               }}
@@ -365,7 +439,7 @@ export function NowWidget({ options, width }: WidgetProps): ReactNode {
               <box
                 style={{
                   flexDirection: 'row',
-                  alignItems: 'flex-start',
+                  alignItems: 'flex-end',
                   flexGrow: 1,
                   justifyContent: 'space-between',
                 }}
@@ -378,7 +452,13 @@ export function NowWidget({ options, width }: WidgetProps): ReactNode {
         </box>
       </box>
 
-      <ActionBar id={id} units={state.units} showUnits onEditLocation={() => setEditing(true)} />
+      <ActionBar
+        id={id}
+        units={state.units}
+        showUnits
+        compact={scale.compactToolbar}
+        onEditLocation={() => setEditing(true)}
+      />
     </box>
   );
 }
@@ -407,7 +487,9 @@ export function ForecastWidget({ options, width, height }: WidgetProps): ReactNo
 
   if (slot.status === 'error' && slot.days.length === 0) {
     return (
-      <box style={{ flexDirection: 'column', flexGrow: 1, gap: 1, justifyContent: 'space-between' }}>
+      <box
+        style={{ flexDirection: 'column', flexGrow: 1, gap: 1, justifyContent: 'space-between' }}
+      >
         <ErrorState message={slot.error ?? 'Could not load forecast'} />
         <Button label="Change location" onPress={() => setEditing(true)} />
       </box>
@@ -436,7 +518,9 @@ export function ForecastWidget({ options, width, height }: WidgetProps): ReactNo
       }}
     >
       <box style={{ flexDirection: 'column', gap: 1, flexGrow: 1 }}>
-        <box style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+        <box
+          style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}
+        >
           <text fg={theme.colors.text}>
             <b>{place}</b>
           </text>
@@ -478,7 +562,12 @@ export function ForecastWidget({ options, width, height }: WidgetProps): ReactNo
         ) : null}
       </box>
 
-      <ActionBar id={id} units={state.units} onEditLocation={() => setEditing(true)} />
+      <ActionBar
+        id={id}
+        units={state.units}
+        compact={height < COMPACT_TOOLBAR_HEIGHT}
+        onEditLocation={() => setEditing(true)}
+      />
     </box>
   );
 }

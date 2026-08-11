@@ -30,7 +30,9 @@ const GEOCODE_URL = 'https://geocoding-api.open-meteo.com/v1/search';
 const FORECAST_URL = 'https://api.open-meteo.com/v1/forecast';
 
 /** Parse `"lat,lon"` when the user pastes coordinates instead of a place name. */
-export function parseCoordinates(query: string): { latitude: number; longitude: number } | undefined {
+export function parseCoordinates(
+  query: string,
+): { latitude: number; longitude: number } | undefined {
   const match = query.trim().match(/^(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)$/);
   if (!match) return undefined;
   const latitude = Number(match[1]);

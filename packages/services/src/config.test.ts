@@ -144,7 +144,11 @@ describe('migrateConfig', () => {
       defaultVibe: null,
       theme: 'midnight',
       logLevel: 'info',
-      plugins: ['@nightshift/plugin-focus', '@nightshift/plugin-todo', '@nightshift/plugin-weather'],
+      plugins: [
+        '@nightshift/plugin-focus',
+        '@nightshift/plugin-todo',
+        '@nightshift/plugin-weather',
+      ],
       pluginPermissions: { weather: ['network'] },
       onboarded: true,
     });

@@ -66,6 +66,43 @@ describe('createToastStore', () => {
     expect(store.list().map((toast) => toast.message)).toEqual(['two', 'three']);
   });
 
+  it('replaces a toast that shares a key instead of stacking a copy', () => {
+    const { store } = manualStore();
+    store.push('Spotify request failed', { key: 'spotify.request', tone: 'warning' });
+    const second = store.push('Spotify request failed again', {
+      key: 'spotify.request',
+      tone: 'danger',
+    });
+
+    expect(store.list()).toHaveLength(1);
+    expect(store.list()[0]).toMatchObject({
+      id: second,
+      message: 'Spotify request failed again',
+      tone: 'danger',
+    });
+  });
+
+  it('expires a replaced toast on its own timer, not the one it replaced', () => {
+    const { store, fireAll } = manualStore();
+    const first = store.push('one', { key: 'shared' });
+    store.push('two', { key: 'shared' });
+
+    // The first toast's timer is gone with it, so firing what is left expires
+    // only the replacement.
+    fireAll();
+
+    expect(store.list()).toEqual([]);
+    expect(first).not.toBe(store.list()[0]?.id);
+  });
+
+  it('keeps toasts with different keys apart', () => {
+    const { store } = manualStore();
+    store.push('one', { key: 'a' });
+    store.push('two', { key: 'b' });
+
+    expect(store.list().map((toast) => toast.message)).toEqual(['one', 'two']);
+  });
+
   it('ignores dismissing something that is already gone', () => {
     const { store } = manualStore();
     const listener = vi.fn();

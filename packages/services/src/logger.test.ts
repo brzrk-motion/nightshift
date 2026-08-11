@@ -80,4 +80,63 @@ describe('createLogger', () => {
   it('closes cleanly even without a file sink', async () => {
     await expect(createNullLogger().close()).resolves.toBeUndefined();
   });
+
+  it('stops writing to the terminal once the stream is detached', async () => {
+    const file = join(dir, 'logs', 'nightshift.log');
+    const { stream, lines } = captureStream();
+    const log = createLogger({ level: 'info', stream, color: false, file });
+
+    log.warn('on screen');
+    log.setStream(null);
+    log.warn('file only');
+    await log.close();
+
+    expect(lines()).toHaveLength(1);
+    expect(lines()[0]).toContain('on screen');
+    // Detaching the terminal must not cost the record — the log file is where
+    // the detail lives while a dashboard owns the screen.
+    expect(await readFile(file, 'utf8')).toContain('file only');
+  });
+
+  it('reattaches a stream after detaching', () => {
+    const { stream, lines } = captureStream();
+    const log = createLogger({ level: 'info', stream: null, color: false });
+    log.warn('dropped');
+    log.setStream(stream);
+    log.warn('written');
+    expect(lines()).toHaveLength(1);
+    expect(lines()[0]).toContain('written');
+  });
+
+  it('reports records to subscribers, including from child loggers', () => {
+    const log = createLogger({ level: 'info', stream: null, scope: 'cli' });
+    const seen: string[] = [];
+    const off = log.onRecord((record) => seen.push(`${record.level}:${record.scope}`));
+
+    log.warn('root');
+    log.child('plugins').error('child');
+    off();
+    log.warn('after unsubscribe');
+
+    expect(seen).toEqual(['warn:cli', 'error:cli:plugins']);
+  });
+
+  it('does not report records below the configured level', () => {
+    const log = createLogger({ level: 'warn', stream: null });
+    const seen: string[] = [];
+    log.onRecord((record) => seen.push(record.message));
+    log.info('hidden');
+    log.warn('shown');
+    expect(seen).toEqual(['shown']);
+  });
+
+  it('keeps logging when a subscriber throws', () => {
+    const { stream, lines } = captureStream();
+    const log = createLogger({ level: 'info', stream, color: false });
+    log.onRecord(() => {
+      throw new Error('listener exploded');
+    });
+    expect(() => log.warn('still written')).not.toThrow();
+    expect(lines()).toHaveLength(1);
+  });
 });

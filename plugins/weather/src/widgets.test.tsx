@@ -85,27 +85,30 @@ function readyState(): WeatherLocationsState {
   });
 }
 
+function nowRuntime(): ReturnType<typeof createAppRuntime> {
+  const entities = createEntityStore();
+  entities.register(WEATHER_LOCATIONS_ENTITY, readyState());
+  const runtime = createAppRuntime({ entities });
+  for (const id of [
+    'weather.refresh',
+    'weather.set-units',
+    'weather.configure-location',
+    'weather.ensure-location',
+  ]) {
+    runtime.commands.register({ id, title: id, run: () => {} });
+  }
+  return runtime;
+}
+
 describe.skipIf(!renderable)('NowWidget', () => {
   it('draws the hero temperature, place, metrics and controls', async () => {
-    const entities = createEntityStore();
-    entities.register(WEATHER_LOCATIONS_ENTITY, readyState());
-    const runtime = createAppRuntime({ entities });
-    for (const id of [
-      'weather.refresh',
-      'weather.set-units',
-      'weather.configure-location',
-      'weather.ensure-location',
-    ]) {
-      runtime.commands.register({ id, title: id, run: () => {} });
-    }
-
     const setup = await testRender(
       <ThemeProvider theme={MIDNIGHT_THEME}>
-        <RuntimeProvider runtime={runtime}>
-          <NowWidget options={{ location: 'home' }} width={48} height={18} />
+        <RuntimeProvider runtime={nowRuntime()}>
+          <NowWidget options={{ location: 'home' }} width={72} height={22} />
         </RuntimeProvider>
       </ThemeProvider>,
-      { width: 52, height: 20 },
+      { width: 76, height: 24 },
     );
 
     try {
@@ -118,9 +121,86 @@ describe.skipIf(!renderable)('NowWidget', () => {
       expect(frame).not.toContain('Sun');
       expect(frame).toContain('Refresh');
       expect(frame).toContain('live');
-      expect(frame).toContain('\\|/');
+      expect(frame).toContain('--( )--');
       expect(frame).toMatch(/22|°C/);
       expect(frame).toMatch(/%/);
+    } finally {
+      setup.renderer.destroy();
+    }
+  });
+});
+
+describe.skipIf(!renderable)('NowWidget at small sizes', () => {
+  it('keeps the big temperature and steps the stats down to plain text', async () => {
+    const setup = await testRender(
+      <ThemeProvider theme={MIDNIGHT_THEME}>
+        <RuntimeProvider runtime={nowRuntime()}>
+          <NowWidget options={{ location: 'home' }} width={48} height={16} />
+        </RuntimeProvider>
+      </ThemeProvider>,
+      { width: 52, height: 18 },
+    );
+
+    try {
+      await setup.renderOnce();
+      const frame = setup.captureCharFrame();
+      expect(frame).toContain('-( o )-');
+      expect(frame).not.toContain('--( )--');
+      // Humidity and wind read as themselves rather than as ascii glyphs.
+      expect(frame).toContain('40 %');
+      expect(frame).toContain('10 km/h');
+      expect(frame).toContain('█');
+    } finally {
+      setup.renderer.destroy();
+    }
+  });
+
+  it('steps the temperature to the tiny font and trades the buttons for chips', async () => {
+    const setup = await testRender(
+      <ThemeProvider theme={MIDNIGHT_THEME}>
+        <RuntimeProvider runtime={nowRuntime()}>
+          <NowWidget options={{ location: 'home' }} width={30} height={11} />
+        </RuntimeProvider>
+      </ThemeProvider>,
+      { width: 34, height: 13 },
+    );
+
+    try {
+      await setup.renderOnce();
+      const frame = setup.captureCharFrame();
+      expect(frame).not.toContain('--( )--');
+      expect(frame).toContain('-( o )-');
+      // 22 in the two-row `tiny` font — twice the height of plain text.
+      expect(frame).toContain('▀█ ▀█');
+      expect(frame).toContain('°C');
+      expect(frame).toContain('10 km/h');
+      expect(frame).toContain('[Refresh]');
+      expect(frame).toContain('[Loc]');
+      // The three-row bordered buttons are what freed the hero's rows.
+      expect(frame).not.toContain('╭─────────╮');
+    } finally {
+      setup.renderer.destroy();
+    }
+  });
+
+  it('keeps the temperature drawn rather than typed at its smallest', async () => {
+    const setup = await testRender(
+      <ThemeProvider theme={MIDNIGHT_THEME}>
+        <RuntimeProvider runtime={nowRuntime()}>
+          <NowWidget options={{ location: 'home' }} width={24} height={9} />
+        </RuntimeProvider>
+      </ThemeProvider>,
+      { width: 28, height: 11 },
+    );
+
+    try {
+      await setup.renderOnce();
+      const frame = setup.captureCharFrame();
+      // Nine rows: humidity and wind go, but the number the widget exists for
+      // still gets both of its rows.
+      expect(frame).toContain('▀█ ▀█');
+      expect(frame).toContain('Clear');
+      expect(frame).not.toContain('km/h');
     } finally {
       setup.renderer.destroy();
     }

@@ -59,6 +59,14 @@ export async function createNightshiftRuntime(
   const warnings: string[] = [];
   const entities = createEntityStore();
 
+  // Built before the plugins so a notification raised inside `setup` has a
+  // toast stack to land in — the shell renders it as soon as it is up.
+  const app = createAppRuntime({
+    entities,
+    theme: context.config.theme,
+    ...(options.onQuit === undefined ? {} : { onQuit: options.onQuit }),
+  });
+
   const plugins = createPluginHost({
     entities,
     dataDir: context.paths.dataDir,
@@ -67,6 +75,17 @@ export async function createNightshiftRuntime(
     // A plugin installed into the config directory wins over one that ships
     // with Nightshift, so a user can replace a bundled plugin without a fork.
     resolveFrom: [join(context.paths.configDir, 'package.json'), import.meta.url],
+  });
+
+  // A plugin's own voice: `context.notify` reaches the user through the same
+  // toast stack the shell, vibes and automations use, so a plugin never has to
+  // draw its own warning line inside a widget to be heard.
+  plugins.events.on('notification', (notification) => {
+    app.toasts.push(notification.message, {
+      tone: notification.tone,
+      ...(notification.timeout === undefined ? {} : { timeout: notification.timeout }),
+      ...(notification.key === undefined ? {} : { key: notification.key }),
+    });
   });
 
   const sources = await discoverPlugins({
@@ -92,12 +111,6 @@ export async function createNightshiftRuntime(
   // A user dashboard replaces the built-in of the same name rather than
   // appearing alongside it.
   const dashboards = mergeDashboards(foundDashboards.dashboards, BUILT_IN_DASHBOARDS);
-
-  const app = createAppRuntime({
-    entities,
-    theme: context.config.theme,
-    ...(options.onQuit === undefined ? {} : { onQuit: options.onQuit }),
-  });
 
   // Plugin commands become app commands, so a keybinding, the palette and a
   // vibe all reach them the same way. Tagging each with `source` is what lets

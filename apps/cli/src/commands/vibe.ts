@@ -5,6 +5,7 @@ import { detectRuntime, startApp, type CommandRegistry } from '@nightshift/ui';
 import { initConfigDirs, type CliContext } from '../context.js';
 import { createNightshiftRuntime } from '../runtime.js';
 import { createStyle, shouldUseColor } from '../lib/output.js';
+import { attachLogToasts } from '../lib/toastLog.js';
 
 /**
  * `DashboardApp` registers its `dashboard.open.<name>` commands from a React
@@ -56,6 +57,7 @@ export async function runVibe(
   await initConfigDirs(context);
   const style = createStyle(shouldUseColor(options.color));
   const runtime = await createNightshiftRuntime(context);
+  let detachLog: (() => void) | undefined;
 
   try {
     const available = runtime.vibes.list();
@@ -165,6 +167,10 @@ export async function runVibe(
 
     context.log.info('Activating vibe', { vibe: vibe.name, dashboard });
 
+    // As in `runDashboard`: the renderer owns the terminal from here, so log
+    // records reach the user as toasts rather than over the frame.
+    detachLog = attachLogToasts({ log: context.log, toasts: runtime.app.toasts });
+
     const app = await startApp({
       title: `nightshift · ${vibe.title ?? vibe.name}`,
       render: () =>
@@ -205,6 +211,7 @@ export async function runVibe(
     await app.waitUntilExit();
     return 0;
   } finally {
+    detachLog?.();
     await runtime.dispose();
   }
 }

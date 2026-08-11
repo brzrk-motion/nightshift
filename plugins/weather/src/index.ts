@@ -53,9 +53,7 @@ export default definePlugin({
 
   async setup(context: PluginContext) {
     const stored = await context.storage.get('weather');
-    const initial = isStoredWeather(stored)
-      ? fromStored(stored)
-      : initialLocationsState();
+    const initial = isStoredWeather(stored) ? fromStored(stored) : initialLocationsState();
 
     context.registerEntity(WEATHER_LOCATIONS_ENTITY, initial, {
       title: 'Weather locations',
@@ -82,10 +80,27 @@ export default definePlugin({
       });
     };
 
+    // A slot with no readings yet draws its own error, so saying it again in a
+    // toast would only be saying it twice. A slot that already has readings is
+    // the case worth announcing: the widget goes on showing numbers, and
+    // without this nothing tells you they have stopped being current.
+    const announced = new Map<string, string>();
+
+    const announceStale = (id: string, message: string): void => {
+      if (announced.get(id) === message) return;
+      announced.set(id, message);
+      const label = read().locations[id]?.label ?? id;
+      context.notify(`Weather (${label}) is out of date: ${message}`, {
+        tone: 'warning',
+        key: `refresh:${id}`,
+      });
+    };
+
     const refreshSlot = async (id: string): Promise<void> => {
       const before = read();
       const location = before.locations[id];
       if (!location || location.query.trim() === '') return;
+      const hadReadings = location.updatedAt !== null;
 
       write(markLoading(before, id));
       try {
@@ -96,9 +111,11 @@ export default definePlugin({
         if (!placeName || (latitude === 0 && longitude === 0)) {
           const place = await geocode(context.fetch, location.query);
           if (!place) {
-            const failed = applyError(read(), id, `No place found for "${location.query}".`);
+            const message = `No place found for "${location.query}".`;
+            const failed = applyError(read(), id, message);
             write(failed);
             persist(failed);
+            if (hadReadings) announceStale(id, message);
             return;
           }
           latitude = place.latitude;
@@ -107,24 +124,18 @@ export default definePlugin({
           write(applyPlace(read(), id, place));
         }
 
-        const forecast = await fetchForecast(
-          context.fetch,
-          latitude,
-          longitude,
-          read().units,
-        );
+        const forecast = await fetchForecast(context.fetch, latitude, longitude, read().units);
         const next = applyForecast(read(), id, forecast);
         write(next);
         persist(next);
+        announced.delete(id);
       } catch (error) {
-        const failed = applyError(
-          read(),
-          id,
-          error instanceof Error ? error.message : `${error}`,
-        );
+        const message = error instanceof Error ? error.message : `${error}`;
+        const failed = applyError(read(), id, message);
         write(failed);
         persist(failed);
         context.log.warn('Weather refresh failed', { id, error: `${error}` });
+        if (hadReadings) announceStale(id, message);
       }
     };
 

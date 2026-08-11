@@ -10,7 +10,11 @@ import type {
   PluginWidget,
 } from '@nightshift/sdk';
 import plugin from './index.js';
-import { WEATHER_LOCATIONS_ENTITY, WEATHER_NOW_ENTITY, type WeatherLocationsState } from './entity.js';
+import {
+  WEATHER_LOCATIONS_ENTITY,
+  WEATHER_NOW_ENTITY,
+  type WeatherLocationsState,
+} from './entity.js';
 
 function fakeContext(fetchImpl?: PluginContext['fetch']) {
   const entities = new Map<string, Json>();
@@ -19,6 +23,7 @@ function fakeContext(fetchImpl?: PluginContext['fetch']) {
   const automations: AutomationSpec[] = [];
   const disposers: (() => void)[] = [];
   const storageData = new Map<string, Json>();
+  const notify = vi.fn();
 
   const entity = (id: string): Entity | undefined =>
     entities.has(id)
@@ -34,6 +39,7 @@ function fakeContext(fetchImpl?: PluginContext['fetch']) {
       capabilities: [],
     },
     log: { error() {}, warn() {}, info() {}, debug() {} },
+    notify,
     entities: {
       get: <State extends Json = Json>(id: EntityId) => entity(id) as Entity<State> | undefined,
       has: (id) => entities.has(id),
@@ -77,7 +83,7 @@ function fakeContext(fetchImpl?: PluginContext['fetch']) {
       ),
   };
 
-  return { context, entities, commands, widgets, automations, storageData, disposers };
+  return { context, entities, commands, widgets, automations, storageData, disposers, notify };
 }
 
 function jsonResponse(body: unknown, status = 200): Response {
@@ -222,11 +228,62 @@ describe('setup', () => {
       throw new Error('should not forecast');
     });
 
-    const { context, entities, commands } = fakeContext(fetchImpl);
+    const { context, entities, commands, notify } = fakeContext(fetchImpl);
     await plugin.setup(context);
     await commands.get('weather.configure-location')!.run({ id: 'home', query: 'zzzzz' });
 
     const locations = entities.get(WEATHER_LOCATIONS_ENTITY) as WeatherLocationsState;
     expect(locations.locations['home']?.status).toBe('error');
+    // The widget has no readings to show, so it draws the error itself — a
+    // toast on top of it would be saying the same thing twice.
+    expect(notify).not.toHaveBeenCalled();
+  });
+
+  it('announces a refresh that fails once readings are already on screen', async () => {
+    let failing = false;
+    const fetchImpl = vi.fn(async (url: string) => {
+      if (failing) throw new Error('Open-Meteo is unreachable');
+      if (url.includes('geocoding-api')) {
+        return jsonResponse({ results: [{ name: 'Austin', latitude: 1, longitude: 2 }] });
+      }
+      return jsonResponse({
+        current: {
+          temperature_2m: 30,
+          apparent_temperature: 30,
+          relative_humidity_2m: 10,
+          weather_code: 0,
+          wind_speed_10m: 1,
+          wind_direction_10m: 1,
+        },
+        daily: {
+          time: [],
+          weather_code: [],
+          temperature_2m_max: [],
+          temperature_2m_min: [],
+          sunrise: [],
+          sunset: [],
+          precipitation_sum: [],
+        },
+        hourly: { time: [], temperature_2m: [], weather_code: [] },
+      });
+    });
+
+    const { context, entities, commands, notify } = fakeContext(fetchImpl);
+    await plugin.setup(context);
+    await commands.get('weather.configure-location')!.run({ id: 'home', query: '78701' });
+    expect(notify).not.toHaveBeenCalled();
+
+    failing = true;
+    await commands.get('weather.refresh')!.run({ id: 'home' });
+    await commands.get('weather.refresh')!.run({ id: 'home' });
+
+    expect(notify).toHaveBeenCalledOnce();
+    expect(notify).toHaveBeenCalledWith(expect.stringContaining('out of date'), {
+      tone: 'warning',
+      key: 'refresh:home',
+    });
+    // The last good reading stays on screen; only its currency is in doubt.
+    const locations = entities.get(WEATHER_LOCATIONS_ENTITY) as WeatherLocationsState;
+    expect(locations.locations['home']?.temperature).toBe(30);
   });
 });

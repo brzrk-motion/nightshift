@@ -26,7 +26,10 @@ export interface TimeFormatOptions {
 }
 
 /** `HH:mm[:ss]` in 24-hour, or `h:mm[:ss] AM/PM` in 12-hour, in `timezone`. */
-export function formatTime(date: Date, { timezone, hour12, showSeconds }: TimeFormatOptions): string {
+export function formatTime(
+  date: Date,
+  { timezone, hour12, showSeconds }: TimeFormatOptions,
+): string {
   return new Intl.DateTimeFormat('en-US', {
     ...(timezone ? { timeZone: timezone } : {}),
     hour12,
@@ -45,7 +48,12 @@ export function formatDate(date: Date, { timezone, format }: DateFormatOptions):
   const zone = timezone ? { timeZone: timezone } : {};
   switch (format) {
     case 'long':
-      return date.toLocaleDateString(undefined, { ...zone, weekday: 'long', day: 'numeric', month: 'long' });
+      return date.toLocaleDateString(undefined, {
+        ...zone,
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+      });
     case 'medium':
       return date.toLocaleDateString(undefined, {
         ...zone,
@@ -55,7 +63,12 @@ export function formatDate(date: Date, { timezone, format }: DateFormatOptions):
         year: 'numeric',
       });
     case 'short':
-      return date.toLocaleDateString(undefined, { ...zone, day: '2-digit', month: '2-digit', year: 'numeric' });
+      return date.toLocaleDateString(undefined, {
+        ...zone,
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+      });
     case 'iso':
       // en-CA is the one built-in locale that formats as YYYY-MM-DD.
       return new Intl.DateTimeFormat('en-CA', {

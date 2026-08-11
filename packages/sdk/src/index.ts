@@ -54,6 +54,26 @@ export interface PluginLogger {
   debug(message: string, fields?: Record<string, Json | undefined>): void;
 }
 
+/**
+ * How loudly a notification reads. Matches the toast tones the shell draws, so
+ * a plugin's `notify` and the shell's own notifications look the same.
+ */
+export type NotificationTone = 'info' | 'success' | 'warning' | 'danger';
+
+export interface NotifyOptions {
+  /** Defaults to `info`. */
+  tone?: NotificationTone;
+  /** Milliseconds on screen; `0` stays until dismissed. */
+  timeout?: number;
+  /**
+   * Identity for a notification that can recur — a failing poll, say. A
+   * notification whose key is already on screen replaces it instead of
+   * stacking, so a repeated failure stays one line rather than a wall of them.
+   * Keys are scoped to the plugin, so two plugins can reuse the same one.
+   */
+  key?: string;
+}
+
 /** A command a plugin contributes to the command palette. */
 export interface PluginCommand {
   id: string;
@@ -104,6 +124,17 @@ export interface PluginFetchInit {
 export interface PluginContext {
   manifest: Readonly<PluginManifest>;
   log: PluginLogger;
+  /**
+   * Tells the user something, wherever they are — the shell shows it as a
+   * toast. This is the right place for a transient failure a plugin cannot fix
+   * on its own (an API that would not answer, a device that is not there):
+   * `log` is for the log file, an entity is for state a widget draws, and this
+   * is for a message that has to reach whoever is at the keyboard now.
+   *
+   * Always available, like `log` — it neither leaves the process nor touches
+   * state, so it needs no capability.
+   */
+  notify(message: string, options?: NotifyOptions): void;
   /** Present when `entities:read` or `entities:write` was granted. */
   entities: EntityStore;
   /** Per-plugin key/value storage. Present when `storage` was granted. */

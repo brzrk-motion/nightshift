@@ -10,10 +10,12 @@ import {
 } from '@nightshift/ui';
 import {
   SPOTIFY_APP_DOCS_URL,
+  SPOTIFY_EPISODES_ENTITY,
   SPOTIFY_LIBRARY_ENTITY,
   SPOTIFY_PLAYER_ENTITY,
   SPOTIFY_REDIRECT_URI,
   SPOTIFY_SESSION_ENTITY,
+  initialEpisodesState,
   initialLibraryState,
   initialPlayerState,
   initialSessionState,
@@ -26,11 +28,13 @@ async function draw(
   session = initialSessionState(),
   player = initialPlayerState(),
   library = initialLibraryState(),
+  size: { width: number; height: number } = { width: 60, height: 20 },
 ): Promise<string> {
   const entities = createEntityStore();
   entities.register(SPOTIFY_SESSION_ENTITY, session);
   entities.register(SPOTIFY_PLAYER_ENTITY, player);
   entities.register(SPOTIFY_LIBRARY_ENTITY, library);
+  entities.register(SPOTIFY_EPISODES_ENTITY, initialEpisodesState());
   const runtime = createAppRuntime({ entities });
   for (const id of [
     'spotify.configure',
@@ -44,6 +48,8 @@ async function draw(
     'spotify.next',
     'spotify.previous',
     'spotify.play-context',
+    'spotify.show-episodes',
+    'spotify.play-episode',
   ]) {
     runtime.commands.register({ id, title: id, run: () => {} });
   }
@@ -51,10 +57,10 @@ async function draw(
   const setup = await testRender(
     <ThemeProvider theme={MIDNIGHT_THEME}>
       <RuntimeProvider runtime={runtime}>
-        <PlayerWidget options={{}} width={60} height={20} />
+        <PlayerWidget options={{}} width={size.width} height={size.height} />
       </RuntimeProvider>
     </ThemeProvider>,
-    { width: 72, height: 24 },
+    { width: size.width + 12, height: size.height + 4 },
   );
   try {
     await setup.renderOnce();
@@ -73,16 +79,13 @@ describe.skipIf(!renderable)('PlayerWidget', () => {
   });
 
   it('prompts to connect once credentials are saved', async () => {
-    const frame = await draw(
-      initialSessionState({ status: 'needs_auth', clientIdSet: true }),
-    );
+    const frame = await draw(initialSessionState({ status: 'needs_auth', clientIdSet: true }));
     expect(frame).toContain('Connect');
     expect(frame).toContain('Change credentials');
   });
 
-  it('shows the Spotify authorize URL and paste prompt while connecting', async () => {
-    const authorizeUrl =
-      'https://accounts.spotify.com/authorize?response_type=code&client_id=cid';
+  it('shows a copy-link button and paste prompt while connecting', async () => {
+    const authorizeUrl = 'https://accounts.spotify.com/authorize?response_type=code&client_id=cid';
     const frame = await draw(
       initialSessionState({
         status: 'connecting',
@@ -90,7 +93,8 @@ describe.skipIf(!renderable)('PlayerWidget', () => {
         authUrl: authorizeUrl,
       }),
     );
-    expect(frame).toContain('accounts.spotify.com');
+    expect(frame).toContain('Copy link');
+    expect(frame).not.toContain('accounts.spotify.com');
     expect(frame).toContain('Unable to connect');
     expect(frame).toContain('Submit');
   });
@@ -140,9 +144,30 @@ describe.skipIf(!renderable)('PlayerWidget', () => {
     );
     expect(frame).toContain('Night Drive');
     expect(frame).toContain('Neon');
-    expect(frame).toContain('Pause');
-    expect(frame).toContain('Focus');
-    expect(frame).toContain('Deep Work');
+    expect(frame).toContain('Laptop');
     expect(frame).toContain('Ada');
+    expect(frame).toContain('Browse');
+    // The library lives on the browse page now, not under the hero.
+    expect(frame).not.toContain('Focus');
+    expect(frame).not.toContain('Deep Work');
+  });
+
+  it('keeps the transport visible when the slot is small', async () => {
+    const frame = await draw(
+      initialSessionState({ status: 'ready', clientIdSet: true }),
+      {
+        ...initialPlayerState(),
+        isPlaying: false,
+        name: 'Night Drive',
+        artists: 'Neon',
+        progressMs: 0,
+        durationMs: 180_000,
+        updatedAt: '2026-08-10T12:00:00.000Z',
+      },
+      initialLibraryState(),
+      { width: 36, height: 7 },
+    );
+    expect(frame).toContain('Night Drive');
+    expect(frame).toContain('Browse');
   });
 });

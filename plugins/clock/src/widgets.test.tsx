@@ -35,12 +35,14 @@ function locate(frame: string, needle: string): { row: number; col: number } {
   throw new Error(`"${needle}" not found in frame:\n${frame}`);
 }
 
-function draw(options: {
-  settings?: ClockSettings;
-  onCommand?: (id: string, args?: unknown) => void;
-  height?: number;
-  widgetOptions?: Record<string, unknown>;
-} = {}) {
+function draw(
+  options: {
+    settings?: ClockSettings;
+    onCommand?: (id: string, args?: unknown) => void;
+    height?: number;
+    widgetOptions?: Record<string, unknown>;
+  } = {},
+) {
   const { settings = initialClockSettings(), onCommand, height = 10, widgetOptions = {} } = options;
   const entities = createEntityStore();
   entities.register(CLOCK_ENTITY, settings);
@@ -328,7 +330,9 @@ describe.skipIf(!renderable)('ClockWidget at a squeezed height', () => {
       const frame = setup.captureCharFrame();
 
       expect(frame).toMatch(/\d\d:\d\d:\d\d/);
-      expect(frame).not.toMatch(/January|February|March|April|May|June|July|August|September|October|November|December/);
+      expect(frame).not.toMatch(
+        /January|February|March|April|May|June|July|August|September|October|November|December/,
+      );
     } finally {
       setup.renderer.destroy();
     }

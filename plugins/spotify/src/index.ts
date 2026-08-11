@@ -5,21 +5,27 @@ import {
   fetchCurrentlyPlaying,
   fetchLibrary,
   fetchProfile,
+  fetchShowEpisodes,
   pause,
   play,
+  playContext,
   skipNext,
   skipPrevious,
 } from './client.js';
+import { PLAYER_SETTLE_MS, pollIntervalMs } from './format.js';
 import {
+  SPOTIFY_EPISODES_ENTITY,
   SPOTIFY_LIBRARY_ENTITY,
   SPOTIFY_PLAYER_ENTITY,
   SPOTIFY_SESSION_ENTITY,
   asJson,
+  initialEpisodesState,
   initialLibraryState,
   initialPlayerState,
   initialSessionState,
   isSpotifyStoredAuth,
   sessionFromStored,
+  type SpotifyEpisodesState,
   type SpotifyLibraryState,
   type SpotifyPlayerState,
   type SpotifySessionState,
@@ -28,7 +34,6 @@ import {
 import { PlayerWidget } from './widgets.js';
 
 const STORAGE_KEY = 'auth';
-const POLL_MS = 5_000;
 
 function stringArg(args: Record<string, Json> | undefined, key: string): string | undefined {
   const value = args?.[key];
@@ -66,6 +71,10 @@ export default definePlugin({
       title: 'Spotify library',
       owner: 'spotify',
     });
+    context.registerEntity(SPOTIFY_EPISODES_ENTITY, initialEpisodesState(), {
+      title: 'Spotify episodes',
+      owner: 'spotify',
+    });
 
     const readSession = (): SpotifySessionState =>
       context.entities.get<SpotifySessionState>(SPOTIFY_SESSION_ENTITY)?.state ??
@@ -75,12 +84,20 @@ export default definePlugin({
       context.entities.set(SPOTIFY_SESSION_ENTITY, next);
     };
 
+    const readPlayer = (): SpotifyPlayerState =>
+      context.entities.get<SpotifyPlayerState>(SPOTIFY_PLAYER_ENTITY)?.state ??
+      initialPlayerState();
+
     const writePlayer = (next: SpotifyPlayerState): void => {
       context.entities.set(SPOTIFY_PLAYER_ENTITY, next);
     };
 
     const writeLibrary = (next: SpotifyLibraryState): void => {
       context.entities.set(SPOTIFY_LIBRARY_ENTITY, next);
+    };
+
+    const writeEpisodes = (next: SpotifyEpisodesState): void => {
+      context.entities.set(SPOTIFY_EPISODES_ENTITY, next);
     };
 
     const persist = async (next: SpotifyStoredAuth | undefined): Promise<void> => {
@@ -91,6 +108,17 @@ export default definePlugin({
       } catch (error) {
         context.log.warn('Could not persist Spotify auth', { error: `${error}` });
       }
+    };
+
+    // A failing poll should say so once, not every few seconds: the message is
+    // remembered until something succeeds, so a Spotify that is down for an
+    // hour costs one toast rather than hundreds.
+    let announced: string | null = null;
+
+    const announce = (message: string, tone: 'warning' | 'danger'): void => {
+      if (announced === message) return;
+      announced = message;
+      context.notify(message, { tone, key: 'request' });
     };
 
     const withToken = async <T>(fn: (token: string) => Promise<T>): Promise<T | undefined> => {
@@ -111,17 +139,22 @@ export default definePlugin({
         return await fn(ensured.token);
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
+        const premiumRequired = error instanceof SpotifyApiError && error.premiumRequired;
         const authLost =
           /refresh failed|Not connected|401/i.test(message) ||
           (error instanceof SpotifyApiError && error.status === 401);
+        // Only what the widget has to draw a form for belongs on the entity. A
+        // request that failed is transient, so it goes to the notification
+        // stack rather than a warning line wedged into the player.
         writeSession({
           ...readSession(),
           status: authLost ? 'needs_auth' : 'ready',
-          error: message,
-          premiumRequired: error instanceof SpotifyApiError && error.premiumRequired,
+          error: authLost ? message : null,
+          premiumRequired,
           clientIdSet: true,
         });
         context.log.warn('Spotify request failed', { error: message });
+        if (!authLost) announce(message, premiumRequired ? 'warning' : 'danger');
         return undefined;
       }
     };
@@ -131,6 +164,7 @@ export default definePlugin({
         try {
           const player = await fetchCurrentlyPlaying(context.fetch, token);
           writePlayer(player);
+          announced = null;
           const session = readSession();
           if (session.status !== 'ready' || session.error) {
             writeSession({
@@ -146,13 +180,30 @@ export default definePlugin({
               ...readSession(),
               status: 'ready',
               premiumRequired: true,
-              error: 'Playback control needs Spotify Premium (and an open Spotify client).',
+              error: null,
             });
+            announce(
+              'Playback control needs Spotify Premium (and an open Spotify client).',
+              'warning',
+            );
             return;
           }
           throw error;
         }
       });
+    };
+
+    // Spotify's player state lags the command it has just accepted, so the read
+    // straight after a play often still reports the old state — or nothing at
+    // all — and the widget looks idle while music is coming out of the speakers.
+    // Read again once the service has caught up.
+    let settleTimer: ReturnType<typeof setTimeout> | undefined;
+
+    const refreshPlayerSettled = async (): Promise<void> => {
+      await refreshPlayer();
+      if (settleTimer) clearTimeout(settleTimer);
+      settleTimer = setTimeout(() => void refreshPlayer(), PLAYER_SETTLE_MS);
+      settleTimer.unref?.();
     };
 
     const refreshLibrary = async (): Promise<void> => {
@@ -300,7 +351,8 @@ export default definePlugin({
         if (!activeConnect.submitRedirect(value)) {
           writeSession({
             ...readSession(),
-            error: 'Could not find code= and state= in what you pasted. Copy the full URL from the browser address bar.',
+            error:
+              'Could not find code= and state= in what you pasted. Copy the full URL from the browser address bar.',
           });
         }
       },
@@ -352,7 +404,7 @@ export default definePlugin({
       run: async () => {
         await withToken(async (token) => {
           await play(context.fetch, token);
-          await refreshPlayer();
+          await refreshPlayerSettled();
         });
       },
     });
@@ -363,7 +415,7 @@ export default definePlugin({
       run: async () => {
         await withToken(async (token) => {
           await pause(context.fetch, token);
-          await refreshPlayer();
+          await refreshPlayerSettled();
         });
       },
     });
@@ -374,7 +426,7 @@ export default definePlugin({
       run: async () => {
         await withToken(async (token) => {
           await skipNext(context.fetch, token);
-          await refreshPlayer();
+          await refreshPlayerSettled();
         });
       },
     });
@@ -385,7 +437,7 @@ export default definePlugin({
       run: async () => {
         await withToken(async (token) => {
           await skipPrevious(context.fetch, token);
-          await refreshPlayer();
+          await refreshPlayerSettled();
         });
       },
     });
@@ -400,8 +452,69 @@ export default definePlugin({
           return;
         }
         await withToken(async (token) => {
-          await play(context.fetch, token, { contextUri: uri });
-          await refreshPlayer();
+          await playContext(context.fetch, token, uri);
+          await refreshPlayerSettled();
+        });
+      },
+    });
+
+    context.registerCommand({
+      id: 'spotify.show-episodes',
+      title: 'Load a Spotify podcast’s episodes',
+      run: async (args) => {
+        const uri = stringArg(args, 'uri');
+        if (!uri || !uri.startsWith('spotify:show:')) {
+          context.log.warn('spotify.show-episodes needs a show uri');
+          return;
+        }
+        const showId = uri.slice('spotify:show:'.length);
+        const showName = stringArg(args, 'name') ?? null;
+
+        writeEpisodes(
+          initialEpisodesState({ showId, showName, loading: true, items: [], error: null }),
+        );
+
+        await withToken(async (token) => {
+          try {
+            const items = await fetchShowEpisodes(context.fetch, token, showId);
+            writeEpisodes(
+              initialEpisodesState({
+                showId,
+                showName,
+                items,
+                loading: false,
+                updatedAt: new Date().toISOString(),
+              }),
+            );
+          } catch (error) {
+            // A podcast that will not load is this page's problem, not the
+            // session's — the rest of the widget keeps working.
+            writeEpisodes(
+              initialEpisodesState({
+                showId,
+                showName,
+                loading: false,
+                error: error instanceof Error ? error.message : String(error),
+                updatedAt: new Date().toISOString(),
+              }),
+            );
+          }
+        });
+      },
+    });
+
+    context.registerCommand({
+      id: 'spotify.play-episode',
+      title: 'Spotify play episode',
+      run: async (args) => {
+        const uri = stringArg(args, 'uri');
+        if (!uri) {
+          context.log.warn('spotify.play-episode needs a uri');
+          return;
+        }
+        await withToken(async (token) => {
+          await play(context.fetch, token, { uris: [uri] });
+          await refreshPlayerSettled();
         });
       },
     });
@@ -409,17 +522,38 @@ export default definePlugin({
     context.registerWidget({
       type: 'spotify.player',
       title: 'Spotify',
-      entities: [SPOTIFY_SESSION_ENTITY, SPOTIFY_PLAYER_ENTITY, SPOTIFY_LIBRARY_ENTITY],
+      entities: [
+        SPOTIFY_SESSION_ENTITY,
+        SPOTIFY_PLAYER_ENTITY,
+        SPOTIFY_LIBRARY_ENTITY,
+        SPOTIFY_EPISODES_ENTITY,
+      ],
       description:
         'Control Spotify Connect: now playing, transport, playlists and podcasts. Configure your app credentials in the widget.',
       render: PlayerWidget,
     });
 
-    const timer = setInterval(() => {
-      if (readSession().status === 'ready') void refreshPlayer();
-    }, POLL_MS);
-    timer.unref?.();
-    context.own(() => clearInterval(timer));
+    // Rescheduled after every poll rather than a fixed interval: a playing
+    // track is worth tracking closely, an idle one is not worth the requests.
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    const schedule = (): void => {
+      timer = setTimeout(() => {
+        void poll();
+      }, pollIntervalMs(readPlayer().isPlaying));
+      timer.unref?.();
+    };
+
+    const poll = async (): Promise<void> => {
+      if (readSession().status === 'ready') await refreshPlayer();
+      schedule();
+    };
+
+    schedule();
+    context.own(() => {
+      if (timer) clearTimeout(timer);
+      if (settleTimer) clearTimeout(settleTimer);
+    });
 
     if (stored?.refreshToken) void refreshAll();
 
@@ -431,11 +565,13 @@ export default definePlugin({
 
 export {
   SPOTIFY_APP_DOCS_URL,
+  SPOTIFY_EPISODES_ENTITY,
   SPOTIFY_LIBRARY_ENTITY,
   SPOTIFY_LOGIN_URI,
   SPOTIFY_PLAYER_ENTITY,
   SPOTIFY_REDIRECT_URI,
   SPOTIFY_SESSION_ENTITY,
+  initialEpisodesState,
   initialLibraryState,
   initialPlayerState,
   initialSessionState,

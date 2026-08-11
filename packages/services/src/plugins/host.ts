@@ -10,6 +10,7 @@ import type { AutomationSpec } from '@nightshift/automations';
 import {
   isCompatible,
   type Capability,
+  type NotificationTone,
   type Plugin,
   type PluginCommand,
   type PluginContext,
@@ -40,10 +41,25 @@ export interface PluginFailure {
   error: unknown;
 }
 
+/**
+ * A message a plugin raised through `context.notify`. The host does not know
+ * how it gets shown — whoever assembled the runtime listens for these and puts
+ * them wherever the user is looking, which for the CLI is the toast stack.
+ */
+export interface PluginNotification {
+  pluginId: string;
+  message: string;
+  tone: NotificationTone;
+  timeout?: number;
+  /** The plugin's own key, namespaced so two plugins cannot collide. */
+  key?: string;
+}
+
 export interface PluginHostEvents extends Record<string, unknown[]> {
   loaded: [plugin: LoadedPlugin];
   unloaded: [id: string];
   failed: [failure: PluginFailure];
+  notification: [notification: PluginNotification];
 }
 
 export interface PluginHost {
@@ -227,6 +243,19 @@ export function createPluginHost(options: PluginHostOptions): PluginHost {
       const context: PluginContext = {
         manifest,
         log: pluginLogger(scoped),
+        notify(message, notifyOptions) {
+          const trimmed = message.trim();
+          if (trimmed === '') return;
+          events.emit('notification', {
+            pluginId: manifest.id,
+            message: trimmed,
+            tone: notifyOptions?.tone ?? 'info',
+            ...(notifyOptions?.timeout === undefined ? {} : { timeout: notifyOptions.timeout }),
+            ...(notifyOptions?.key === undefined
+              ? {}
+              : { key: `${manifest.id}:${notifyOptions.key}` }),
+          });
+        },
         entities: guardEntities(options.entities, manifest.id, policy, owned),
         storage: createPluginStorage({ dataDir: options.dataDir, pluginId: manifest.id }),
         registerCommand(command) {

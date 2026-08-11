@@ -153,7 +153,11 @@ set every file — data and logs included — lives underneath it.
     "@nightshift/plugin-todo",
     "@nightshift/plugin-weather"
   ],
-  "pluginPermissions": { "weather": ["network"], "spotify": ["network"], "clock": ["network"] },
+  "pluginPermissions": {
+    "weather": ["network"],
+    "spotify": ["network"],
+    "clock": ["network"]
+  },
   "onboarded": false
 }
 ```
@@ -371,12 +375,17 @@ Defaults grant weather, Spotify and clock network access (the clock only
 calls out when you set a location — the machine's own timezone needs none):
 
 ```json
-{ "pluginPermissions": { "weather": ["network"], "spotify": ["network"], "clock": ["network"] } }
+{
+  "pluginPermissions": {
+    "weather": ["network"],
+    "spotify": ["network"],
+    "clock": ["network"]
+  }
+}
 ```
 
 Existing configs are migrated on load when the config version bumps (bundled
 plugins and their network grants are added automatically).
-
 
 ### Capabilities
 
@@ -394,7 +403,13 @@ process are not, and wait for a line in `config.json`:
 `network` unlocks `context.fetch` (HTTPS only). `shell` is still declare-only.
 
 ```json
-{ "pluginPermissions": { "weather": ["network"], "spotify": ["network"], "clock": ["network"] } }
+{
+  "pluginPermissions": {
+    "weather": ["network"],
+    "spotify": ["network"],
+    "clock": ["network"]
+  }
+}
 ```
 
 A plugin that asks for something it has not been granted is refused at load
