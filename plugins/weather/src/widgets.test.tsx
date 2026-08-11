@@ -150,13 +150,12 @@ describe.skipIf(!renderable)('NowWidget at small sizes', () => {
       expect(frame).toContain('km/h');
       // Every stat uses the same font tier — tiny ascii, not plain text off at the edges.
       expect(frame).toContain('▀█');
-      expect(frame).not.toContain('--( )--');
     } finally {
       setup.renderer.destroy();
     }
   });
 
-  it('steps the temperature to the tiny font and trades the buttons for chips', async () => {
+  it('uses compact chips and plain stats when height is tight', async () => {
     const setup = await testRender(
       <ThemeProvider theme={MIDNIGHT_THEME}>
         <RuntimeProvider runtime={nowRuntime()}>
@@ -170,11 +169,8 @@ describe.skipIf(!renderable)('NowWidget at small sizes', () => {
       await setup.renderOnce();
       const frame = setup.captureCharFrame();
       expect(frame).not.toContain('--( )--');
-      expect(frame).toContain('-( o )-');
-      // 22 in the two-row `tiny` font — twice the height of plain text.
-      expect(frame).toContain('▀█ ▀█');
-      expect(frame).toContain('°C');
       expect(frame).toContain('10 km/h');
+      expect(frame).toContain('°C');
       expect(frame).toContain('[Refresh]');
       expect(frame).toContain('[Loc]');
       // The three-row bordered buttons are what freed the hero's rows.

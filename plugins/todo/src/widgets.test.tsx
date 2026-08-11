@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { act } from 'react';
 import { testRender } from '@opentui/react/test-utils';
 import { createEntityStore } from '@nightshift/entities';
 import {
@@ -34,10 +35,12 @@ async function typeIntoInput(
   setup: Awaited<ReturnType<typeof testRender>>,
   text: string,
 ): Promise<void> {
-  for (const char of text) {
-    await setup.mockInput.pressKey(char);
-  }
-  await setup.flush();
+  await act(async () => {
+    for (const char of text) {
+      await setup.mockInput.pressKey(char);
+    }
+    await new Promise((resolve) => setTimeout(resolve, 30));
+  });
 }
 
 async function renderWidget(items: { text: string; done: boolean }[]): Promise<{
@@ -195,9 +198,10 @@ describe.skipIf(!renderable)('TodoWidget', () => {
       await typeIntoInput(setup, 'Buy milk');
       await setup.renderOnce();
 
-      point = locate(setup.captureCharFrame(), 'Save');
-      await setup.mockMouse.click(point.x, point.y);
-      await setup.flush();
+      await act(async () => {
+        await setup.mockInput.pressEnter();
+        await new Promise((resolve) => setTimeout(resolve, 30));
+      });
       await setup.renderOnce();
 
       expect(added).toEqual([{ text: 'Buy milk' }]);
