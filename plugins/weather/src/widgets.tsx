@@ -254,11 +254,7 @@ function LargeHero({
         justifyContent: 'flex-start',
       }}
     >
-      {art ? (
-        <AsciiBlock lines={art} color={artColor} />
-      ) : scale.showSecondary ? (
-        icon
-      ) : null}
+      {art ? <AsciiBlock lines={art} color={artColor} /> : scale.showSecondary ? icon : null}
       {stats}
     </box>
   );

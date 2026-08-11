@@ -57,7 +57,11 @@ describe('startSession', () => {
   });
 
   it('resumes a paused session', () => {
-    const paused = { ...startSession(initialState()), status: 'paused' as const, remainingSeconds: 900 };
+    const paused = {
+      ...startSession(initialState()),
+      status: 'paused' as const,
+      remainingSeconds: 900,
+    };
     expect(startSession(paused)).toMatchObject({ status: 'running', remainingSeconds: 900 });
   });
 

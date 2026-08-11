@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { act } from 'react';
 import { testRender } from '@opentui/react/test-utils';
 import { createEntityStore } from '@nightshift/entities';
 import {
@@ -28,6 +29,18 @@ function locate(frame: string, text: string): { x: number; y: number } {
     if (x !== -1) return { x, y };
   }
   throw new Error(`"${text}" was not found in the frame:\n${frame}`);
+}
+
+async function typeIntoInput(
+  setup: Awaited<ReturnType<typeof testRender>>,
+  text: string,
+): Promise<void> {
+  await act(async () => {
+    for (const char of text) {
+      await setup.mockInput.pressKey(char);
+    }
+    await new Promise((resolve) => setTimeout(resolve, 30));
+  });
 }
 
 async function renderWidget(items: { text: string; done: boolean }[]): Promise<{
@@ -175,20 +188,20 @@ describe.skipIf(!renderable)('TodoWidget', () => {
 
     try {
       await setup.renderOnce();
-      let point = locate(setup.captureCharFrame(), 'Add todo');
+      const point = locate(setup.captureCharFrame(), 'Add todo');
       await setup.mockMouse.click(point.x, point.y);
       await setup.renderOnce();
 
       // The editor replaces the Add button, focused, ready to type into.
       expect(setup.captureCharFrame()).toContain('Save');
 
-      await setup.mockInput.typeText('Buy milk');
-      await setup.flush();
+      await typeIntoInput(setup, 'Buy milk');
       await setup.renderOnce();
 
-      point = locate(setup.captureCharFrame(), 'Save');
-      await setup.mockMouse.click(point.x, point.y);
-      await setup.flush();
+      await act(async () => {
+        await setup.mockInput.pressEnter();
+        await new Promise((resolve) => setTimeout(resolve, 30));
+      });
       await setup.renderOnce();
 
       expect(added).toEqual([{ text: 'Buy milk' }]);
@@ -212,8 +225,7 @@ describe.skipIf(!renderable)('TodoWidget', () => {
       await setup.mockMouse.click(point.x, point.y);
       await setup.renderOnce();
 
-      await setup.mockInput.typeText('Never minded');
-      await setup.flush();
+      await typeIntoInput(setup, 'Never minded');
       await setup.renderOnce();
 
       point = locate(setup.captureCharFrame(), 'Cancel');

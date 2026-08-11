@@ -10,8 +10,7 @@ import {
   searchSymbols,
 } from './query.js';
 import { createCodeIndex, type FileSystem } from './store.js';
-
-const ROOT = '/repo';
+import { TEST_ROOT, testAbsPath, testRelPath } from './testRoot.js';
 
 const SOURCES: Record<string, string> = {
   'packages/core/src/timer.ts': [
@@ -48,26 +47,22 @@ let context: QueryContext;
 beforeAll(async () => {
   const io: FileSystem = {
     async stat(path) {
-      const source = SOURCES[relative(path)];
+      const source = SOURCES[testRelPath(path)];
       if (source === undefined) throw new Error(`ENOENT ${path}`);
       return { size: source.length, mtimeMs: 1 };
     },
     async readFile(path) {
-      const source = SOURCES[relative(path)];
+      const source = SOURCES[testRelPath(path)];
       if (source === undefined) throw new Error(`ENOENT ${path}`);
       return source;
     },
     list: () => Object.keys(SOURCES).sort(),
   };
 
-  const index = createCodeIndex({ root: ROOT, extractor: await createExtractor(), io });
+  const index = createCodeIndex({ root: TEST_ROOT, extractor: await createExtractor(), io });
   await index.reindexAll();
-  context = { index, readSource: (file) => io.readFile(`${ROOT}/${file}`) };
+  context = { index, readSource: (file) => io.readFile(testAbsPath(file)) };
 });
-
-function relative(path: string): string {
-  return path.replace(`${ROOT}/`, '');
-}
 
 describe('searchSymbols', () => {
   it('ranks an exact name above a prefix and a substring', () => {

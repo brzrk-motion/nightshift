@@ -209,9 +209,7 @@ async function probeExisting(server) {
 async function startServer(server) {
   const existing = await probeExisting(server);
   if (existing) {
-    process.stderr.write(
-      `${label(server)} already listening on port ${server.port}; reusing it\n`,
-    );
+    process.stderr.write(`${label(server)} already listening on port ${server.port}; reusing it\n`);
     return { server, child: null, restarts: 0, stopped: false, failed: false, external: true };
   }
   return supervise(server);

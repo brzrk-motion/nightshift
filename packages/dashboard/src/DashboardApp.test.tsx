@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { access, mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -23,11 +23,24 @@ function registry() {
 }
 
 /** Same input-flushing helper the rest of the shell's tests use. */
-async function press(send: () => void): Promise<void> {
+async function press(send: () => void | Promise<void>): Promise<void> {
   await act(async () => {
-    send();
-    await new Promise((resolve) => setTimeout(resolve, 30));
+    await send();
+    await new Promise((resolve) => setTimeout(resolve, 50));
   });
+}
+
+async function waitForDashboardFile(path: string): Promise<string> {
+  const deadline = Date.now() + 3000;
+  while (Date.now() < deadline) {
+    try {
+      await access(path);
+      return await readFile(path, 'utf8');
+    } catch {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+  }
+  throw new Error(`dashboard file was not written: ${path}`);
 }
 
 const twoWidgets: DashboardSpec = parseDashboard(
@@ -163,7 +176,7 @@ describe.skipIf(!renderable)('DashboardApp edit mode', () => {
       await press(() => setup.mockInput.pressKey('ARROW_RIGHT'));
       await press(() => setup.mockInput.pressKey('s', { ctrl: true }));
 
-      const written = await readFile(join(dir, 'home.yaml'), 'utf8');
+      const written = await waitForDashboardFile(join(dir, 'home.yaml'));
       const saved = parseDashboard(written, { name: 'home' });
       expect(saved.rows[0]?.widgets.map((w) => w.type)).toEqual(['core.note', 'core.entities']);
     } finally {
@@ -189,7 +202,7 @@ describe.skipIf(!renderable)('DashboardApp edit mode', () => {
       await press(() => setup.mockInput.pressKey('ARROW_RIGHT', { shift: true }));
       await press(() => setup.mockInput.pressKey('s', { ctrl: true }));
 
-      const saved = parseDashboard(await readFile(join(dir, 'home.yaml'), 'utf8'), {
+      const saved = parseDashboard(await waitForDashboardFile(join(dir, 'home.yaml')), {
         name: 'home',
       });
       expect(saved.rows[0]?.widgets[0]?.span).toBe(2);
@@ -216,7 +229,7 @@ describe.skipIf(!renderable)('DashboardApp edit mode', () => {
       await press(() => setup.mockInput.pressKey('ARROW_DOWN', { shift: true }));
       await press(() => setup.mockInput.pressKey('s', { ctrl: true }));
 
-      const saved = parseDashboard(await readFile(join(dir, 'home.yaml'), 'utf8'), {
+      const saved = parseDashboard(await waitForDashboardFile(join(dir, 'home.yaml')), {
         name: 'home',
       });
       expect(saved.rows[0]?.height).toBe(2);
@@ -243,7 +256,7 @@ describe.skipIf(!renderable)('DashboardApp edit mode', () => {
       await press(() => setup.mockInput.pressKey('d'));
       await press(() => setup.mockInput.pressKey('s', { ctrl: true }));
 
-      const saved = parseDashboard(await readFile(join(dir, 'home.yaml'), 'utf8'), {
+      const saved = parseDashboard(await waitForDashboardFile(join(dir, 'home.yaml')), {
         name: 'home',
       });
       expect(saved.rows[0]?.widgets.map((w) => w.type)).toEqual(['core.note']);
@@ -276,7 +289,7 @@ describe.skipIf(!renderable)('DashboardApp edit mode', () => {
       await press(() => setup.mockInput.pressEnter());
       await press(() => setup.mockInput.pressKey('s', { ctrl: true }));
 
-      const saved = parseDashboard(await readFile(join(dir, 'home.yaml'), 'utf8'), {
+      const saved = parseDashboard(await waitForDashboardFile(join(dir, 'home.yaml')), {
         name: 'home',
       });
       expect(saved.rows[0]?.widgets.map((w) => w.type)).toContain('focus.session');
@@ -311,7 +324,7 @@ describe.skipIf(!renderable)('DashboardApp edit mode', () => {
       await press(() => setup.mockInput.pressEnter());
       await press(() => setup.mockInput.pressKey('s', { ctrl: true }));
 
-      const saved = parseDashboard(await readFile(join(dir, 'home.yaml'), 'utf8'), {
+      const saved = parseDashboard(await waitForDashboardFile(join(dir, 'home.yaml')), {
         name: 'home',
       });
       expect(saved.rows[0]?.widgets.map((w) => w.type)).toEqual(['focus.session', 'core.note']);
@@ -394,11 +407,11 @@ describe.skipIf(!renderable)('DashboardApp edit mode', () => {
       await press(() => setup.mockInput.pressKey('d'));
       await press(() => setup.mockInput.pressKey('s', { ctrl: true }));
 
-      const frame = setup.captureCharFrame();
+      const frame = await setup.waitForFrame((f) => !f.includes('editing'));
       expect(frame).not.toContain('editing');
       expect(frame).not.toContain('core.note');
 
-      const written = await readFile(join(dir, 'home.yaml'), 'utf8');
+      const written = await waitForDashboardFile(join(dir, 'home.yaml'));
       expect(written).toContain('core.note');
     } finally {
       setup.renderer.destroy();

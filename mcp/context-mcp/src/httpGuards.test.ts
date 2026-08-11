@@ -22,7 +22,11 @@ function check(origin: string | undefined): { ok: boolean; status?: number } {
   const request = { headers: { origin } } as IncomingMessage;
   const response = mockResponse();
   const ok = validate(request, response);
-  return { ok, status: response.status };
+  const result: { ok: boolean; status?: number } = { ok };
+  if (response.status !== undefined) {
+    result.status = response.status;
+  }
+  return result;
 }
 
 describe('ideOriginValidation', () => {

@@ -74,7 +74,11 @@ describe('nowScale', () => {
 
   it('keeps only the temperature when there is no width for the rest', () => {
     expect(nowScale(16, 40)).toMatchObject({ layout: 'compact', showSecondary: false });
-    expect(nowScale(12, 8)).toMatchObject({ layout: 'compact', font: 'text', showSecondary: false });
+    expect(nowScale(12, 8)).toMatchObject({
+      layout: 'compact',
+      font: 'text',
+      showSecondary: false,
+    });
   });
 
   it('never asks for more rows than the widget has', () => {
@@ -90,11 +94,7 @@ describe('nowScale', () => {
 
         const extra = (scale.showLabel ? 1 : 0) + (scale.showDetail ? 1 : 0);
         const hero = GLYPH_ROWS[scale.font] + extra;
-        const rows = !scale.showSecondary
-          ? hero
-          : scale.heroesInline
-            ? hero
-            : hero + 1 + hero;
+        const rows = !scale.showSecondary ? hero : scale.heroesInline ? hero : hero + 1 + hero;
         const artRows = scale.art === 'none' ? 0 : weatherArt('clear', scale.art).length;
 
         expect({ width, height, rows: Math.max(rows, artRows) }).toEqual({

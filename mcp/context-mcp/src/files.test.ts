@@ -1,6 +1,7 @@
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
-import { isIndexable, listFiles, toPosix, toRelative } from './files.js';
+import { isIndexable, listFiles, toRelative } from './files.js';
 
 describe('isIndexable', () => {
   it('accepts the supported extensions', () => {
@@ -37,7 +38,8 @@ describe('listFiles', () => {
 
   it('walks the directory when the root is not a git working tree', () => {
     // This package's own source is the fixture: real files, fixed contents.
-    const files = listFiles(toPosix(new URL('..', import.meta.url).pathname), {
+    const pkgRoot = fileURLToPath(new URL('..', import.meta.url));
+    const files = listFiles(pkgRoot, {
       gitFiles: () => null,
     });
 
