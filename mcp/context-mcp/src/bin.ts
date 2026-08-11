@@ -12,13 +12,10 @@ import { resolve } from 'node:path';
 
 import { createMcpHandler } from '@modelcontextprotocol/server';
 import { serveStdio } from '@modelcontextprotocol/server/stdio';
-import {
-  localhostHostValidation,
-  localhostOriginValidation,
-  toNodeHandler,
-} from '@modelcontextprotocol/node';
+import { localhostHostValidation, toNodeHandler } from '@modelcontextprotocol/node';
 
 import { createExtractor } from './extract.js';
+import { ideOriginValidation } from './httpGuards.js';
 import { createLogger } from './log.js';
 import { type QueryContext } from './query.js';
 import { createContextServer, SERVER_NAME, SERVER_VERSION } from './server.js';
@@ -158,7 +155,7 @@ async function main(): Promise<number> {
     onerror: (error) => log.warn(`http: ${error.message}`),
   });
   const validateHost = localhostHostValidation();
-  const validateOrigin = localhostOriginValidation();
+  const validateOrigin = ideOriginValidation();
 
   const server = createServer((request, response) => {
     if (!validateHost(request, response) || !validateOrigin(request, response)) return;
