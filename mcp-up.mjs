@@ -20,7 +20,6 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = dirname(fileURLToPath(import.meta.url));
-const windows = process.platform === 'win32';
 const interactive = process.stderr.isTTY === true;
 
 const HOST = '127.0.0.1';
@@ -128,7 +127,9 @@ function label(server) {
 
 /** Builds the given packages with Turbo, staying silent unless it fails. */
 async function build(servers) {
-  const turbo = join(root, 'node_modules', '.bin', windows ? 'turbo.cmd' : 'turbo');
+  // Bypass `.bin/turbo(.cmd)` — invoke the JS entry with this node so Windows
+  // never needs a shell (and never splits `C:\Program Files\...`).
+  const turbo = join(root, 'node_modules', 'turbo', 'bin', 'turbo');
   if (!existsSync(turbo)) {
     process.stderr.write('mcp-up: dependencies are missing. Run `pnpm install` first.\n');
     return false;
@@ -137,11 +138,14 @@ async function build(servers) {
   status('building…');
   const filters = servers.flatMap((server) => ['--filter', `${server.package}...`]);
   const code = await new Promise((resolve, reject) => {
-    const child = spawn(turbo, ['run', 'build', ...filters, '--output-logs=errors-only'], {
-      cwd: root,
-      stdio: ['ignore', 'pipe', 'pipe'],
-      shell: windows,
-    });
+    const child = spawn(
+      process.execPath,
+      [turbo, 'run', 'build', ...filters, '--output-logs=errors-only'],
+      {
+        cwd: root,
+        stdio: ['ignore', 'pipe', 'pipe'],
+      },
+    );
     let output = '';
     child.stdout.on('data', (chunk) => (output += chunk));
     child.stderr.on('data', (chunk) => (output += chunk));

@@ -16,7 +16,6 @@ import { fileURLToPath } from 'node:url';
 
 const root = dirname(fileURLToPath(import.meta.url));
 const entry = join(root, 'apps', 'cli', 'dist', 'bin.js');
-const windows = process.platform === 'win32';
 const interactive = process.stderr.isTTY === true;
 
 /**
@@ -29,8 +28,8 @@ function exec(command, args, { capture = false } = {}) {
     const child = spawn(command, args, {
       cwd: root,
       stdio: capture ? ['ignore', 'pipe', 'pipe'] : 'inherit',
-      // Spawning a .cmd shim on Windows requires a shell.
-      shell: windows,
+      // Never shell:true — Node concatenates args unescaped (DEP0190) and
+      // breaks when node lives under "C:\Program Files\...".
     });
 
     let output = '';
@@ -65,7 +64,9 @@ function status(text) {
 }
 
 async function build() {
-  const turbo = join(root, 'node_modules', '.bin', windows ? 'turbo.cmd' : 'turbo');
+  // Bypass `.bin/turbo(.cmd)` — invoke the JS entry with this node so Windows
+  // never needs a shell (and never splits `C:\Program Files\...`).
+  const turbo = join(root, 'node_modules', 'turbo', 'bin', 'turbo');
   if (!existsSync(turbo)) {
     process.stderr.write('nightshift: dependencies are missing. Run `pnpm install` first.\n');
     return 1;
@@ -74,8 +75,8 @@ async function build() {
   status('building…');
   // `@nightshift/cli...` means the CLI plus everything it depends on.
   const { code, output } = await exec(
-    turbo,
-    ['run', 'build', '--filter=@nightshift/cli...', '--output-logs=errors-only'],
+    process.execPath,
+    [turbo, 'run', 'build', '--filter=@nightshift/cli...', '--output-logs=errors-only'],
     { capture: true },
   );
   status('');

@@ -83,6 +83,7 @@ export const DEFAULT_DASHBOARD: DashboardSpec = {
         { type: 'weather.forecast', options: { location: 'home' } },
       ],
     },
+    { height: 2, widgets: [{ type: 'habit.tracker' }] },
     { height: 2, widgets: [{ type: 'core.commands' }] },
   ],
 };

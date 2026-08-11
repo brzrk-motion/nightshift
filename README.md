@@ -7,9 +7,9 @@ configured in files you own.
 > left nav rail, and a persistent status bar around the dashboard canvas —
 > plugins load through the public SDK and contribute widgets, commands and
 > automations, the entity store drives the screen, vibes orchestrate the
-> workspace by name, and the bundled focus, todo, and weather plugins ship
+> workspace by name, and the bundled focus, todo, habit, and weather plugins ship
 > with the CLI. A dashboard is config all the way down — three ship by
-> default, and `home` includes weather, focus, and todo widgets. Dashboards
+> default, and `home` includes weather, focus, todo, and habit widgets. Dashboards
 > can be edited in place, saved back to disk and reloaded without a restart.
 > Packaging binaries and a release workflow are what's left of the MVP
 > checklist.
@@ -149,6 +149,7 @@ set every file — data and logs included — lives underneath it.
   "plugins": [
     "@nightshift/plugin-clock",
     "@nightshift/plugin-focus",
+    "@nightshift/plugin-habit",
     "@nightshift/plugin-pomodoro",
     "@nightshift/plugin-spotify",
     "@nightshift/plugin-todo",
@@ -344,7 +345,7 @@ export default definePlugin({
 A plugin dropped into `plugins/` is imported as-is, so it has to be an installed
 package with its dependencies alongside it, or a bundle.
 
-Nightshift ships six bundled plugins:
+Nightshift ships seven bundled plugins:
 
 - **clock** — the time and date, in the machine's own timezone when it can be
   detected (`Intl.DateTimeFormat().resolvedOptions().timeZone`, no network
@@ -355,6 +356,9 @@ Nightshift ships six bundled plugins:
   across restarts. A clock added through the widget picker opens straight
   into that settings panel.
 - **focus** — the reference timer (session + today’s count).
+- **habit** — a rolling 7-day habit grid (`habit.tracker`) with add/toggle/
+  rename/delete, current and longest streaks, and persistence via plugin
+  storage. Day-label density adapts to the widget’s width.
 - **pomodoro** — work intervals with short and long breaks (25/5/15 by
   default, long break every four pomodoros). Session widget plus today’s count.
 - **todo** — a todo list with no backend; a single `todo.md` in your home

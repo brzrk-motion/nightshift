@@ -343,6 +343,7 @@ describe('BUILT_IN_DASHBOARDS', () => {
       'clock.now',
       'focus.session',
       'focus.today',
+      'habit.tracker',
       'todo.list',
       'weather.now',
       'weather.forecast',
