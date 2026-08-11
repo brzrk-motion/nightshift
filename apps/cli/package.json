@@ -34,6 +34,7 @@
     "@nightshift/plugin-clock": "workspace:*",
     "@nightshift/plugin-focus": "workspace:*",
     "@nightshift/plugin-habit": "workspace:*",
+    "@nightshift/plugin-home-assistant": "workspace:*",
     "@nightshift/plugin-pomodoro": "workspace:*",
     "@nightshift/plugin-spotify": "workspace:*",
     "@nightshift/plugin-todo": "workspace:*",

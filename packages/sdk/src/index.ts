@@ -140,8 +140,10 @@ export interface PluginContext {
   /** Per-plugin key/value storage. Present when `storage` was granted. */
   storage: PluginStorage;
   /**
-   * HTTPS fetch gated by the `network` capability. Non-HTTPS URLs are refused;
-   * without an explicit `signal`, the host applies a 15s timeout.
+   * Network fetch gated by the `network` capability. HTTPS is always allowed;
+   * HTTP is allowed only for loopback and RFC1918 private IPv4 hosts (local
+   * Home Assistant and similar). Other cleartext URLs are refused. Without an
+   * explicit `signal`, the host applies a 15s timeout.
    */
   fetch(url: string, init?: PluginFetchInit): Promise<Response>;
   registerCommand(command: PluginCommand): void;

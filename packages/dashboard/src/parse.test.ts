@@ -344,6 +344,7 @@ describe('BUILT_IN_DASHBOARDS', () => {
       'focus.session',
       'focus.today',
       'habit.tracker',
+      'home-assistant.scenes',
       'todo.list',
       'weather.now',
       'weather.forecast',

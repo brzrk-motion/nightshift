@@ -24,6 +24,7 @@ import { assertCapability, createPermissionPolicy, type PermissionPolicy } from 
 import { createPluginStorage } from './storage.js';
 import type { PluginSource } from './discovery.js';
 import { resolvePluginSpecifier, type ResolveBase } from './resolve.js';
+import { isAllowedPluginFetchUrl } from './fetch-policy.js';
 
 /** A plugin that finished `setup`, and everything it contributed. */
 export interface LoadedPlugin {
@@ -286,11 +287,13 @@ export function createPluginHost(options: PluginHostOptions): PluginHost {
               hint: 'Pass an absolute https URL.',
             });
           }
-          if (parsed.protocol !== 'https:') {
+          if (!isAllowedPluginFetchUrl(parsed)) {
             throw new NightshiftError(
               'NETWORK_DENIED',
-              `Plugin "${manifest.id}" may only fetch https URLs.`,
-              { hint: `Refused "${url}".` },
+              `Plugin "${manifest.id}" may only fetch https URLs, or http to loopback/private IPs.`,
+              {
+                hint: `Refused "${url}". Use https, or http:// for localhost / RFC1918 addresses.`,
+              },
             );
           }
           const signal = init?.signal ?? AbortSignal.timeout(15_000);

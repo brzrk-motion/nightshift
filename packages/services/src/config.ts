@@ -37,7 +37,7 @@ export interface NightshiftConfig {
   onboarded: boolean;
 }
 
-export const CONFIG_VERSION = 7;
+export const CONFIG_VERSION = 8;
 
 export const DEFAULT_CONFIG: NightshiftConfig = {
   version: CONFIG_VERSION,
@@ -49,12 +49,18 @@ export const DEFAULT_CONFIG: NightshiftConfig = {
     '@nightshift/plugin-clock',
     '@nightshift/plugin-focus',
     '@nightshift/plugin-habit',
+    '@nightshift/plugin-home-assistant',
     '@nightshift/plugin-pomodoro',
     '@nightshift/plugin-spotify',
     '@nightshift/plugin-todo',
     '@nightshift/plugin-weather',
   ],
-  pluginPermissions: { weather: ['network'], spotify: ['network'], clock: ['network'] },
+  pluginPermissions: {
+    weather: ['network'],
+    spotify: ['network'],
+    clock: ['network'],
+    'home-assistant': ['network'],
+  },
   onboarded: false,
 };
 
@@ -76,14 +82,15 @@ const CLOCK_PLUGIN = '@nightshift/plugin-clock';
 const SPOTIFY_PLUGIN = '@nightshift/plugin-spotify';
 const POMODORO_PLUGIN = '@nightshift/plugin-pomodoro';
 const HABIT_PLUGIN = '@nightshift/plugin-habit';
+const HOME_ASSISTANT_PLUGIN = '@nightshift/plugin-home-assistant';
 
 /**
  * Brings an older on-disk config forward. v1 → v2 ships the weather plugin and
  * its network grant; v2 → v3 ships the clock plugin; v3 → v4 ships the Spotify
  * plugin and its network grant; v4 → v5 grants the clock plugin network access,
  * needed once it can look up a location's timezone; v5 → v6 ships the pomodoro
- * plugin; v6 → v7 ships the habit tracker — so existing installs see the same
- * defaults as a fresh one.
+ * plugin; v6 → v7 ships the habit tracker; v7 → v8 ships Home Assistant scenes
+ * and its network grant — so existing installs see the same defaults as a fresh one.
  */
 export function migrateConfig(config: NightshiftConfig): {
   config: NightshiftConfig;
@@ -185,6 +192,27 @@ export function migrateConfig(config: NightshiftConfig): {
       migrated = true;
     }
     next = { ...next, version: 7 };
+    migrated = true;
+  }
+
+  if (next.version < 8) {
+    if (!next.plugins.includes(HOME_ASSISTANT_PLUGIN)) {
+      next = { ...next, plugins: [...next.plugins, HOME_ASSISTANT_PLUGIN] };
+      migrated = true;
+    }
+    const haGrant = next.pluginPermissions['home-assistant'];
+    if (haGrant !== 'all' && !(Array.isArray(haGrant) && haGrant.includes('network'))) {
+      const grants = Array.isArray(haGrant) ? haGrant : [];
+      next = {
+        ...next,
+        pluginPermissions: {
+          ...next.pluginPermissions,
+          'home-assistant': [...grants, 'network'],
+        },
+      };
+      migrated = true;
+    }
+    next = { ...next, version: 8 };
     migrated = true;
   }
 

@@ -84,6 +84,7 @@ export const DEFAULT_DASHBOARD: DashboardSpec = {
       ],
     },
     { height: 2, widgets: [{ type: 'habit.tracker' }] },
+    { height: 2, widgets: [{ type: 'home-assistant.scenes' }] },
     { height: 2, widgets: [{ type: 'core.commands' }] },
   ],
 };

@@ -227,7 +227,7 @@ describe('createPluginHost', () => {
     expect(isNightshiftError(denied) && denied.code).toBe('PERMISSION_DENIED');
   });
 
-  it('refuses non-https URLs from context.fetch', async () => {
+  it('refuses public http URLs from context.fetch', async () => {
     let denied: unknown;
     const plugins = host(
       demo({
@@ -246,6 +246,27 @@ describe('createPluginHost', () => {
     await plugins.load(source);
 
     expect(isNightshiftError(denied) && denied.code).toBe('NETWORK_DENIED');
+  });
+
+  it('allows http to private / loopback hosts when network is granted', async () => {
+    const fetchMock = vi.fn(async (_url: string) => new Response('ok', { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const plugins = host(
+      demo({
+        capabilities: ['network'],
+        setup: async (context) => {
+          expect((await context.fetch('http://192.168.0.2/')).status).toBe(200);
+          expect((await context.fetch('http://127.0.0.1:8123/')).status).toBe(200);
+        },
+      }),
+      { demo: ['network'] },
+    );
+
+    await plugins.load(source);
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    vi.unstubAllGlobals();
   });
 
   it('fetches https URLs when network is granted', async () => {

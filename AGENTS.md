@@ -42,6 +42,8 @@ packages/services      Config, logging, settings and the plugin runtime/host
 mcp/context-mcp        Agent tooling: a tree-sitter code index served over MCP
 plugins/clock          The time and date, with 12/24-hour and date format settings
 plugins/focus          The focus timer — the reference plugin
+plugins/habit          Rolling 7-day habit tracker
+plugins/home-assistant Home Assistant scenes (list, activate, vibe bindings)
 plugins/spotify        Spotify Connect control (playlists, podcasts, transport)
 plugins/todo           A todo list backed by a plain todo.md file
 plugins/weather        Current conditions + forecast via Open-Meteo
@@ -212,13 +214,15 @@ through `context`:
 | `context.registerCommand()`    | `commands:register`                                  |
 | `context.registerAutomation()` | `automations:register`                               |
 | `context.storage.*`            | `storage`                                            |
-| `context.fetch(url, init?)`    | `network` (HTTPS only; 15s default timeout)          |
+| `context.fetch(url, init?)`    | `network` (HTTPS; HTTP only to loopback/private IPs; 15s default timeout) |
 | `context.own(disposable)`      | (always available — ties cleanup to plugin lifetime) |
 | `context.log.*`                | (always available)                                   |
 
 `network` and `shell` are declarable capabilities (`CAPABILITIES` in the SDK)
 that the host checks at load time. `context.fetch` is the gated network surface:
-it asserts `network` on every call and refuses non-HTTPS URLs. `shell` remains
+it asserts `network` on every call and allows HTTPS anywhere plus HTTP only to
+loopback/RFC1918 private IPs (for local Home Assistant). Other cleartext URLs
+are refused. `shell` remains
 declarable only — nothing on `PluginContext` grants shell access yet; don't add
 that without checking with a maintainer first.
 

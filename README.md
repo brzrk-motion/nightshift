@@ -7,10 +7,10 @@ configured in files you own.
 > left nav rail, and a persistent status bar around the dashboard canvas —
 > plugins load through the public SDK and contribute widgets, commands and
 > automations, the entity store drives the screen, vibes orchestrate the
-> workspace by name, and the bundled focus, todo, habit, and weather plugins ship
-> with the CLI. A dashboard is config all the way down — three ship by
-> default, and `home` includes weather, focus, todo, and habit widgets. Dashboards
-> can be edited in place, saved back to disk and reloaded without a restart.
+> workspace by name, and the bundled focus, todo, habit, home-assistant, and weather
+> plugins ship with the CLI. A dashboard is config all the way down — three ship by
+> default, and `home` includes weather, focus, todo, habit, and Home Assistant widgets.
+> Dashboards can be edited in place, saved back to disk and reloaded without a restart.
 > Packaging binaries and a release workflow are what's left of the MVP
 > checklist.
 
@@ -150,6 +150,7 @@ set every file — data and logs included — lives underneath it.
     "@nightshift/plugin-clock",
     "@nightshift/plugin-focus",
     "@nightshift/plugin-habit",
+    "@nightshift/plugin-home-assistant",
     "@nightshift/plugin-pomodoro",
     "@nightshift/plugin-spotify",
     "@nightshift/plugin-todo",
@@ -158,7 +159,8 @@ set every file — data and logs included — lives underneath it.
   "pluginPermissions": {
     "weather": ["network"],
     "spotify": ["network"],
-    "clock": ["network"]
+    "clock": ["network"],
+    "home-assistant": ["network"]
   },
   "onboarded": false
 }
@@ -345,7 +347,7 @@ export default definePlugin({
 A plugin dropped into `plugins/` is imported as-is, so it has to be an installed
 package with its dependencies alongside it, or a bundle.
 
-Nightshift ships seven bundled plugins:
+Nightshift ships eight bundled plugins:
 
 - **clock** — the time and date, in the machine's own timezone when it can be
   detected (`Intl.DateTimeFormat().resolvedOptions().timeZone`, no network
@@ -359,6 +361,11 @@ Nightshift ships seven bundled plugins:
 - **habit** — a rolling 7-day habit grid (`habit.tracker`) with add/toggle/
   rename/delete, current and longest streaks, and persistence via plugin
   storage. Day-label density adapts to the widget’s width.
+- **home-assistant** — connect to a Home Assistant instance (LAN IP or URL +
+  long-lived access token), list scenes, activate them from the widget, and
+  bind scenes to vibes via `home-assistant.activate-scene` in vibe
+  `onActivate` / `onDeactivate`. Token stays in plugin storage, never on the
+  shared entity.
 - **pomodoro** — work intervals with short and long breaks (25/5/15 by
   default, long break every four pomodoros). Session widget plus today’s count.
 - **todo** — a todo list with no backend; a single `todo.md` in your home
@@ -378,15 +385,17 @@ Nightshift ships seven bundled plugins:
   allowlist redirect URI `http://127.0.0.1:43891/callback`. Playback control
   needs Spotify Premium.
 
-Defaults grant weather, Spotify and clock network access (the clock only
-calls out when you set a location — the machine's own timezone needs none):
+Defaults grant weather, Spotify, clock, and Home Assistant network access
+(the clock only calls out when you set a location — the machine's own
+timezone needs none):
 
 ```json
 {
   "pluginPermissions": {
     "weather": ["network"],
     "spotify": ["network"],
-    "clock": ["network"]
+    "clock": ["network"],
+    "home-assistant": ["network"]
   }
 }
 ```
@@ -407,14 +416,16 @@ process are not, and wait for a line in `config.json`:
 | `storage`                                                       | automatically |
 | `network`, `shell`                                              | by you        |
 
-`network` unlocks `context.fetch` (HTTPS only). `shell` is still declare-only.
+`network` unlocks `context.fetch` (HTTPS anywhere; HTTP only to loopback /
+private LAN IPs for local Home Assistant). `shell` is still declare-only.
 
 ```json
 {
   "pluginPermissions": {
     "weather": ["network"],
     "spotify": ["network"],
-    "clock": ["network"]
+    "clock": ["network"],
+    "home-assistant": ["network"]
   }
 }
 ```
@@ -490,6 +501,8 @@ packages/services      Config, logging, settings and the plugin runtime
 mcp/context-mcp        A tree-sitter code index served over MCP, for agents
 plugins/clock          The time and date, with 12/24-hour and date format settings
 plugins/focus          The focus timer — the reference plugin
+plugins/habit          Rolling 7-day habit tracker
+plugins/home-assistant Home Assistant scenes (list, activate, vibe bindings)
 plugins/todo           A todo list backed by a plain todo.md file
 plugins/weather        Current conditions + forecast via Open-Meteo
 ```
