@@ -1,0 +1,42 @@
+{
+  "name": "@nightshift/context-mcp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "An MCP server that indexes this repository with tree-sitter and serves precise code context.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "nightshift-context-mcp": "./dist/bin.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "mcp": {
+    "id": "context",
+    "port": 7411
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.typecheck.json",
+    "lint": "eslint src",
+    "test": "vitest run --passWithNoTests",
+    "dev": "tsc -p tsconfig.json --watch",
+    "clean": "rm -rf dist *.tsbuildinfo"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/node": "^2.0.0",
+    "@modelcontextprotocol/server": "^2.0.0",
+    "@nightshift/core": "workspace:*",
+    "tree-sitter-wasms": "^0.1.13",
+    "web-tree-sitter": "^0.25.10",
+    "zod": "^4.4.3"
+  }
+}

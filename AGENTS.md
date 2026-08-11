@@ -25,10 +25,11 @@ load-bearing, not aspirational — keep them in mind for every change:
 ## Monorepo layout
 
 pnpm workspaces + Turborepo. Workspace globs (`pnpm-workspace.yaml`):
-`apps/*`, `packages/*`, `plugins/*`.
+`apps/*`, `mcp/*`, `packages/*`, `plugins/*`.
 
 ```
 nightshift.mjs         Build-and-launch script for local development
+mcp-up.sh/.mjs         Build-and-launch script for the MCP servers in mcp/
 apps/cli               The nightshift command line interface (entry point)
 packages/core          Runtime primitives: errors, versions, events, disposables
 packages/entities      Shared observable state — the contract for plugin state
@@ -38,6 +39,7 @@ packages/dashboard     Dashboard model, layout parser, widget registry, editor
 packages/vibes         The vibe engine
 packages/automations   Triggers, conditions and actions
 packages/services      Config, logging, settings and the plugin runtime/host
+mcp/context-mcp        Agent tooling: a tree-sitter code index served over MCP
 plugins/clock          The time and date, with 12/24-hour and date format settings
 plugins/focus          The focus timer — the reference plugin
 plugins/spotify        Spotify Connect control (playlists, podcasts, transport)
@@ -77,6 +79,19 @@ Concretely:
   and use `context.fetch` — weather to geocode+forecast, clock to geocode a
   location into a timezone when the machine's own can't be detected).
 
+`mcp/*` sits outside that diagram on purpose. It is developer tooling for the
+agents working on this repository, not part of the application: nothing in
+`apps/` or `packages/` may import from it, its packages are `private: true` (so
+Changesets and `release` skip them), and it is free to depend on whatever it
+needs — `@modelcontextprotocol/*`, `web-tree-sitter` — without widening what a
+plugin author is allowed to reach for. See `mcp/context-mcp/README.md`.
+
+Two rules that are easy to break there: **an MCP server over stdio must never
+write to stdout** (stdout is the JSON-RPC channel — logging goes to stderr via
+`createLogger`), and `mcp-up` finds servers by scanning `mcp/*/package.json` for
+an `mcp` block plus a `bin` entry, so a new server needs no launcher changes but
+does need both fields.
+
 ## Toolchain and commands
 
 - **pnpm 11+**, **Node 22+** (Node 26.4+ or Bun to actually open a dashboard —
@@ -105,6 +120,7 @@ pnpm test             # turbo run test
 pnpm lint             # turbo run lint
 pnpm typecheck        # turbo run typecheck (tsc --noEmit, tests included)
 pnpm format           # prettier --write .
+pnpm mcp:up [args]    # ./mcp-up.mjs — builds and runs the MCP servers (--check smoke-tests them)
 ```
 
 `pnpm start` is what you want while iterating on the CLI or a bundled plugin —

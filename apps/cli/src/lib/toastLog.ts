@@ -29,7 +29,9 @@ const TONES = { warn: 'warning', error: 'danger' } as const;
 /** The message, plus the `error` field the message usually defers the detail to. */
 function toastMessage(record: LogRecord): string {
   const detail = record.fields?.['error'];
-  return typeof detail === 'string' && detail !== '' ? `${record.message}: ${detail}` : record.message;
+  return typeof detail === 'string' && detail !== ''
+    ? `${record.message}: ${detail}`
+    : record.message;
 }
 
 export function attachLogToasts({

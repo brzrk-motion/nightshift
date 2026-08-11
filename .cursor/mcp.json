@@ -1,0 +1,7 @@
+{
+  "mcpServers": {
+    "nightshift-context": {
+      "url": "http://127.0.0.1:7411/mcp"
+    }
+  }
+}

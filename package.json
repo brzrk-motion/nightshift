@@ -19,6 +19,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "start": "node ./nightshift.mjs",
+    "mcp:up": "node ./mcp-up.mjs",
     "nightshift": "node apps/cli/dist/bin.js",
     "changeset": "changeset",
     "version-packages": "changeset version",

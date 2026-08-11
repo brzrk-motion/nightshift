@@ -416,10 +416,61 @@ A plugin that asks for something it has not been granted is refused at load
 time, with the line to add printed alongside the refusal. A plugin that fails
 for any reason is reported and skipped — Nightshift still starts.
 
+## MCP servers
+
+Nightshift ships MCP servers for the agents that work on it. They are developer
+tooling, not part of the application — nothing in `apps/` or `packages/` depends
+on them.
+
+```bash
+./mcp-up.sh                        # build every server, launch it, print the endpoints
+./mcp-up.sh --check                # verify each one starts and answers, then exit
+./mcp-up.sh --write-cursor-config  # merge the endpoints into .cursor/mcp.json
+./mcp-up.sh --only context --no-build
+```
+
+```
+SERVER   PORT  ENDPOINT                   STATUS
+context  7411  http://127.0.0.1:7411/mcp  ready — 7 tools
+```
+
+`mcp-up` discovers servers by scanning `mcp/*/package.json` for an `mcp` block:
+
+```json
+"mcp": { "id": "context", "port": 7411 },
+"bin": { "nightshift-context-mcp": "./dist/bin.js" }
+```
+
+so a new server needs no changes to the launcher. Each is started with `--http`
+as a long-lived process, restarted if it crashes, and stopped on Ctrl-C.
+
+The same binaries also speak stdio, which is what an editor spawning them
+directly will use — no daemon required:
+
+```json
+{
+  "mcpServers": {
+    "nightshift-context": {
+      "command": "node",
+      "args": ["mcp/context-mcp/dist/bin.js"]
+    }
+  }
+}
+```
+
+### mcp/context-mcp
+
+A tree-sitter index of the repository, kept current as files change. It exists
+so an agent can ask for the definition it needs — `search_symbols`,
+`get_symbol`, `file_outline`, `find_references`, `read_lines` — instead of
+reading whole files to find it. See
+[`mcp/context-mcp/README.md`](mcp/context-mcp/README.md).
+
 ## Repository layout
 
 ```
 nightshift.mjs         Build-and-launch script for local development
+mcp-up.sh              Build-and-launch script for the MCP servers
 apps/cli               The nightshift command line interface
 packages/core          Runtime primitives: errors, versions, shared types
 packages/entities      Shared observable state — the contract for plugin state
@@ -429,6 +480,7 @@ packages/dashboard     Dashboard model, layout parser, widget registry
 packages/vibes         The vibe engine
 packages/automations   Triggers, conditions and actions
 packages/services      Config, logging, settings and the plugin runtime
+mcp/context-mcp        A tree-sitter code index served over MCP, for agents
 plugins/clock          The time and date, with 12/24-hour and date format settings
 plugins/focus          The focus timer — the reference plugin
 plugins/todo           A todo list backed by a plain todo.md file
@@ -444,6 +496,7 @@ pnpm test        # run the test suites
 pnpm lint        # eslint
 pnpm typecheck   # tsc --noEmit, tests included
 pnpm format      # prettier --write
+pnpm mcp:up      # build and run the MCP servers (same as ./mcp-up.sh)
 ```
 
 Turborepo drives the task graph, so `pnpm build` builds dependencies first and

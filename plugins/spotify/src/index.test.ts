@@ -180,7 +180,8 @@ describe('spotify plugin', () => {
   it('announces a failed request instead of parking it on the session entity', async () => {
     const { context, commands, notify } = mockContext({
       storage: { auth: CONNECTED_AUTH },
-      fetch: async () => new Response('{"error":{"message":"Service unavailable"}}', { status: 503 }),
+      fetch: async () =>
+        new Response('{"error":{"message":"Service unavailable"}}', { status: 503 }),
     });
     await plugin.setup(context);
 
@@ -199,7 +200,8 @@ describe('spotify plugin', () => {
   it('announces the same failure once however often the poll repeats', async () => {
     const { context, commands, notify } = mockContext({
       storage: { auth: CONNECTED_AUTH },
-      fetch: async () => new Response('{"error":{"message":"Service unavailable"}}', { status: 503 }),
+      fetch: async () =>
+        new Response('{"error":{"message":"Service unavailable"}}', { status: 503 }),
     });
     await plugin.setup(context);
     const refresh = commands.find((c) => c.id === 'spotify.refresh');
@@ -214,7 +216,8 @@ describe('spotify plugin', () => {
   it('announces a 403 as the Premium warning it is', async () => {
     const { context, commands, notify } = mockContext({
       storage: { auth: CONNECTED_AUTH },
-      fetch: async () => new Response('{"error":{"message":"Player command failed"}}', { status: 403 }),
+      fetch: async () =>
+        new Response('{"error":{"message":"Player command failed"}}', { status: 403 }),
     });
     await plugin.setup(context);
 
@@ -232,7 +235,8 @@ describe('spotify plugin', () => {
   it('keeps a lost session on the entity, since the widget has to draw the connect form', async () => {
     const { context, commands, notify } = mockContext({
       storage: { auth: CONNECTED_AUTH },
-      fetch: async () => new Response('{"error":{"message":"Invalid access token"}}', { status: 401 }),
+      fetch: async () =>
+        new Response('{"error":{"message":"Invalid access token"}}', { status: 401 }),
     });
     await plugin.setup(context);
 
@@ -250,7 +254,8 @@ describe('spotify plugin', () => {
     const { context, commands, notify } = mockContext({
       storage: { auth: CONNECTED_AUTH },
       fetch: async (url) => {
-        if (failing) return new Response('{"error":{"message":"Service unavailable"}}', { status: 503 });
+        if (failing)
+          return new Response('{"error":{"message":"Service unavailable"}}', { status: 503 });
         if (url.includes('currently-playing')) return new Response(null, { status: 204 });
         return new Response(JSON.stringify({ items: [], next: null }));
       },
