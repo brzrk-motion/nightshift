@@ -96,8 +96,21 @@ export function VibesScreen(): ReactNode {
   }
 
   return (
-    <box style={{ flexDirection: 'column', gap: 1, flexGrow: 1 }}>
-      <box style={{ flexDirection: 'row', gap: 1, flexShrink: 0 }}>
+    <box style={{ flexDirection: 'column', flexGrow: 1 }}>
+      <box
+        style={{
+          flexDirection: 'row',
+          gap: 1,
+          flexShrink: 0,
+          width: '100%',
+          paddingLeft: 1,
+          paddingRight: 1,
+          paddingTop: 0,
+          paddingBottom: 0,
+          backgroundColor: runtime.themes.current.colors.surface,
+          alignItems: 'center',
+        }}
+      >
         <Button
           label="Add vibe"
           primary
@@ -119,21 +132,23 @@ export function VibesScreen(): ReactNode {
         />
       </box>
 
-      {vibes.length === 0 ? (
-        <EmptyState message="No vibes available." hint="Press Add vibe to create one." />
-      ) : (
-        <Table
-          columns={COLUMNS}
-          rows={vibes}
-          width={runtime.size.width - 20}
-          selected={selectedIndex}
-          onSelect={setSelected}
-        />
-      )}
+      <box style={{ flexDirection: 'column', gap: 1, flexGrow: 1, paddingLeft: 1, paddingRight: 1 }}>
+        {vibes.length === 0 ? (
+          <EmptyState message="No vibes available." hint="Press Add vibe to create one." />
+        ) : (
+          <Table
+            columns={COLUMNS}
+            rows={vibes}
+            width={runtime.size.width - 20}
+            selected={selectedIndex}
+            onSelect={setSelected}
+          />
+        )}
 
-      <text fg={runtime.themes.current.colors.muted}>
-        ↑↓ move · enter activate · e edit · a add
-      </text>
+        <text fg={runtime.themes.current.colors.muted}>
+          ↑↓ move · enter activate · e edit · a add
+        </text>
+      </box>
     </box>
   );
 }
