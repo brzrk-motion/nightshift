@@ -33,6 +33,7 @@
     "@nightshift/entities": "workspace:*",
     "@nightshift/plugin-clock": "workspace:*",
     "@nightshift/plugin-focus": "workspace:*",
+    "@nightshift/plugin-pomodoro": "workspace:*",
     "@nightshift/plugin-spotify": "workspace:*",
     "@nightshift/plugin-todo": "workspace:*",
     "@nightshift/plugin-weather": "workspace:*",

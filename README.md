@@ -141,7 +141,7 @@ set every file — data and logs included — lives underneath it.
 
 ```json
 {
-  "version": 5,
+  "version": 6,
   "defaultDashboard": "home",
   "defaultVibe": null,
   "theme": "midnight",
@@ -149,6 +149,7 @@ set every file — data and logs included — lives underneath it.
   "plugins": [
     "@nightshift/plugin-clock",
     "@nightshift/plugin-focus",
+    "@nightshift/plugin-pomodoro",
     "@nightshift/plugin-spotify",
     "@nightshift/plugin-todo",
     "@nightshift/plugin-weather"
@@ -343,7 +344,7 @@ export default definePlugin({
 A plugin dropped into `plugins/` is imported as-is, so it has to be an installed
 package with its dependencies alongside it, or a bundle.
 
-Nightshift ships five bundled plugins:
+Nightshift ships six bundled plugins:
 
 - **clock** — the time and date, in the machine's own timezone when it can be
   detected (`Intl.DateTimeFormat().resolvedOptions().timeZone`, no network
@@ -354,6 +355,8 @@ Nightshift ships five bundled plugins:
   across restarts. A clock added through the widget picker opens straight
   into that settings panel.
 - **focus** — the reference timer (session + today’s count).
+- **pomodoro** — work intervals with short and long breaks (25/5/15 by
+  default, long break every four pomodoros). Session widget plus today’s count.
 - **todo** — a todo list with no backend; a single `todo.md` in your home
   directory is the source of truth (`- [ ]` / `- [x]`), mirrored into
   `todo.items`.

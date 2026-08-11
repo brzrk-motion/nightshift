@@ -37,7 +37,7 @@ export interface NightshiftConfig {
   onboarded: boolean;
 }
 
-export const CONFIG_VERSION = 5;
+export const CONFIG_VERSION = 6;
 
 export const DEFAULT_CONFIG: NightshiftConfig = {
   version: CONFIG_VERSION,
@@ -48,6 +48,7 @@ export const DEFAULT_CONFIG: NightshiftConfig = {
   plugins: [
     '@nightshift/plugin-clock',
     '@nightshift/plugin-focus',
+    '@nightshift/plugin-pomodoro',
     '@nightshift/plugin-spotify',
     '@nightshift/plugin-todo',
     '@nightshift/plugin-weather',
@@ -72,13 +73,14 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 const WEATHER_PLUGIN = '@nightshift/plugin-weather';
 const CLOCK_PLUGIN = '@nightshift/plugin-clock';
 const SPOTIFY_PLUGIN = '@nightshift/plugin-spotify';
+const POMODORO_PLUGIN = '@nightshift/plugin-pomodoro';
 
 /**
  * Brings an older on-disk config forward. v1 → v2 ships the weather plugin and
  * its network grant; v2 → v3 ships the clock plugin; v3 → v4 ships the Spotify
  * plugin and its network grant; v4 → v5 grants the clock plugin network access,
- * needed once it can look up a location's timezone — so existing installs see
- * the same defaults as a fresh one.
+ * needed once it can look up a location's timezone; v5 → v6 ships the pomodoro
+ * plugin — so existing installs see the same defaults as a fresh one.
  */
 export function migrateConfig(config: NightshiftConfig): {
   config: NightshiftConfig;
@@ -162,6 +164,15 @@ export function migrateConfig(config: NightshiftConfig): {
       migrated = true;
     }
     next = { ...next, version: 5 };
+    migrated = true;
+  }
+
+  if (next.version < 6) {
+    if (!next.plugins.includes(POMODORO_PLUGIN)) {
+      next = { ...next, plugins: [...next.plugins, POMODORO_PLUGIN] };
+      migrated = true;
+    }
+    next = { ...next, version: 6 };
     migrated = true;
   }
 
