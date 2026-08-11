@@ -1,6 +1,6 @@
-import { readdir, readFile } from 'node:fs/promises';
+import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import { basename, extname, join } from 'node:path';
-import { parse as parseYaml } from 'yaml';
+import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 import { NightshiftError, type Json } from '@nightshift/core';
 import { isEntityId, type EntityId } from '@nightshift/entities';
 import type { VibeAction, VibeSpec } from './schema.js';
@@ -114,6 +114,49 @@ export function parseVibe(source: string, options: ParseVibeOptions = {}): VibeS
   }
 
   return vibe;
+}
+
+function serializeAction(action: VibeAction): Record<string, unknown> | string {
+  // Canonical form always uses an object when args are present; bare command
+  // ids stay as strings so hand-edited files stay short.
+  if (action.args === undefined) return action.command;
+  return { command: action.command, args: action.args };
+}
+
+/**
+ * Writes a vibe as YAML. Round-trips: `parseVibe(serializeVibe(spec))`
+ * describes the same vibe `spec` does, give or take key order and action
+ * shorthand expansion.
+ */
+export function serializeVibe(vibe: VibeSpec): string {
+  const output: Record<string, unknown> = { name: vibe.name };
+  if (vibe.title !== undefined) output['title'] = vibe.title;
+  if (vibe.description !== undefined) output['description'] = vibe.description;
+  if (vibe.theme !== undefined) output['theme'] = vibe.theme;
+  if (vibe.dashboard !== undefined) output['dashboard'] = vibe.dashboard;
+  if (vibe.entities !== undefined) output['entities'] = vibe.entities;
+  if (vibe.onActivate !== undefined) {
+    output['onActivate'] = vibe.onActivate.map(serializeAction);
+  }
+  if (vibe.onDeactivate !== undefined) {
+    output['onDeactivate'] = vibe.onDeactivate.map(serializeAction);
+  }
+  return stringifyYaml(output);
+}
+
+/**
+ * Writes a vibe to `<directory>/<name>.yaml`, creating the directory if
+ * needed. A user file of the same name replaces a built-in on the next load.
+ */
+export async function saveVibe(directory: string, vibe: VibeSpec): Promise<string> {
+  const path = join(directory, `${vibe.name}.yaml`);
+  try {
+    await mkdir(directory, { recursive: true });
+    await writeFile(path, serializeVibe(vibe), 'utf8');
+  } catch (error) {
+    throw new NightshiftError('CONFIG_UNWRITABLE', `Could not write ${path}.`, { cause: error });
+  }
+  return path;
 }
 
 const EXTENSIONS = new Set(['.yaml', '.yml']);

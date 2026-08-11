@@ -113,7 +113,7 @@ export {
   EntitiesScreen,
   SettingsScreen,
   VibesScreen,
-} from './app/screens.js';
+} from './app/screens/index.js';
 export {
   assertRenderable,
   detectRuntime,

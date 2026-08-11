@@ -3,6 +3,8 @@ export {
   loadVibeFile,
   loadVibes,
   parseVibe,
+  saveVibe,
+  serializeVibe,
   type ParseVibeOptions,
   type VibeLoadResult,
 } from './parse.js';

@@ -4,8 +4,9 @@
  * already has — so this folder never has to depend on the vibe engine, the
  * plugin host or the automation engine directly. Where a screen needs data
  * only the CLI's runtime wiring can produce (which plugins are loaded, which
- * vibe is active), it reads it from a well-known entity id and simply shows
- * less if nothing has published one — see `apps/cli/src/runtime.ts`.
+ * vibes exist, which vibe is active), it reads it from a well-known entity
+ * id (`nightshift.plugins`, `nightshift.vibes`, `nightshift.vibe`, …) and
+ * simply shows less if nothing has published one — see `apps/cli/src/runtime.ts`.
  */
 
 import type { Screen } from '../screen.js';

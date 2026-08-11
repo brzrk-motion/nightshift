@@ -1,9 +1,9 @@
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { isNightshiftError } from '@nightshift/core';
-import { loadVibeFile, loadVibes, parseVibe } from './parse.js';
+import { loadVibeFile, loadVibes, parseVibe, saveVibe, serializeVibe } from './parse.js';
 
 const LOCKED_IN = `
 name: locked-in
@@ -113,5 +113,52 @@ describe('loadVibes', () => {
 
   it('reports a missing file by path', async () => {
     await expect(loadVibeFile(join(dir, 'nope.yaml'))).rejects.toThrowError(/Could not read/);
+  });
+});
+
+describe('serializeVibe', () => {
+  it('round-trips a complete vibe', () => {
+    const vibe = parseVibe(LOCKED_IN);
+    expect(parseVibe(serializeVibe(vibe))).toEqual(vibe);
+  });
+
+  it('round-trips a minimal vibe', () => {
+    const vibe = parseVibe('theme: midnight', { name: 'quiet' });
+    const reparsed = parseVibe(serializeVibe(vibe));
+    expect(reparsed).toEqual({ name: 'quiet', theme: 'midnight' });
+  });
+});
+
+describe('saveVibe', () => {
+  let dir: string;
+
+  beforeEach(async () => {
+    dir = await mkdtemp(join(tmpdir(), 'nightshift-vibe-save-'));
+  });
+
+  afterEach(async () => {
+    await rm(dir, { recursive: true, force: true });
+  });
+
+  it('writes <name>.yaml and round-trips', async () => {
+    const vibe = parseVibe(LOCKED_IN);
+    const path = await saveVibe(dir, vibe);
+    expect(path).toBe(join(dir, 'locked-in.yaml'));
+    expect(await loadVibeFile(path)).toEqual(vibe);
+  });
+
+  it('creates the directory when needed', async () => {
+    const nested = join(dir, 'nested');
+    await saveVibe(nested, { name: 'quiet', theme: 'midnight' });
+    expect(await readFile(join(nested, 'quiet.yaml'), 'utf8')).toContain('theme: midnight');
+  });
+
+  it('overwrites an existing file of the same name', async () => {
+    await saveVibe(dir, { name: 'quiet', title: 'Quiet' });
+    await saveVibe(dir, { name: 'quiet', title: 'Renamed' });
+    expect(await loadVibeFile(join(dir, 'quiet.yaml'))).toEqual({
+      name: 'quiet',
+      title: 'Renamed',
+    });
   });
 });

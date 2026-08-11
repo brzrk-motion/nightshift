@@ -10,7 +10,7 @@ import { CommandPalette } from './CommandPalette.js';
 import { HelpOverlay } from './HelpOverlay.js';
 import { Header } from './Header.js';
 import { NavRail } from './NavRail.js';
-import { DEFAULT_SCREENS } from './screens.js';
+import { DEFAULT_SCREENS } from './screens/index.js';
 import type { Screen } from './screen.js';
 import { RuntimeProvider, ThemeProvider, type AppRuntime } from './context.js';
 
@@ -250,7 +250,7 @@ export function AppShell({
             </box>
           ) : (
             <>
-              <Header runtime={runtime} title={current.label} />
+              <Header runtime={runtime} />
               <box style={{ flexGrow: 1, flexDirection: 'row' }}>
                 <NavRail
                   screens={allScreens}

@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { useTheme } from './context.js';
 import { Icon } from '../components/Icon.js';
 import type { Screen } from './screen.js';
+import { EDGE_BOTTOM } from '@opentui/core/yoga';
 
 export interface NavRailProps {
   screens: readonly Screen[];
@@ -37,6 +38,7 @@ function NavRailItem({ screen, active, first, collapsed, onSelect }: NavRailItem
         paddingLeft: 1,
         paddingRight: 1,
         marginTop: first ? 1 : 0,
+        marginBottom: 1,
         ...(active
           ? { backgroundColor: theme.colors.border }
           : hovered
@@ -65,6 +67,8 @@ export function NavRail({ screens, active, onSelect, collapsed }: NavRailProps):
         width: collapsed ? 4 : 16,
         flexShrink: 0,
         flexDirection: 'column',
+        marginTop: 1,
+        marginBottom: 1,
         backgroundColor: theme.colors.surface,
         border: ['right'],
         borderStyle: 'single',

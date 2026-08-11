@@ -17,7 +17,17 @@ import {
   type WidgetRegistry,
 } from '@nightshift/dashboard';
 import { createAutomationEngine, type AutomationEngine } from '@nightshift/automations';
-import { BUILT_IN_VIBES, createVibeEngine, loadVibes, type VibeEngine } from '@nightshift/vibes';
+import { NightshiftError, type Json } from '@nightshift/core';
+import {
+  BUILT_IN_VIBES,
+  createVibeEngine,
+  loadVibes,
+  parseVibe,
+  saveVibe,
+  serializeVibe,
+  type VibeEngine,
+  type VibeSpec,
+} from '@nightshift/vibes';
 import { createAppRuntime, type AppRuntime } from '@nightshift/ui';
 import type { CliContext } from './context.js';
 
@@ -50,6 +60,66 @@ export interface CreateRuntimeOptions {
 function describe(failure: PluginFailure): string {
   const reason = failure.error instanceof Error ? failure.error.message : String(failure.error);
   return `Plugin "${failure.source.id}" did not load: ${reason}`;
+}
+
+const VIBE_NAME = /^[a-z][a-z0-9-]*$/;
+
+/** Turns a command-args blob into a validated VibeSpec. */
+function vibeFromArgs(args: Record<string, Json> | undefined): VibeSpec {
+  if (args === undefined || typeof args['name'] !== 'string' || !VIBE_NAME.test(args['name'])) {
+    throw new NightshiftError(
+      'CONFIG_INVALID',
+      'vibe.save needs a name like `locked-in` (lowercase letters, digits, hyphens).',
+    );
+  }
+  // Round-trip through serialize/parse so the same rules hand-edited YAML
+  // gets applied to the form — one validator, two entry points.
+  return parseVibe(serializeVibe(args as unknown as VibeSpec), { source: 'vibe.save' });
+}
+
+function publishVibesCatalog(
+  entities: EntityStore,
+  vibes: VibeEngine,
+  userVibeNames: ReadonlySet<string>,
+): void {
+  const active = entities.get<{ active: string | null }>('nightshift.vibe')?.state.active ?? null;
+  const rows: Json[] = vibes.list().map((vibe) => {
+    const row: Record<string, Json> = {
+      name: vibe.name,
+      title: vibe.title ?? vibe.name,
+      description: vibe.description ?? '',
+      theme: vibe.theme ?? '',
+      dashboard: vibe.dashboard ?? '',
+      source: userVibeNames.has(vibe.name) ? 'user' : 'built-in',
+      active: vibe.name === active,
+    };
+    if (vibe.entities !== undefined) row['entities'] = vibe.entities;
+    if (vibe.onActivate !== undefined) {
+      row['onActivate'] = vibe.onActivate.map((action) => {
+        const entry: Record<string, Json> = { command: action.command };
+        if (action.args !== undefined) entry['args'] = action.args;
+        return entry;
+      });
+    }
+    if (vibe.onDeactivate !== undefined) {
+      row['onDeactivate'] = vibe.onDeactivate.map((action) => {
+        const entry: Record<string, Json> = { command: action.command };
+        if (action.args !== undefined) entry['args'] = action.args;
+        return entry;
+      });
+    }
+    return row;
+  });
+
+  const state: Json = { vibes: rows };
+  if (entities.get('nightshift.vibes')) {
+    entities.set('nightshift.vibes', state);
+  } else {
+    entities.register('nightshift.vibes', state, {
+      owner: 'nightshift',
+      title: 'Registered vibes',
+    });
+  }
 }
 
 export async function createNightshiftRuntime(
@@ -165,10 +235,7 @@ export async function createNightshiftRuntime(
     ...foundVibes.vibes,
   ]);
 
-  // One command per vibe, the same way DashboardApp gives one command per
-  // dashboard — this is what makes a vibe reachable from the palette, not
-  // just from `nightshift vibe <name>` at boot.
-  for (const vibe of vibes.list()) {
+  const registerActivateCommand = (vibe: VibeSpec): void => {
     app.commands.register({
       id: `vibe.activate.${vibe.name}`,
       title: `Activate ${vibe.title ?? vibe.name}`,
@@ -177,12 +244,34 @@ export async function createNightshiftRuntime(
         await vibes.activate(vibe.name);
       },
     });
-  }
+  };
+
+  // One command per vibe, the same way DashboardApp gives one command per
+  // dashboard — this is what makes a vibe reachable from the palette, not
+  // just from `nightshift vibe <name>` at boot.
+  for (const vibe of vibes.list()) registerActivateCommand(vibe);
 
   // The shell's header reads this to show "● locked in" — see `Header.tsx` —
   // and it is the other half of the same entity-bridge convention as
   // `nightshift.plugins` above.
   entities.register('nightshift.vibe', { active: null, title: null }, { owner: 'nightshift' });
+  publishVibesCatalog(entities, vibes, userVibeNames);
+
+  app.commands.register({
+    id: 'vibe.save',
+    title: 'Save vibe',
+    category: 'Vibes',
+    hidden: true,
+    run: async (args) => {
+      const spec = vibeFromArgs(args);
+      await saveVibe(context.paths.vibesDir, spec);
+      vibes.register(spec);
+      userVibeNames.add(spec.name);
+      registerActivateCommand(spec);
+      publishVibesCatalog(entities, vibes, userVibeNames);
+      app.toasts.push(`Saved vibe "${spec.title ?? spec.name}"`, { tone: 'success' });
+    },
+  });
 
   const automations = createAutomationEngine({ entities, commands: app.commands });
   automations.registerAll(plugins.automations());
@@ -199,11 +288,13 @@ export async function createNightshiftRuntime(
       active: result.vibe.name,
       title: result.vibe.title ?? result.vibe.name,
     });
+    publishVibesCatalog(entities, vibes, userVibeNames);
     automations.notifyVibe(result.vibe.name, 'activate');
   });
   vibes.events.on('deactivated', (name, deactivateWarnings) => {
     for (const warning of deactivateWarnings) app.toasts.push(warning, { tone: 'warning' });
     entities.set('nightshift.vibe', { active: null, title: null });
+    publishVibesCatalog(entities, vibes, userVibeNames);
     automations.notifyVibe(name, 'deactivate');
   });
 
