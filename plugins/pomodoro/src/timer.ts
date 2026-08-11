@@ -28,10 +28,7 @@ export const DEFAULT_SHORT_BREAK_MINUTES = 5;
 export const DEFAULT_LONG_BREAK_MINUTES = 15;
 export const DEFAULT_POMODOROS_PER_LONG_BREAK = 4;
 
-export function initialState(
-  completedPomodorosToday = 0,
-  cycleCount = 0,
-): PomodoroState {
+export function initialState(completedPomodorosToday = 0, cycleCount = 0): PomodoroState {
   const durationSeconds = DEFAULT_WORK_MINUTES * 60;
   return {
     status: 'idle',

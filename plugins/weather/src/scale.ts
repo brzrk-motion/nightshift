@@ -115,7 +115,11 @@ function tryLarge(
   if (width < LARGE_MIN_WIDTH || heroRows < FONT_ROWS.block) return null;
 
   const fonts: HeroFont[] =
-    heroRows >= FONT_ROWS.block + 2 ? ['block', 'tiny'] : heroRows >= FONT_ROWS.tiny + 1 ? ['tiny'] : [];
+    heroRows >= FONT_ROWS.block + 2
+      ? ['block', 'tiny']
+      : heroRows >= FONT_ROWS.tiny + 1
+        ? ['tiny']
+        : [];
 
   for (const font of fonts) {
     const inlineWidths = [width >= LARGE_INLINE_WIDTH, width >= LARGE_MIN_WIDTH];

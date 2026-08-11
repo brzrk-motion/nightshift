@@ -28,7 +28,10 @@ function rejectOrigin(response: ServerResponse): void {
  * Localhost origin guard that also accepts Cursor and VS Code desktop clients.
  * Host validation still limits the server to loopback; this only widens Origin.
  */
-export function ideOriginValidation(): (request: IncomingMessage, response: ServerResponse) => boolean {
+export function ideOriginValidation(): (
+  request: IncomingMessage,
+  response: ServerResponse,
+) => boolean {
   return (request, response) => {
     if (isAllowedOrigin(request.headers.origin)) return true;
     rejectOrigin(response);
