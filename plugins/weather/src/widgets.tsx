@@ -130,7 +130,7 @@ function AsciiBlock({ lines, color }: { lines: readonly string[]; color: string 
   );
 }
 
-/** A value + unit drawn in one of the ascii fonts, or plain text at the smallest. */
+/** A value + unit in the hero font — same size for every stat in a layout mode. */
 function HeroStat({
   digits,
   unit,
@@ -168,10 +168,140 @@ function HeroStat({
           <b>{label}</b>
         </text>
       ) : null}
-      {/* Always reserve the detail row so sibling heroes share the same height —
-          the temperature can be drawn in a bigger font than the two beside it,
-          and bottom-aligning them is what keeps the labels on one line. */}
       {scale.showDetail ? <text fg={theme.colors.muted}>{detail ?? '\u00A0'}</text> : null}
+    </box>
+  );
+}
+
+/** Compact mode: one even row of stats beside the art or icon. */
+function CompactHeroRow({
+  scale,
+  tempStat,
+  humidityStat,
+  windStat,
+  conditionLine,
+}: {
+  scale: NowScale;
+  tempStat: ReactNode;
+  humidityStat: ReactNode;
+  windStat: ReactNode;
+  conditionLine: ReactNode;
+}): ReactNode {
+  return (
+    <box style={{ flexDirection: 'column', gap: 0, flexGrow: 1, justifyContent: 'center' }}>
+      <box
+        style={{
+          flexDirection: 'row',
+          alignItems: 'flex-end',
+          gap: 3,
+          flexWrap: 'wrap',
+        }}
+      >
+        {tempStat}
+        {scale.showSecondary ? humidityStat : null}
+        {scale.showSecondary ? windStat : null}
+      </box>
+      {conditionLine}
+    </box>
+  );
+}
+
+/** Large mode: art beside a block of evenly weighted stats. */
+function LargeHero({
+  scale,
+  art,
+  artColor,
+  icon,
+  tempStat,
+  humidityStat,
+  windStat,
+}: {
+  scale: NowScale;
+  art: readonly string[] | null;
+  artColor: string;
+  icon: ReactNode;
+  tempStat: ReactNode;
+  humidityStat: ReactNode;
+  windStat: ReactNode;
+}): ReactNode {
+  const stats = scale.showSecondary ? (
+    scale.heroesInline ? (
+      <box style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 3, flexShrink: 0 }}>
+        {tempStat}
+        {humidityStat}
+        {windStat}
+      </box>
+    ) : (
+      <box style={{ flexDirection: 'column', gap: 1, flexShrink: 0 }}>
+        {tempStat}
+        <box style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 3 }}>
+          {humidityStat}
+          {windStat}
+        </box>
+      </box>
+    )
+  ) : (
+    tempStat
+  );
+
+  return (
+    <box
+      style={{
+        flexDirection: 'row',
+        gap: scale.art === 'large' ? 3 : 2,
+        alignItems: scale.art === 'none' ? 'flex-end' : 'center',
+        flexGrow: 1,
+        justifyContent: 'flex-start',
+      }}
+    >
+      {art ? (
+        <AsciiBlock lines={art} color={artColor} />
+      ) : scale.showSecondary ? (
+        icon
+      ) : null}
+      {stats}
+    </box>
+  );
+}
+
+/** Compact mode: icon or small art beside a single row of uniform stats. */
+function CompactHero({
+  scale,
+  art,
+  artColor,
+  icon,
+  tempStat,
+  humidityStat,
+  windStat,
+  conditionLine,
+}: {
+  scale: NowScale;
+  art: readonly string[] | null;
+  artColor: string;
+  icon: ReactNode;
+  tempStat: ReactNode;
+  humidityStat: ReactNode;
+  windStat: ReactNode;
+  conditionLine: ReactNode;
+}): ReactNode {
+  return (
+    <box
+      style={{
+        flexDirection: 'row',
+        gap: 2,
+        alignItems: 'center',
+        flexGrow: 1,
+        justifyContent: 'flex-start',
+      }}
+    >
+      {art ? <AsciiBlock lines={art} color={artColor} /> : icon}
+      <CompactHeroRow
+        scale={scale}
+        tempStat={tempStat}
+        humidityStat={humidityStat}
+        windStat={windStat}
+        conditionLine={conditionLine}
+      />
     </box>
   );
 }
@@ -344,7 +474,7 @@ export function NowWidget({ options, width, height }: WidgetProps): ReactNode {
       unit="%"
       color={toneColor}
       label="Humidity"
-      font={scale.secondaryFont}
+      font={scale.font}
       scale={scale}
     />
   );
@@ -354,15 +484,29 @@ export function NowWidget({ options, width, height }: WidgetProps): ReactNode {
       unit={windUnit}
       color={toneColor}
       label="Wind"
-      font={scale.secondaryFont}
+      font={scale.font}
       scale={scale}
     />
   );
 
-  // The two rows `HERO_GAP_ROWS` accounts for: header-to-hero and hero-to-
-  // toolbar. `nowScale` hands them to the hero when that is what a bigger
-  // font costs, so the gaps here have to follow what it decided.
+  const conditionIcon = <Icon name={code.icon} color={toneColor} />;
+  const compactCondition =
+    scale.layout === 'compact' ? (
+      <text fg={theme.colors.muted} wrapMode="none">
+        {slot.condition || code.label}
+      </text>
+    ) : null;
+
   const gap = scale.tightGaps ? 0 : 1;
+  const heroProps = {
+    scale,
+    art,
+    artColor: toneColor,
+    icon: conditionIcon,
+    tempStat,
+    humidityStat,
+    windStat,
+  };
 
   return (
     <box
@@ -401,55 +545,11 @@ export function NowWidget({ options, width, height }: WidgetProps): ReactNode {
           />
         </box>
 
-        <box
-          style={{
-            flexDirection: 'row',
-            gap: scale.art === 'large' ? 3 : 1,
-            // The bare glyph sits on the values' own line rather than floating
-            // above them; drawn art is tall enough to centre against them.
-            alignItems: scale.art === 'none' ? 'flex-end' : 'center',
-            flexGrow: 1,
-            justifyContent: 'center',
-          }}
-        >
-          {art ? (
-            <AsciiBlock lines={art} color={toneColor} />
-          ) : scale.showSecondary ? (
-            // Too small to draw at all — the condition still gets a glyph.
-            <Icon name={code.icon} color={toneColor} />
-          ) : null}
-          {!scale.showSecondary ? (
-            <box style={{ flexGrow: 1 }}>{tempStat}</box>
-          ) : scale.heroesInline ? (
-            <box
-              style={{
-                flexDirection: 'row',
-                alignItems: 'flex-end',
-                flexGrow: 1,
-                justifyContent: 'space-between',
-              }}
-            >
-              {tempStat}
-              {humidityStat}
-              {windStat}
-            </box>
-          ) : (
-            <box style={{ flexDirection: 'column', gap: 1, flexGrow: 1 }}>
-              {tempStat}
-              <box
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'flex-end',
-                  flexGrow: 1,
-                  justifyContent: 'space-between',
-                }}
-              >
-                {humidityStat}
-                {windStat}
-              </box>
-            </box>
-          )}
-        </box>
+        {scale.layout === 'large' ? (
+          <LargeHero {...heroProps} />
+        ) : (
+          <CompactHero {...heroProps} conditionLine={compactCondition} />
+        )}
       </box>
 
       <ActionBar

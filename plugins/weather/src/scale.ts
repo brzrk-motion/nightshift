@@ -1,206 +1,211 @@
 import type { WeatherArtSize } from './art.js';
 
 /**
- * How much of the now-widget hero fits in the cells it was given.
+ * Two layout modes for the now-widget hero — large and compact — instead of a
+ * ladder that mixes a block-font temperature with plain-text humidity and wind.
  *
- * OpenTUI's `ascii-font` is a fixed-size framebuffer — `block` is always six
- * rows tall whatever the widget's size — and boxes do not clip by default, so
- * a hero drawn bigger than its slot spills over the toolbar and past the panel
- * border. Rather than let that happen, the widget walks a fixed ladder of
- * treatments and takes the first rung that fits — spending the blank rows
- * around the hero, and then the font itself, as the cells run out.
+ * OpenTUI's `ascii-font` is a fixed-size framebuffer and boxes do not clip by
+ * default, so every rung is measured against the cells available before draw.
  */
 
-/**
- * Fonts a value can be drawn in, largest first.
- *
- * Only these three. OpenTUI's remaining ascii fonts are no help: `slick`,
- * `grid`, `pallet`, `shade` and `huge` are all six rows or more, same as
- * `block`, so they buy nothing where rows are what ran out. `tiny` is the one
- * middle rung — two rows, so twice the height of plain text, at the cost of
- * being blockier to read (`▀█ / █▄` is a 2) — and plain text is the floor.
- */
 export type HeroFont = 'block' | 'tiny' | 'text';
+export type NowLayout = 'large' | 'compact';
 
-/** Rows each font's glyphs occupy, per `measureText` in @opentui/core. */
 const FONT_ROWS: Record<HeroFont, number> = { block: 6, tiny: 2, text: 1 };
-
 const ART_ROWS: Record<WeatherArtSize, number> = { large: 5, small: 3 };
 
-/**
- * Rows the widget spends before the hero gets any, toolbar aside: the panel's
- * border and padding (4) and the place/status header (1).
- */
+/** Panel border/padding (4) + place/status header (1). */
 export const HERO_CHROME_ROWS = 5;
 
-/**
- * The blank rows above and below the hero. Unlike the rest of the chrome these
- * are negotiable: two rows of breathing room are worth less than a temperature
- * legible at a glance, so `nowScale` spends them on a bigger font when that is
- * the difference between rungs.
- */
+/** Blank rows above and below the hero — negotiable when rows are tight. */
 export const HERO_GAP_ROWS = 2;
 
-/** `Button` is three rows; a row of pressable `[chips]` is one. */
+/** `Button` is three rows; a row of pressable chips is one. */
 const TOOLBAR_ROWS = { full: 3, compact: 1 };
 
-/**
- * Below this height the toolbar's two spare rows are worth more to the hero
- * than the buttons' borders are — the same trade the clock plugin makes with
- * its own settings panel.
- */
 export const COMPACT_TOOLBAR_HEIGHT = 14;
 
-/**
- * Cells each value takes with its unit beside it, per `measureText`: the widest
- * each one realistically gets is `22 °C`, `100 %` and `108 km/h`.
- */
+const PANEL_COLS = 4;
+const GAP_COLS = 2;
+
+/** Cells each value takes with its unit, per font. */
 const VALUE_COLS: Record<HeroFont, { temp: number; humidity: number; wind: number }> = {
   block: { temp: 20, humidity: 26, wind: 29 },
   tiny: { temp: 8, humidity: 12, wind: 15 },
   text: { temp: 6, humidity: 5, wind: 8 },
 };
 
-/** Cells the widest label under each value takes: `Feels -12°C`, then the names. */
 const LABEL_COLS = { temp: 12, humidity: 8, wind: 4 };
+const ART_COLS: Record<WeatherArtSize | 'none', number> = { large: 15, small: 8, none: 0 };
 
-/** Cells the art column takes, including the gap to the values beside it. */
-const ART_COLS: Record<WeatherArtSize | 'none', number> = { large: 15, small: 8, none: 2 };
+/** Minimum widget size to attempt each mode. */
+const LARGE_MIN_WIDTH = 44;
+const LARGE_MIN_HEIGHT = 13;
+const COMPACT_MIN_WIDTH = 18;
+const COMPACT_MIN_HEIGHT = 7;
 
-/** The panel's own border and padding. */
-const PANEL_COLS = 4;
+/** Inline block stats need this much width with large art. */
+const LARGE_INLINE_WIDTH = 92;
 
-/** Breathing room between the three values when they share a row. */
-const GAP_COLS = 2;
-
-/**
- * One rung of the ladder. The temperature can be drawn larger than humidity
- * and wind — it is the number the widget exists for — so a rung names a font
- * for each — and dropping them entirely, leaving the temperature alone, is
- * itself a rung rather than a special case, so that the temperature's own font
- * still outranks it. Rungs are ordered by what matters most: the temperature's
- * font first, then the art, then the stats' font. Widths are not listed here;
- * they are computed from the tables above, because what a rung needs depends on
- * whether its labels are showing.
- */
-interface Rung {
+export interface NowScale {
+  layout: NowLayout;
+  /** Same font for temperature, humidity, and wind — never mixed. */
   font: HeroFont;
-  secondaryFont: HeroFont;
   art: WeatherArtSize | 'none';
-  /** Humidity and wind beside the temperature at all. */
+  /** Humidity and wind beside the temperature (large wide widgets only). */
+  heroesInline: boolean;
+  showLabel: boolean;
+  showDetail: boolean;
   showSecondary: boolean;
+  tightGaps: boolean;
+  compactToolbar: boolean;
 }
 
-const LADDER: readonly Rung[] = [
-  { font: 'block', secondaryFont: 'block', art: 'large', showSecondary: true },
-  { font: 'block', secondaryFont: 'text', art: 'large', showSecondary: true },
-  { font: 'block', secondaryFont: 'text', art: 'small', showSecondary: true },
-  { font: 'block', secondaryFont: 'text', art: 'none', showSecondary: true },
-  { font: 'tiny', secondaryFont: 'tiny', art: 'large', showSecondary: true },
-  { font: 'tiny', secondaryFont: 'text', art: 'large', showSecondary: true },
-  { font: 'tiny', secondaryFont: 'text', art: 'small', showSecondary: true },
-  { font: 'tiny', secondaryFont: 'text', art: 'none', showSecondary: true },
-  { font: 'tiny', secondaryFont: 'tiny', art: 'none', showSecondary: false },
-  { font: 'text', secondaryFont: 'text', art: 'large', showSecondary: true },
-  { font: 'text', secondaryFont: 'text', art: 'small', showSecondary: true },
-  { font: 'text', secondaryFont: 'text', art: 'none', showSecondary: true },
-  { font: 'text', secondaryFont: 'text', art: 'none', showSecondary: false },
-];
-
-/** Cells `rung` needs, laid out inline or stacked, with or without labels. */
-function widthNeeded(rung: Rung, heroesInline: boolean, showLabel: boolean): number {
-  const hero = VALUE_COLS[rung.font];
-  const stats = VALUE_COLS[rung.secondaryFont];
+function widthForStats(
+  font: HeroFont,
+  art: WeatherArtSize | 'none',
+  inline: boolean,
+  showLabel: boolean,
+  showSecondary: boolean,
+): number {
+  const hero = VALUE_COLS[font];
   const widest = (value: number, label: number): number =>
     showLabel ? Math.max(value, label) : value;
 
   const temp = widest(hero.temp, LABEL_COLS.temp);
-  if (!rung.showSecondary) return PANEL_COLS + ART_COLS[rung.art] + temp;
+  if (!showSecondary) return PANEL_COLS + ART_COLS[art] + temp + (art === 'none' ? 2 : 0);
 
-  const humidity = widest(stats.humidity, LABEL_COLS.humidity);
-  const wind = widest(stats.wind, LABEL_COLS.wind);
+  const humidity = widest(hero.humidity, LABEL_COLS.humidity);
+  const wind = widest(hero.wind, LABEL_COLS.wind);
+
+  if (inline) {
+    return PANEL_COLS + ART_COLS[art] + temp + humidity + wind + GAP_COLS * 2;
+  }
 
   return (
     PANEL_COLS +
-    ART_COLS[rung.art] +
-    (heroesInline ? temp + humidity + wind + GAP_COLS : Math.max(temp, humidity + 1 + wind))
+    ART_COLS[art] +
+    Math.max(temp, humidity + GAP_COLS + wind) +
+    (art === 'none' ? 2 : 0)
   );
 }
 
-export interface NowScale {
-  /** Font for the temperature. */
-  font: HeroFont;
-  /** Font for humidity and wind, never larger than the temperature's. */
-  secondaryFont: HeroFont;
-  art: WeatherArtSize | 'none';
-  /** Temperature, humidity and wind across one row rather than stacked. */
-  heroesInline: boolean;
-  /** The condition line under each value. */
-  showLabel: boolean;
-  /** The quieter "Feels 21°C" line under that. */
-  showDetail: boolean;
-  /** Humidity and wind at all — the last thing to go. */
-  showSecondary: boolean;
-  /** The blank rows around the hero, given up to draw it larger. */
-  tightGaps: boolean;
-  /** One row of pressable labels instead of three rows of bordered buttons. */
-  compactToolbar: boolean;
+function rowsForStats(
+  font: HeroFont,
+  inline: boolean,
+  showLabel: boolean,
+  showDetail: boolean,
+  showSecondary: boolean,
+): number {
+  const extra = (showLabel ? 1 : 0) + (showDetail ? 1 : 0);
+  const hero = FONT_ROWS[font] + extra;
+  const secondary = FONT_ROWS[font] + extra;
+
+  if (!showSecondary) return hero;
+  if (inline) return Math.max(hero, secondary);
+  return hero + 1 + secondary;
 }
 
-/**
- * Label and "Feels 21°C" detail combinations, richest first. Dropping them is
- * always allowed: every value is drawn with its unit beside it (`°C`, `%`,
- * `km/h`) and the art says what the condition is, so a label-less hero is
- * still readable — which is what lets the six-row temperature survive down to
- * six hero rows.
- */
-const LABELLING: readonly [boolean, boolean][] = [
-  [true, true],
-  [true, false],
-  [false, false],
-];
-
-function fit(
-  rung: Rung,
+function tryLarge(
   width: number,
   heroRows: number,
   tightGaps: boolean,
   compactToolbar: boolean,
 ): NowScale | null {
-  if (rung.art !== 'none' && heroRows < ART_ROWS[rung.art]) return null;
+  if (width < LARGE_MIN_WIDTH || heroRows < FONT_ROWS.block) return null;
 
-  for (const [showLabel, showDetail] of LABELLING) {
-    const inlineFits = width >= widthNeeded(rung, true, showLabel);
-    // A lone temperature is inline by definition — there is nothing beside it
-    // to stack under, so its only width is the one `widthNeeded` returned.
-    if (!inlineFits && (!rung.showSecondary || width < widthNeeded(rung, false, showLabel))) {
+  const fonts: HeroFont[] =
+    heroRows >= FONT_ROWS.block + 2 ? ['block', 'tiny'] : heroRows >= FONT_ROWS.tiny + 1 ? ['tiny'] : [];
+
+  for (const font of fonts) {
+    const inlineWidths = [width >= LARGE_INLINE_WIDTH, width >= LARGE_MIN_WIDTH];
+
+    for (const art of ['large', 'small', 'none'] as const) {
+      if (art !== 'none' && heroRows < ART_ROWS[art]) continue;
+
+      for (const heroesInline of inlineWidths) {
+        if (heroesInline && width < LARGE_MIN_WIDTH) continue;
+
+        for (const [showLabel, showDetail] of [
+          [true, true],
+          [true, false],
+          [false, false],
+        ] as const) {
+          if (showDetail && (!showLabel || !heroesInline)) continue;
+
+          const cols = widthForStats(font, art, heroesInline, showLabel, true);
+          if (width < cols) continue;
+
+          const rows = rowsForStats(font, heroesInline, showLabel, showDetail, true);
+          const artRows = art === 'none' ? 0 : ART_ROWS[art];
+          if (Math.max(rows, artRows) > heroRows) continue;
+
+          return {
+            layout: 'large',
+            font,
+            art,
+            heroesInline,
+            showLabel,
+            showDetail,
+            showSecondary: true,
+            tightGaps,
+            compactToolbar,
+          };
+        }
+      }
+    }
+  }
+
+  return null;
+}
+
+function tryCompact(
+  width: number,
+  heroRows: number,
+  tightGaps: boolean,
+  compactToolbar: boolean,
+): NowScale | null {
+  if (width < COMPACT_MIN_WIDTH || heroRows < 1) return null;
+
+  for (const art of ['small', 'none'] as const) {
+    if (art !== 'none' && heroRows < ART_ROWS[art]) continue;
+
+    const font: HeroFont = heroRows >= FONT_ROWS.tiny + 1 && width >= 26 ? 'tiny' : 'text';
+    const showSecondary = width >= 24;
+
+    const cols = widthForStats(font, art, true, false, showSecondary);
+    if (width < cols) {
+      if (showSecondary) {
+        const solo = widthForStats(font, art, true, false, false);
+        if (width >= solo) {
+          return {
+            layout: 'compact',
+            font,
+            art,
+            heroesInline: true,
+            showLabel: false,
+            showDetail: false,
+            showSecondary: false,
+            tightGaps,
+            compactToolbar,
+          };
+        }
+      }
       continue;
     }
-    const heroesInline = inlineFits || !rung.showSecondary;
 
-    // At the plain-text size "Feels 21°C" is wider than the temperature it sits
-    // under, so inline it squeezes humidity and wind rather than adding to them.
-    if (showDetail && heroesInline && rung.showSecondary && rung.font === 'text') continue;
-
-    const extra = (showLabel ? 1 : 0) + (showDetail ? 1 : 0);
-    const hero = FONT_ROWS[rung.font] + extra;
-    const secondary = FONT_ROWS[rung.secondaryFont] + extra;
-    // Inline they share the rows; stacked they take their own, plus a gap.
-    const rows = !rung.showSecondary
-      ? hero
-      : heroesInline
-        ? Math.max(hero, secondary)
-        : hero + 1 + secondary;
-    if (rows > heroRows) continue;
+    const rows = rowsForStats(font, true, false, false, showSecondary);
+    const artRows = art === 'none' ? 0 : ART_ROWS[art];
+    if (Math.max(rows, artRows) > heroRows) continue;
 
     return {
-      font: rung.font,
-      secondaryFont: rung.secondaryFont,
-      art: rung.art,
-      heroesInline,
-      showLabel,
-      showDetail,
-      showSecondary: rung.showSecondary,
+      layout: 'compact',
+      font,
+      art,
+      heroesInline: true,
+      showLabel: false,
+      showDetail: false,
+      showSecondary,
       tightGaps,
       compactToolbar,
     };
@@ -210,46 +215,38 @@ function fit(
 }
 
 /**
- * Picks the richest hero treatment that fits `width` x `height` widget cells.
+ * Picks large or compact hero treatment for the widget's cell size.
  *
- * The ladder's order is the priority order: a readable temperature first, then
- * the art, then the size of the stats beside it, and the labels last — every
- * value is drawn with its unit, and the art says what the condition is, so
- * labels are the one thing here that repeats what is already on screen.
+ * Large mode draws temperature, humidity, and wind in the same font tier with
+ * optional ASCII art. Compact mode uses a single uniform row of smaller stats.
  */
 export function nowScale(width: number, height: number): NowScale {
   const compactToolbar = height < COMPACT_TOOLBAR_HEIGHT;
-  const rows =
-    height - HERO_CHROME_ROWS - (compactToolbar ? TOOLBAR_ROWS.compact : TOOLBAR_ROWS.full);
+  const toolbarRows = compactToolbar ? TOOLBAR_ROWS.compact : TOOLBAR_ROWS.full;
 
-  // Two passes over the ladder, roomy first, so the gaps are only spent when
-  // they buy a rung the widget could not otherwise reach — searching above the
-  // roomy result rather than from the top is what makes that "only".
-  let best: NowScale | null = null;
-  let bestRung = LADDER.length;
   for (const tightGaps of [false, true]) {
-    const heroRows = rows - (tightGaps ? 0 : HERO_GAP_ROWS);
-    for (let index = 0; index < bestRung; index += 1) {
-      const scale = fit(LADDER[index]!, width, heroRows, tightGaps, compactToolbar);
-      if (scale) {
-        best = scale;
-        bestRung = index;
-        break;
-      }
+    const heroRows = height - HERO_CHROME_ROWS - toolbarRows - (tightGaps ? 0 : HERO_GAP_ROWS);
+
+    if (height >= LARGE_MIN_HEIGHT) {
+      const large = tryLarge(width, heroRows, tightGaps, compactToolbar);
+      if (large) return large;
+    }
+
+    if (height >= COMPACT_MIN_HEIGHT) {
+      const compact = tryCompact(width, heroRows, tightGaps, compactToolbar);
+      if (compact) return compact;
     }
   }
-  if (best) return best;
 
-  // Not even one row to draw in: plain temperature, everything else dropped.
   return {
+    layout: 'compact',
     font: 'text',
-    secondaryFont: 'text',
     art: 'none',
     heroesInline: true,
     showLabel: false,
     showDetail: false,
     showSecondary: false,
     tightGaps: true,
-    compactToolbar,
+    compactToolbar: height < COMPACT_TOOLBAR_HEIGHT,
   };
 }

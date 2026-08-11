@@ -131,25 +131,26 @@ describe.skipIf(!renderable)('NowWidget', () => {
 });
 
 describe.skipIf(!renderable)('NowWidget at small sizes', () => {
-  it('keeps the big temperature and steps the stats down to plain text', async () => {
+  it('keeps every stat the same size in a medium widget', async () => {
     const setup = await testRender(
       <ThemeProvider theme={MIDNIGHT_THEME}>
         <RuntimeProvider runtime={nowRuntime()}>
-          <NowWidget options={{ location: 'home' }} width={48} height={16} />
+          <NowWidget options={{ location: 'home' }} width={48} height={18} />
         </RuntimeProvider>
       </ThemeProvider>,
-      { width: 52, height: 18 },
+      { width: 52, height: 20 },
     );
 
     try {
       await setup.renderOnce();
       const frame = setup.captureCharFrame();
-      expect(frame).toContain('-( o )-');
-      expect(frame).not.toContain('--( )--');
-      // Humidity and wind read as themselves rather than as ascii glyphs.
       expect(frame).toContain('40 %');
       expect(frame).toContain('10 km/h');
-      expect(frame).toContain('█');
+      expect(frame).toContain('Humidity');
+      expect(frame).toContain('Wind');
+      // Every stat uses the same font tier — tiny ascii, not plain text off at the edges.
+      expect(frame).toContain('▀█');
+      expect(frame).not.toContain('--( )--');
     } finally {
       setup.renderer.destroy();
     }
