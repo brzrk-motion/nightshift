@@ -5,8 +5,7 @@ import { type QueryContext } from './query.js';
 import { createContextServer } from './server.js';
 import { createCodeIndex, type FileSystem } from './store.js';
 import { createTools, type Tool } from './tools.js';
-
-const ROOT = '/repo';
+import { TEST_ROOT, testAbsPath, testRelPath } from './testRoot.js';
 const SOURCES: Record<string, string> = {
   'src/timer.ts': ['export function tick(): number {', '  return 1;', '}'].join('\n'),
 };
@@ -17,21 +16,21 @@ let context: QueryContext;
 beforeAll(async () => {
   const io: FileSystem = {
     async stat(path) {
-      const source = SOURCES[path.replace(`${ROOT}/`, '')];
+      const source = SOURCES[testRelPath(path)];
       if (source === undefined) throw new Error('ENOENT');
       return { size: source.length, mtimeMs: 1 };
     },
     async readFile(path) {
-      const source = SOURCES[path.replace(`${ROOT}/`, '')];
+      const source = SOURCES[testRelPath(path)];
       if (source === undefined) throw new Error('ENOENT');
       return source;
     },
     list: () => Object.keys(SOURCES),
   };
 
-  const index = createCodeIndex({ root: ROOT, extractor: await createExtractor(), io });
+  const index = createCodeIndex({ root: TEST_ROOT, extractor: await createExtractor(), io });
   await index.reindexAll();
-  context = { index, readSource: (file) => io.readFile(`${ROOT}/${file}`) };
+  context = { index, readSource: (file) => io.readFile(testAbsPath(file)) };
   tools = new Map(createTools(context).map((tool) => [tool.name, tool]));
 });
 
@@ -64,7 +63,7 @@ describe('createTools', () => {
   });
 
   it('reports index status', async () => {
-    expect(await call('index_status')).toMatchObject({ root: ROOT, files: 1, symbols: 1 });
+    expect(await call('index_status')).toMatchObject({ root: TEST_ROOT, files: 1, symbols: 1 });
   });
 
   it('searches symbols and returns their source', async () => {

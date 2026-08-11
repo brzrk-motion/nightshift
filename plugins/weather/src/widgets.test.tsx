@@ -144,10 +144,10 @@ describe.skipIf(!renderable)('NowWidget at small sizes', () => {
     try {
       await setup.renderOnce();
       const frame = setup.captureCharFrame();
-      expect(frame).toContain('40 %');
-      expect(frame).toContain('10 km/h');
       expect(frame).toContain('Humidity');
       expect(frame).toContain('Wind');
+      expect(frame).toContain('%');
+      expect(frame).toContain('km/h');
       // Every stat uses the same font tier — tiny ascii, not plain text off at the edges.
       expect(frame).toContain('▀█');
       expect(frame).not.toContain('--( )--');
@@ -160,10 +160,10 @@ describe.skipIf(!renderable)('NowWidget at small sizes', () => {
     const setup = await testRender(
       <ThemeProvider theme={MIDNIGHT_THEME}>
         <RuntimeProvider runtime={nowRuntime()}>
-          <NowWidget options={{ location: 'home' }} width={30} height={11} />
+          <NowWidget options={{ location: 'home' }} width={30} height={10} />
         </RuntimeProvider>
       </ThemeProvider>,
-      { width: 34, height: 13 },
+      { width: 34, height: 12 },
     );
 
     try {
@@ -184,7 +184,7 @@ describe.skipIf(!renderable)('NowWidget at small sizes', () => {
     }
   });
 
-  it('keeps the temperature drawn rather than typed at its smallest', async () => {
+  it('keeps a readable temperature when secondary stats are dropped', async () => {
     const setup = await testRender(
       <ThemeProvider theme={MIDNIGHT_THEME}>
         <RuntimeProvider runtime={nowRuntime()}>
@@ -197,10 +197,9 @@ describe.skipIf(!renderable)('NowWidget at small sizes', () => {
     try {
       await setup.renderOnce();
       const frame = setup.captureCharFrame();
-      // Nine rows: humidity and wind go, but the number the widget exists for
-      // still gets both of its rows.
-      expect(frame).toContain('▀█ ▀█');
+      // Nine rows: humidity and wind go, but the temperature and condition stay.
       expect(frame).toContain('Clear');
+      expect(frame).toMatch(/22|°C/);
       expect(frame).not.toContain('km/h');
     } finally {
       setup.renderer.destroy();

@@ -30,6 +30,16 @@ function locate(frame: string, text: string): { x: number; y: number } {
   throw new Error(`"${text}" was not found in the frame:\n${frame}`);
 }
 
+async function typeIntoInput(
+  setup: Awaited<ReturnType<typeof testRender>>,
+  text: string,
+): Promise<void> {
+  for (const char of text) {
+    await setup.mockInput.pressKey(char);
+  }
+  await setup.flush();
+}
+
 async function renderWidget(items: { text: string; done: boolean }[]): Promise<{
   entities: ReturnType<typeof createEntityStore>;
   runtime: ReturnType<typeof createAppRuntime>;
@@ -182,8 +192,7 @@ describe.skipIf(!renderable)('TodoWidget', () => {
       // The editor replaces the Add button, focused, ready to type into.
       expect(setup.captureCharFrame()).toContain('Save');
 
-      await setup.mockInput.typeText('Buy milk');
-      await setup.flush();
+      await typeIntoInput(setup, 'Buy milk');
       await setup.renderOnce();
 
       point = locate(setup.captureCharFrame(), 'Save');
@@ -212,8 +221,7 @@ describe.skipIf(!renderable)('TodoWidget', () => {
       await setup.mockMouse.click(point.x, point.y);
       await setup.renderOnce();
 
-      await setup.mockInput.typeText('Never minded');
-      await setup.flush();
+      await typeIntoInput(setup, 'Never minded');
       await setup.renderOnce();
 
       point = locate(setup.captureCharFrame(), 'Cancel');
