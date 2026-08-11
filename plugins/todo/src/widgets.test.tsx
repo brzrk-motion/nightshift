@@ -188,7 +188,7 @@ describe.skipIf(!renderable)('TodoWidget', () => {
 
     try {
       await setup.renderOnce();
-      let point = locate(setup.captureCharFrame(), 'Add todo');
+      const point = locate(setup.captureCharFrame(), 'Add todo');
       await setup.mockMouse.click(point.x, point.y);
       await setup.renderOnce();
 
