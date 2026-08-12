@@ -3,17 +3,5 @@
     "nightshift-context": {
       "url": "http://127.0.0.1:7411/mcp"
     },
-    "context7": {
-      "url": "https://mcp.context7.com/mcp",
-      "headers": {
-        "CONTEXT7_API_KEY": "${env:CONTEXT7_API_KEY}"
-      }
-    },
-    "deepwiki": {
-      "url": "https://mcp.deepwiki.com/mcp"
-    },
-    "semgrep": {
-      "url": "https://mcp.semgrep.ai/mcp"
-    }
   }
 }
