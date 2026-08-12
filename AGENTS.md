@@ -86,7 +86,9 @@ agents working on this repository, not part of the application: nothing in
 `apps/` or `packages/` may import from it, its packages are `private: true` (so
 Changesets and `release` skip them), and it is free to depend on whatever it
 needs — `@modelcontextprotocol/*`, `web-tree-sitter` — without widening what a
-plugin author is allowed to reach for. See `mcp/context-mcp/README.md`.
+plugin author is allowed to reach for. **`context-mcp`** is the one server
+today — see [Agent tooling (MCP)](#agent-tooling-mcp) below
+and `mcp/context-mcp/README.md` for flags and layout.
 
 Two rules that are easy to break there: **an MCP server over stdio must never
 write to stdout** (stdout is the JSON-RPC channel — logging goes to stderr via
@@ -129,6 +131,155 @@ pnpm mcp:up [args]    # ./mcp-up.mjs — builds and runs the MCP servers (--chec
 it rebuilds only what changed and launches on a clean terminal (build output
 is swallowed unless it fails). `pnpm --filter <pkg> test` / `build` /
 `typecheck` scopes to one package when you don't need the whole graph.
+
+## Agent tooling (MCP)
+
+Four MCP servers are wired in `.cursor/mcp.json`. Use the right one for the
+job — they answer different questions:
+
+| Server               | Question it answers                                        | Auth                          |
+| -------------------- | ---------------------------------------------------------- | ----------------------------- |
+| `nightshift-context` | Where is X defined in _this repo_? Who references it?      | None (run `pnpm mcp:up` first) |
+| `context7`           | How does library Y work? What's the current API for Z?       | Optional `CONTEXT7_API_KEY`   |
+| `deepwiki`           | How is upstream repo Y structured? What does its wiki say? | None                          |
+| `semgrep`            | Does this code have security issues?                       | None (core scanning)          |
+
+**Decision guide:** Nightshift internals → `nightshift-context`. Dependency
+APIs and examples → `context7`. Upstream repo architecture (OpenTUI, MCP SDK,
+tree-sitter) → `deepwiki`. Security review of generated or changed code →
+`semgrep`.
+
+### `nightshift-context` — this repository
+
+`mcp/context-mcp` (`@nightshift/context-mcp`) is a tree-sitter code index
+served over MCP. **Use it before reading whole files or running broad greps**
+when you need to find where something is defined, what a file exports, or who
+references an identifier — it returns precise slices (signatures, doc comments,
+line ranges) instead of dumping entire sources.
+
+### Starting it
+
+```bash
+pnpm mcp:up              # build every mcp/* server and run them over HTTP
+pnpm mcp:up --check      # smoke-test: build, start, poll /health, exit
+```
+
+`mcp-up` discovers servers from each `mcp/*/package.json` `mcp` block (context
+uses port `7411`) and serves streamable HTTP at `http://127.0.0.1:7411/mcp`.
+This repo's `.cursor/mcp.json` already points Cursor at that URL — start
+`pnpm mcp:up` in a terminal before a long session so the tools are available.
+Editors that spawn MCP servers directly can use stdio instead (see
+`mcp/context-mcp/README.md`).
+
+The index builds once at startup and stays current via a debounced file watcher.
+After a bulk change such as a branch switch, call the `reindex` tool with no
+arguments (or restart the server).
+
+### Tools — when to use which
+
+| Tool              | Reach for it when…                                                                 |
+| ----------------- | ---------------------------------------------------------------------------------- |
+| `index_status`    | A query returns nothing unexpected — check root, counts, languages, parse failures. |
+| `search_symbols`  | You know a name/kind/path glob and want definitions without opening files.         |
+| `get_symbol`      | You know what to fetch and want the exact source (optionally with doc/context).    |
+| `file_outline`    | You need the shape of a file (all defs + signatures, no bodies) before diving in.  |
+| `find_references` | You need every syntax-tree mention of an identifier (not comments/strings).        |
+| `read_lines`      | Another tool gave you line numbers and you only need that inclusive range.         |
+| `reindex`         | The watcher missed a bulk change, or a new file is not indexed yet.                |
+
+Suggested flow: `search_symbols` → `get_symbol` or `file_outline` → `read_lines`
+for surrounding context → `find_references` when tracing call sites. Prefer
+`search_symbols` over text search for "where is X defined?"; prefer `get_symbol`
+over reading a whole file when you only need one definition.
+
+`find_references` is identifier-level and not type-aware — unrelated members
+sharing a name both appear. It never matches names inside comments or strings.
+
+### What is indexed
+
+TypeScript, TSX, and JavaScript (`.ts`, `.mts`, `.cts`, `.tsx`, `.js`, `.mjs`,
+`.cjs`, `.jsx`). Discovery uses `git ls-files` (honours `.gitignore`); outside
+a git tree it walks the directory. Always skipped: `node_modules`, `dist`,
+`build`, `coverage`, `.turbo`, `.next`, `.cache`, and files over 512 KB. A file
+that fails to parse is recorded and skipped — it never stops the rest of the
+index from building (same failure philosophy as the plugin host).
+
+Implementation layout and CLI flags (`--root`, `--no-watch`, `--quiet`, …) are
+in `mcp/context-mcp/README.md`. When changing the server itself, keep logging on
+stderr — stdout is the JSON-RPC channel under stdio.
+
+### `context7` — library documentation
+
+[Context7](https://context7.com) is a hosted MCP server that returns **current
+documentation for third-party libraries** — React, OpenTUI, Vitest, Zod, the
+MCP SDK, tree-sitter, and so on. **Use it whenever you need API details,
+setup steps, or code examples for a dependency** instead of relying on training
+data or grepping `node_modules`. Do not use it to navigate Nightshift's own
+code; that is what `nightshift-context` is for.
+
+It is already configured in `.cursor/mcp.json` (remote endpoint at
+`https://mcp.context7.com/mcp`). An optional `CONTEXT7_API_KEY` in `.env`
+(see `.env.example`) raises rate limits; the server works without a key.
+
+Suggested flow:
+
+1. **`resolve-library-id`** — pass the library name and your full question;
+   pick the best match (prefer official packages and version-specific IDs when
+   the user named a version).
+2. **`query-docs`** — pass the chosen library ID and your specific question;
+   use the returned docs and examples in your answer.
+
+Reach for Context7 when writing or changing code that calls an external API
+(`@opentui/*`, `@modelcontextprotocol/*`, `web-tree-sitter`, Commander, …),
+when a version mismatch matters, or when you are unsure whether a pattern still
+applies in the current release. Prefer Nightshift's own `AGENTS.md`, `README.md`,
+and `nightshift-context` for how _this_ repo is structured.
+
+### `deepwiki` — upstream repository docs
+
+[DeepWiki](https://mcp.deepwiki.com) is a free hosted MCP server (no auth) at
+`https://mcp.deepwiki.com/mcp` that answers questions about **public GitHub
+repositories** — OpenTUI, the MCP SDK, tree-sitter, Vitest, and other
+dependencies Nightshift builds on. Use it when you need architecture-level
+context or a wiki-style overview of an upstream repo, especially before diving
+into its source. It complements Context7: Context7 returns version-specific
+API docs; DeepWiki returns repo-level structure and narrative docs. Do not use
+it for Nightshift's own code.
+
+Repository parameters use `owner/repo` form (e.g. `sst/opentui`,
+`modelcontextprotocol/typescript-sdk`).
+
+| Tool                   | Reach for it when…                                              |
+| ---------------------- | --------------------------------------------------------------- |
+| `read_wiki_structure`  | You want the table of contents / topic list for a repo.         |
+| `read_wiki_contents`   | You know the topic and want the full wiki page.                 |
+| `ask_question`         | You have a natural-language question about how a repo works.    |
+
+Suggested flow: `read_wiki_structure` → `read_wiki_contents` or
+`ask_question`. Prefer `ask_question` for exploratory questions; prefer
+`read_wiki_contents` when you already know the topic name.
+
+### `semgrep` — security scanning
+
+[Semgrep](https://semgrep.dev) provides a hosted MCP server (no auth for core
+scanning) at `https://mcp.semgrep.ai/mcp`. **Use it when reviewing changes that
+touch security-sensitive surfaces** — plugin permissions, `context.fetch`,
+storage, shell capability declarations, YAML/config parsing, or anything that
+handles user-controlled input. The hosted endpoint is experimental; for
+proprietary code you can run `uvx semgrep-mcp` locally instead.
+
+| Tool                          | Reach for it when…                                           |
+| ----------------------------- | ------------------------------------------------------------ |
+| `security_check`              | Quick scan of code snippets for common vulnerabilities.      |
+| `semgrep_scan`                | Scan with a specific Semgrep config or rule set.             |
+| `semgrep_scan_with_custom_rule` | You need a one-off rule for a pattern you are checking.    |
+| `get_abstract_syntax_tree`    | You need the AST to reason about structure before scanning.  |
+| `supported_languages`         | You want to confirm Semgrep covers the language you are scanning. |
+
+Suggested flow: after generating or editing security-sensitive code, run
+`security_check` on the diff or new snippets before considering the change
+done. `semgrep_findings` (cloud dashboard results) requires a `SEMGREP_APP_TOKEN`
+and is optional — not configured in this repo.
 
 ## The runtime contract (`@nightshift/core`, `@nightshift/entities`)
 
