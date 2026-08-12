@@ -141,7 +141,7 @@ export function DashboardEditor({
           {(focused) => (
             <TextInput
               value={draft.refresh}
-              placeholder="Seconds (empty = default)"
+              placeholder="60 (0 = off)"
               focused={focused}
               onInput={(refresh) => update({ refresh })}
             />

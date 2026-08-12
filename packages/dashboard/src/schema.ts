@@ -55,6 +55,9 @@ export interface DashboardSpec {
 
 export const DASHBOARD_SCHEMA_VERSION = 1;
 
+/** Seconds between widget remounts when a dashboard omits `refresh`. `0` disables. */
+export const DEFAULT_DASHBOARD_REFRESH = 60;
+
 /**
  * The dashboard shipped with a fresh install. Beyond the built-ins, it draws
  * on every plugin Nightshift bundles by default — clock, focus, todo,
@@ -122,6 +125,7 @@ export function BLANK_DASHBOARD(name: string, title?: string): DashboardSpec {
   const spec: DashboardSpec = {
     version: DASHBOARD_SCHEMA_VERSION,
     name,
+    refresh: DEFAULT_DASHBOARD_REFRESH,
     rows: [{ widgets: [{ type: 'core.note', options: { text: '' } }] }],
   };
   if (title !== undefined && title.trim() !== '') spec.title = title.trim();

@@ -19,8 +19,18 @@ const SAMPLE_ROW: DashboardCatalogRow = {
 };
 
 describe('dashboardDraft', () => {
-  it('starts empty', () => {
-    expect(emptyDraft()).toEqual({ name: '', title: '', theme: '', refresh: '' });
+  it('starts empty with default refresh', () => {
+    expect(emptyDraft()).toEqual({ name: '', title: '', theme: '', refresh: '60' });
+  });
+
+  it('defaults refresh when catalog row omits it', () => {
+    const row: DashboardCatalogRow = {
+      name: 'home',
+      title: 'Home',
+      source: 'built-in',
+      active: false,
+    };
+    expect(draftFromCatalog(row).refresh).toBe('60');
   });
 
   it('loads a catalog row into a draft', () => {
@@ -63,6 +73,12 @@ describe('dashboardDraft', () => {
 
   it('rejects invalid names', () => {
     expect(() => draftToSaveArgs({ ...emptyDraft(), name: 'Bad Name' })).toThrow(/Name must be/);
+  });
+
+  it('defaults refresh to 60 on save when field is empty', () => {
+    expect(draftToSaveArgs({ ...emptyDraft(), name: 'work', refresh: '' })).toMatchObject({
+      refresh: 60,
+    });
   });
 
   it('rejects invalid refresh', () => {

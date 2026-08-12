@@ -14,6 +14,7 @@ import {
 import type { WidgetProps } from '@nightshift/sdk';
 import type { EntityId } from '@nightshift/entities';
 import type { DashboardSpec, WidgetSpec } from './schema.js';
+import { DEFAULT_DASHBOARD_REFRESH } from './schema.js';
 import type { WidgetRegistry } from './registry.js';
 import type { WidgetAddress } from './edit.js';
 import { MissingWidget } from './widgets.js';
@@ -170,7 +171,7 @@ export function Dashboard({
   // TextInput holds keyboard capture — remounting widgets would erase in-progress
   // text (see `keyboardCapture.ts`).
   useEffect(() => {
-    const seconds = dashboard.refresh ?? 0;
+    const seconds = dashboard.refresh ?? DEFAULT_DASHBOARD_REFRESH;
     if (seconds <= 0) return;
     const timer = setInterval(() => {
       if (runtime?.keyboardCapture.isCaptured()) return;

@@ -24,8 +24,11 @@ export interface DashboardDraft {
 
 export const DASHBOARD_NAME = /^[a-z][a-z0-9-]*$/;
 
+/** Matches `DEFAULT_DASHBOARD_REFRESH` in `@nightshift/dashboard` schema. */
+export const DEFAULT_DASHBOARD_REFRESH_SECONDS = 60;
+
 export function emptyDraft(): DashboardDraft {
-  return { name: '', title: '', theme: '', refresh: '' };
+  return { name: '', title: '', theme: '', refresh: String(DEFAULT_DASHBOARD_REFRESH_SECONDS) };
 }
 
 export function draftFromCatalog(row: DashboardCatalogRow): DashboardDraft {
@@ -33,7 +36,10 @@ export function draftFromCatalog(row: DashboardCatalogRow): DashboardDraft {
     name: row.name,
     title: row.title === row.name ? '' : row.title,
     theme: row.theme ?? '',
-    refresh: row.refresh === undefined ? '' : String(row.refresh),
+    refresh:
+      row.refresh === undefined
+        ? String(DEFAULT_DASHBOARD_REFRESH_SECONDS)
+        : String(row.refresh),
     ...(row.rows === undefined ? {} : { rows: row.rows }),
   };
 }
@@ -74,13 +80,12 @@ export function draftToSaveArgs(draft: DashboardDraft): Record<string, Json> {
   if (title !== undefined) args['title'] = title;
   if (theme !== undefined) args['theme'] = theme;
   const refreshText = draft.refresh.trim();
-  if (refreshText !== '') {
-    const refresh = Number(refreshText);
-    if (!Number.isInteger(refresh) || refresh < 0) {
-      throw new Error('Refresh must be a non-negative whole number of seconds, or empty.');
-    }
-    args['refresh'] = refresh;
+  const refresh =
+    refreshText === '' ? DEFAULT_DASHBOARD_REFRESH_SECONDS : Number(refreshText);
+  if (!Number.isInteger(refresh) || refresh < 0) {
+    throw new Error('Refresh must be a non-negative whole number of seconds.');
   }
+  args['refresh'] = refresh;
   if (draft.rows !== undefined) args['rows'] = draft.rows;
   return args;
 }

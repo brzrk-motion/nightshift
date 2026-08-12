@@ -442,6 +442,7 @@ describe('BLANK_DASHBOARD', () => {
     const spec = BLANK_DASHBOARD('work', 'Work');
     expect(spec.name).toBe('work');
     expect(spec.title).toBe('Work');
+    expect(spec.refresh).toBe(60);
     expect(spec.rows).toHaveLength(1);
     expect(parseDashboard(serializeDashboard(spec)).name).toBe('work');
   });
