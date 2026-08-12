@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { useKeyboard } from '@opentui/react';
 import { useRuntime, useTheme } from '../app/context.js';
 import { List, type ListItem } from './Table.js';
+import { SelectFieldListKeys } from './SelectFieldListKeys.js';
 
 export interface SelectOption {
   value: string;
@@ -33,7 +33,6 @@ export function SelectField({
   onFocus,
 }: SelectFieldProps): ReactNode {
   const theme = useTheme();
-  const runtime = useRuntime();
 
   const items: ListItem[] = [
     ...(allowClear
@@ -50,25 +49,8 @@ export function SelectField({
   const [cursor, setCursor] = useState(Math.max(0, valueIndex));
 
   useEffect(() => {
-    if (!focused) return;
-    return runtime?.keyboardCapture.acquire();
-  }, [focused, runtime]);
-
-  useEffect(() => {
     if (focused) setCursor(Math.max(0, valueIndex));
   }, [focused, valueIndex]);
-
-  useKeyboard((key) => {
-    if (!focused || items.length === 0) return;
-    if (key.name === 'up' || key.name === 'k') {
-      setCursor((index) => Math.max(0, index - 1));
-    } else if (key.name === 'down' || key.name === 'j') {
-      setCursor((index) => Math.min(items.length - 1, index + 1));
-    } else if (key.name === 'return') {
-      const item = items[cursor];
-      if (item && item.id !== value) onChange?.(item.id);
-    }
-  });
 
   const display =
     value === ''
@@ -82,13 +64,22 @@ export function SelectField({
     >
       <text fg={focused ? theme.colors.accent : theme.colors.text}>{display}</text>
       {focused && (
-        <List
-          items={items}
-          selected={cursor}
-          onSelect={(_index, item) => {
-            if (item.id !== value) onChange?.(item.id);
-          }}
-        />
+        <>
+          <SelectFieldListKeys
+            items={items}
+            cursor={cursor}
+            value={value}
+            onCursorChange={setCursor}
+            {...(onChange === undefined ? {} : { onChange })}
+          />
+          <List
+            items={items}
+            selected={cursor}
+            onSelect={(_index, item) => {
+              if (item.id !== value) onChange?.(item.id);
+            }}
+          />
+        </>
       )}
     </box>
   );

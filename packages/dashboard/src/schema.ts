@@ -117,6 +117,17 @@ export const NIGHTSHIFT_DASHBOARD: DashboardSpec = {
   rows: [{ height: 3, widgets: [{ type: 'core.entities', span: 2 }, { type: 'core.commands' }] }],
 };
 
+/** Minimal valid dashboard for create flows — one neutral placeholder row. */
+export function BLANK_DASHBOARD(name: string, title?: string): DashboardSpec {
+  const spec: DashboardSpec = {
+    version: DASHBOARD_SCHEMA_VERSION,
+    name,
+    rows: [{ widgets: [{ type: 'core.note', options: { text: '' } }] }],
+  };
+  if (title !== undefined && title.trim() !== '') spec.title = title.trim();
+  return spec;
+}
+
 /** Every dashboard Nightshift ships with, sorted the same way a merge with
  * user files would sort them. `apps/cli`'s runtime folds these in behind
  * whatever it finds on disk; `DashboardApp`'s reload does the same. */

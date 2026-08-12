@@ -34,6 +34,68 @@ function toastMessage(record: LogRecord): string {
     : record.message;
 }
 
+function diagnosticKey(message: string): string {
+  return `diagnostic:${message.slice(0, 96)}`;
+}
+
+/** Node/runtime warnings that should toast instead of drawing over the frame. */
+function isDiagnosticStderr(text: string): boolean {
+  const trimmed = text.trim();
+  if (trimmed === '') return true;
+  return (
+    trimmed.includes('Warning:') ||
+    trimmed.includes('MaxListenersExceededWarning') ||
+    trimmed.includes('ExperimentalWarning') ||
+    trimmed.includes('DeprecationWarning')
+  );
+}
+
+function attachStderrToToasts(
+  toasts: ToastStore,
+  timeout: number,
+  stream: NodeJS.WriteStream = process.stderr,
+): () => void {
+  const write = stream.write.bind(stream);
+
+  stream.write = ((chunk: unknown, encoding?: unknown, callback?: unknown): boolean => {
+    const text =
+      typeof chunk === 'string'
+        ? chunk
+        : Buffer.isBuffer(chunk)
+          ? chunk.toString('utf8')
+          : String(chunk);
+
+    if (isDiagnosticStderr(text)) {
+      const message = text.trim();
+      if (message !== '') {
+        toasts.push(message, { tone: 'warning', timeout, key: diagnosticKey(message) });
+      }
+      if (typeof encoding === 'function') {
+        encoding();
+        return true;
+      }
+      if (typeof callback === 'function') callback();
+      return true;
+    }
+
+    return write(chunk as never, encoding as never, callback as never);
+  }) as typeof stream.write;
+
+  const onWarning = (warning: Error): void => {
+    toasts.push(warning.message, {
+      tone: 'warning',
+      timeout,
+      key: diagnosticKey(warning.message),
+    });
+  };
+  process.on('warning', onWarning);
+
+  return () => {
+    stream.write = write;
+    process.off('warning', onWarning);
+  };
+}
+
 export function attachLogToasts({
   log,
   toasts,
@@ -55,8 +117,11 @@ export function attachLogToasts({
     });
   });
 
+  const detachStderr = attachStderrToToasts(toasts, timeout);
+
   return () => {
     off();
+    detachStderr();
     log.setStream(restoreStream);
   };
 }

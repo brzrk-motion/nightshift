@@ -43,6 +43,8 @@ async function draw(
     'spotify.disconnect',
     'spotify.reset-credentials',
     'spotify.refresh',
+    'spotify.widget-mounted',
+    'spotify.widget-unmounted',
     'spotify.play',
     'spotify.pause',
     'spotify.next',

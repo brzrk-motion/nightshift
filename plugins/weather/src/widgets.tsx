@@ -99,6 +99,13 @@ function useWeatherSlot(options: WidgetProps['options']): {
   const { id, location, bootstrapQuery } = resolveSlot(state, options);
 
   useEffect(() => {
+    void commands.run('weather.widget-mounted');
+    return () => {
+      void commands.run('weather.widget-unmounted');
+    };
+  }, [commands]);
+
+  useEffect(() => {
     if (bootstrapQuery !== '' && (location?.query.trim() ?? '') === '') {
       void commands.run('weather.ensure-location', { id, query: bootstrapQuery });
       return;

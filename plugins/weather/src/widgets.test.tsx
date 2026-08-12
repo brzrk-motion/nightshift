@@ -94,6 +94,8 @@ function nowRuntime(): ReturnType<typeof createAppRuntime> {
     'weather.set-units',
     'weather.configure-location',
     'weather.ensure-location',
+    'weather.widget-mounted',
+    'weather.widget-unmounted',
   ]) {
     runtime.commands.register({ id, title: id, run: () => {} });
   }
@@ -208,7 +210,13 @@ describe.skipIf(!renderable)('ForecastWidget', () => {
     const entities = createEntityStore();
     entities.register(WEATHER_LOCATIONS_ENTITY, readyState());
     const runtime = createAppRuntime({ entities });
-    for (const id of ['weather.refresh', 'weather.configure-location', 'weather.ensure-location']) {
+    for (const id of [
+      'weather.refresh',
+      'weather.configure-location',
+      'weather.ensure-location',
+      'weather.widget-mounted',
+      'weather.widget-unmounted',
+    ]) {
       runtime.commands.register({ id, title: id, run: () => {} });
     }
 
@@ -238,7 +246,13 @@ describe.skipIf(!renderable)('ForecastWidget', () => {
     const entities = createEntityStore();
     entities.register(WEATHER_LOCATIONS_ENTITY, readyState());
     const runtime = createAppRuntime({ entities });
-    for (const id of ['weather.refresh', 'weather.configure-location', 'weather.ensure-location']) {
+    for (const id of [
+      'weather.refresh',
+      'weather.configure-location',
+      'weather.ensure-location',
+      'weather.widget-mounted',
+      'weather.widget-unmounted',
+    ]) {
       runtime.commands.register({ id, title: id, run: () => {} });
     }
 

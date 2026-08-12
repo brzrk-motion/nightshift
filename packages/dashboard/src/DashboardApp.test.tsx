@@ -95,10 +95,12 @@ describe.skipIf(!renderable)('DashboardApp edit mode', () => {
 
     try {
       await setup.renderOnce();
+      expect(setup.captureCharFrame()).toContain('nightshift · Home');
       await press(() => setup.mockInput.pressKey('e'));
+      await setup.renderOnce();
 
       const frame = setup.captureCharFrame();
-      expect(frame).toContain('editing Home');
+      expect(frame).toContain('editing');
       expect(frame).toContain('save');
     } finally {
       setup.renderer.destroy();
@@ -124,11 +126,12 @@ describe.skipIf(!renderable)('DashboardApp edit mode', () => {
       // dashboard edit mode. See `@nightshift/ui`'s `keyboardCapture.ts`.
       const release = runtime.keyboardCapture.acquire();
       await press(() => setup.mockInput.pressKey('e'));
-      expect(setup.captureCharFrame()).not.toContain('editing Home');
+      expect(setup.captureCharFrame()).not.toContain('editing');
 
       release();
       await press(() => setup.mockInput.pressKey('e'));
-      expect(setup.captureCharFrame()).toContain('editing Home');
+      await setup.renderOnce();
+      expect(setup.captureCharFrame()).toContain('editing');
     } finally {
       setup.renderer.destroy();
     }
@@ -382,7 +385,7 @@ describe.skipIf(!renderable)('DashboardApp edit mode', () => {
       await press(() => setup.mockInput.pressKey('r'));
 
       const frame = setup.captureCharFrame();
-      expect(frame).toContain('editing Home');
+      expect(frame).toContain('editing');
       expect(frame).toContain('Entities');
     } finally {
       setup.renderer.destroy();
@@ -494,7 +497,8 @@ describe.skipIf(!renderable)('DashboardApp onboarding', () => {
       expect(onOnboardingDismissed).toHaveBeenCalledOnce();
 
       await press(() => setup.mockInput.pressKey('e'));
-      expect(setup.captureCharFrame()).toContain('editing Home');
+      await setup.renderOnce();
+      expect(setup.captureCharFrame()).toContain('editing');
     } finally {
       setup.renderer.destroy();
     }

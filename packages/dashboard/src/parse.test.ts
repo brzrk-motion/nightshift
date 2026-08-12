@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { isNightshiftError } from '@nightshift/core';
 import {
+  deleteDashboard,
   loadDashboardFile,
   loadDashboards,
   mergeDashboards,
@@ -11,7 +12,12 @@ import {
   saveDashboard,
   serializeDashboard,
 } from './parse.js';
-import { BUILT_IN_DASHBOARDS, DASHBOARD_SCHEMA_VERSION, type DashboardSpec } from './schema.js';
+import {
+  BLANK_DASHBOARD,
+  BUILT_IN_DASHBOARDS,
+  DASHBOARD_SCHEMA_VERSION,
+  type DashboardSpec,
+} from './schema.js';
 import { createWidgetRegistry, type WidgetDefinition } from './registry.js';
 import { BUILT_IN_WIDGETS } from './widgets.js';
 
@@ -428,5 +434,38 @@ describe('createWidgetRegistry', () => {
     expect(registry.missing(['core.note', 'focus.session', 'focus.session'])).toEqual([
       'focus.session',
     ]);
+  });
+});
+
+describe('BLANK_DASHBOARD', () => {
+  it('produces a minimal valid spec', () => {
+    const spec = BLANK_DASHBOARD('work', 'Work');
+    expect(spec.name).toBe('work');
+    expect(spec.title).toBe('Work');
+    expect(spec.rows).toHaveLength(1);
+    expect(parseDashboard(serializeDashboard(spec)).name).toBe('work');
+  });
+});
+
+describe('deleteDashboard', () => {
+  let dir: string;
+
+  beforeEach(async () => {
+    dir = await mkdtemp(join(tmpdir(), 'nightshift-dashboard-delete-'));
+  });
+
+  afterEach(async () => {
+    await rm(dir, { recursive: true, force: true });
+  });
+
+  it('removes a user dashboard file', async () => {
+    const spec = BLANK_DASHBOARD('work');
+    await saveDashboard(dir, spec);
+    await deleteDashboard(dir, 'work');
+    await expect(loadDashboardFile(join(dir, 'work.yaml'))).rejects.toThrow();
+  });
+
+  it('refuses when no user file exists', async () => {
+    await expect(deleteDashboard(dir, 'nope')).rejects.toThrowError(/No user dashboard file/);
   });
 });

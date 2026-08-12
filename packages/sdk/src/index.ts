@@ -78,6 +78,8 @@ export interface NotifyOptions {
 export interface PluginCommand {
   id: string;
   title: string;
+  /** Hidden from the palette but still callable (e.g. widget lifecycle hooks). */
+  hidden?: boolean;
   /** Arguments a vibe's `onActivate` or an automation's `then` can pass in. */
   run(args?: Record<string, Json>): void | Promise<void>;
 }

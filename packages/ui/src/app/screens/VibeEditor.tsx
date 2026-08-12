@@ -1,11 +1,14 @@
 import type { Json } from '@nightshift/core';
 import { useEffect, useState, type ReactNode } from 'react';
 import { useKeyboard } from '@opentui/react';
+import { COMPACT_WIDTH } from '../../layout.js';
 import { Button, TextInput } from '../../components/controls.js';
 import { SelectField } from '../../components/SelectField.js';
+import { IconButton } from '../../components/Toolbar.js';
 import { useEntity, useRuntime, useTheme } from '../context.js';
 import { CommandPicker } from './CommandPicker.js';
 import type { ActionDraft, VibeDraft } from './vibeDraft.js';
+import { vibeEditorContentSize, vibeEditorScale, type VibeEditorScale } from './vibeEditorLayout.js';
 import { summariseDraft } from './vibeSummary.js';
 
 export interface VibeEditorProps {
@@ -29,10 +32,18 @@ interface DashboardCatalogState {
   [key: string]: Json;
 }
 
-function Section({ title, children }: { title: string; children: ReactNode }): ReactNode {
+function Section({
+  title,
+  scale,
+  children,
+}: {
+  title: string;
+  scale: VibeEditorScale;
+  children: ReactNode;
+}): ReactNode {
   const theme = useTheme();
   return (
-    <box style={{ flexDirection: 'column', gap: 1 }}>
+    <box style={{ flexDirection: 'column', gap: scale.tightGaps ? 0 : 1 }}>
       <text fg={theme.colors.accent}>
         <b>{title}</b>
       </text>
@@ -44,11 +55,13 @@ function Section({ title, children }: { title: string; children: ReactNode }): R
 function Field({
   label,
   focused,
+  scale,
   onFocus,
   children,
 }: {
   label: string;
   focused: boolean;
+  scale: VibeEditorScale;
   onFocus: () => void;
   children: (focused: boolean) => ReactNode;
 }): ReactNode {
@@ -56,9 +69,14 @@ function Field({
   return (
     <box
       onMouseDown={onFocus}
-      style={{ flexDirection: 'row', gap: 2, minHeight: 1, alignItems: 'flex-start' }}
+      style={{
+        flexDirection: scale.stackFields ? 'column' : 'row',
+        gap: scale.stackFields ? 0 : 2,
+        minHeight: 1,
+        alignItems: scale.stackFields ? 'stretch' : 'flex-start',
+      }}
     >
-      <text fg={theme.colors.muted}>{label.padEnd(12)}</text>
+      <text fg={theme.colors.muted}>{scale.stackFields ? label : label.padEnd(12)}</text>
       <box style={{ flexGrow: 1 }}>{children(focused)}</box>
     </box>
   );
@@ -69,6 +87,7 @@ function ActionListEditor({
   actions,
   list,
   focus,
+  scale,
   setFocus,
   onChange,
 }: {
@@ -76,6 +95,7 @@ function ActionListEditor({
   actions: ActionDraft[];
   list: 'onActivate' | 'onDeactivate';
   focus: FocusTarget;
+  scale: VibeEditorScale;
   setFocus: (target: FocusTarget) => void;
   onChange: (actions: ActionDraft[]) => void;
 }): ReactNode {
@@ -92,17 +112,47 @@ function ActionListEditor({
     setFocus({ list, index: next, field: 'command' });
   };
 
-  return (
-    <box style={{ flexDirection: 'column', gap: 1 }}>
-      <box style={{ flexDirection: 'row', gap: 2, alignItems: 'center' }}>
-        <text fg={theme.colors.muted}>{label}</text>
-        <Button
-          label="+ command"
-          onPress={() => {
-            onChange([...actions, { command: '', args: '' }]);
-            setFocus({ list, index: actions.length, field: 'command' });
-          }}
+  const addAction = (): void => {
+    onChange([...actions, { command: '', args: '' }]);
+    setFocus({ list, index: actions.length, field: 'command' });
+  };
+
+  const removeAction = (index: number): void => {
+    onChange(actions.filter((_, i) => i !== index));
+  };
+
+  const moveControls = (index: number): ReactNode =>
+    scale.compactActionControls ? (
+      <>
+        <IconButton icon="↑" disabled={index === 0} onPress={() => move(index, -1)} />
+        <IconButton
+          icon="↓"
+          disabled={index === actions.length - 1}
+          onPress={() => move(index, 1)}
         />
+        <IconButton icon="✖" onPress={() => removeAction(index)} />
+      </>
+    ) : (
+      <>
+        <Button label="↑" disabled={index === 0} onPress={() => move(index, -1)} />
+        <Button
+          label="↓"
+          disabled={index === actions.length - 1}
+          onPress={() => move(index, 1)}
+        />
+        <Button label="Remove" onPress={() => removeAction(index)} />
+      </>
+    );
+
+  return (
+    <box style={{ flexDirection: 'column', gap: scale.tightGaps ? 0 : 1 }}>
+      <box style={{ flexDirection: 'row', gap: 1, alignItems: 'center', flexShrink: 0 }}>
+        <text fg={theme.colors.muted}>{label}</text>
+        {scale.compactActionControls ? (
+          <IconButton icon="+" label="command" onPress={addAction} />
+        ) : (
+          <Button label="+ command" onPress={addAction} />
+        )}
       </box>
       {actions.map((action, index) => {
         const commandFocused =
@@ -118,20 +168,17 @@ function ActionListEditor({
         return (
           <box
             key={`${list}-${index}`}
-            style={{ flexDirection: 'column', gap: 1, paddingLeft: 2 }}
+            style={{
+              flexDirection: 'column',
+              gap: scale.tightGaps ? 0 : 1,
+              paddingLeft: scale.stackActionRows ? 0 : 2,
+            }}
           >
-            <box style={{ flexDirection: 'row', gap: 1, alignItems: 'center' }}>
-              <Button
-                label="↑"
-                disabled={index === 0}
-                onPress={() => move(index, -1)}
-              />
-              <Button
-                label="↓"
-                disabled={index === actions.length - 1}
-                onPress={() => move(index, 1)}
-              />
-              <box style={{ flexGrow: 1 }}>
+            {scale.stackActionRows ? (
+              <>
+                <box style={{ flexDirection: 'row', gap: 1, alignItems: 'center', flexShrink: 0 }}>
+                  {moveControls(index)}
+                </box>
                 <CommandPicker
                   value={action.command}
                   focused={commandFocused}
@@ -142,17 +189,33 @@ function ActionListEditor({
                     onChange(next);
                   }}
                 />
+              </>
+            ) : (
+              <box style={{ flexDirection: 'row', gap: 1, alignItems: 'center' }}>
+                {moveControls(index)}
+                <box style={{ flexGrow: 1 }}>
+                  <CommandPicker
+                    value={action.command}
+                    focused={commandFocused}
+                    onFocus={() => setFocus({ list, index, field: 'command' })}
+                    onChange={(command) => {
+                      const next = [...actions];
+                      next[index] = { ...action, command };
+                      onChange(next);
+                    }}
+                  />
+                </box>
               </box>
-              <Button
-                label="Remove"
-                onPress={() => onChange(actions.filter((_, i) => i !== index))}
-              />
-            </box>
+            )}
             <box
               onMouseDown={() => setFocus({ list, index, field: 'args' })}
-              style={{ flexDirection: 'row', gap: 2, paddingLeft: 2 }}
+              style={{
+                flexDirection: scale.stackFields ? 'column' : 'row',
+                gap: scale.stackFields ? 0 : 2,
+                paddingLeft: scale.stackActionRows ? 0 : 2,
+              }}
             >
-              <text fg={theme.colors.muted}>args</text>
+              <text fg={theme.colors.muted}>{scale.stackFields ? 'args' : 'args'.padEnd(12)}</text>
               <TextInput
                 value={action.args}
                 placeholder='{"minutes":50}'
@@ -187,6 +250,12 @@ export function VibeEditor({
   const [draft, setDraft] = useState(initialDraft);
   const [focus, setFocus] = useState<FocusTarget>(nameLocked ? 'title' : 'name');
 
+  const terminalSize = runtime?.size ?? { width: 80, height: 24 };
+  const navCollapsed = terminalSize.width < COMPACT_WIDTH;
+  const contentSize = vibeEditorContentSize(terminalSize, navCollapsed);
+  const scale = vibeEditorScale(contentSize.width, contentSize.height);
+  const sectionGap = scale.tightGaps ? 0 : 1;
+
   const patch = (partial: Partial<VibeDraft>): void => {
     setDraft((current) => ({ ...current, ...partial }));
   };
@@ -203,132 +272,161 @@ export function VibeEditor({
     if (key.name === 'escape') onCancel();
   });
 
-  useEffect(() => {
-    return runtime?.keyboardCapture.acquire();
-  }, [runtime]);
-
   const summary = summariseDraft(draft);
+  const footerHint = scale.shortFooter
+    ? 'esc cancel · saves vibes/<name>.yaml'
+    : 'esc cancel · Saves to vibes/<name>.yaml — same format as a hand-edited file.';
 
   return (
-    <box style={{ flexDirection: 'column', gap: 1, flexGrow: 1 }}>
-      <text fg={theme.colors.text}>
-        <b>{nameLocked ? `Edit ${draft.name}` : 'New vibe'}</b>
-      </text>
-
-      <Section title="Identity">
-        <Field
-          label="name"
-          focused={!nameLocked && focus === 'name'}
-          onFocus={() => {
-            if (!nameLocked) setFocus('name');
-          }}
-        >
-          {(focused) => (
-            <TextInput
-              value={draft.name}
-              placeholder="locked-in"
-              focused={focused}
-              onInput={(name) => {
-                if (!nameLocked) patch({ name });
-              }}
-            />
-          )}
-        </Field>
-        <Field label="title" focused={focus === 'title'} onFocus={() => setFocus('title')}>
-          {(focused) => (
-            <TextInput
-              value={draft.title}
-              placeholder="Locked In"
-              focused={focused}
-              onInput={(title) => patch({ title })}
-            />
-          )}
-        </Field>
-        <Field
-          label="description"
-          focused={focus === 'description'}
-          onFocus={() => setFocus('description')}
-        >
-          {(focused) => (
-            <TextInput
-              value={draft.description}
-              placeholder="Deep work."
-              focused={focused}
-              onInput={(description) => patch({ description })}
-            />
-          )}
-        </Field>
-      </Section>
-
-      <Section title="Look">
-        <Field label="theme" focused={focus === 'theme'} onFocus={() => setFocus('theme')}>
-          {(focused) => (
-            <SelectField
-              value={draft.theme}
-              options={themeOptions}
-              placeholder="(none)"
-              focused={focused}
-              onFocus={() => setFocus('theme')}
-              onChange={(themeName) => patch({ theme: themeName })}
-            />
-          )}
-        </Field>
-        <Field
-          label="dashboard"
-          focused={focus === 'dashboard'}
-          onFocus={() => setFocus('dashboard')}
-        >
-          {(focused) => (
-            <SelectField
-              value={draft.dashboard}
-              options={dashboardOptions}
-              placeholder="(none)"
-              focused={focused}
-              onFocus={() => setFocus('dashboard')}
-              onChange={(dashboard) => patch({ dashboard })}
-            />
-          )}
-        </Field>
-      </Section>
-
-      <Section title="On activate">
-        <ActionListEditor
-          label="onActivate"
-          list="onActivate"
-          actions={draft.onActivate}
-          focus={focus}
-          setFocus={setFocus}
-          onChange={(onActivate) => patch({ onActivate })}
-        />
-      </Section>
-
-      <Section title="On deactivate">
-        <ActionListEditor
-          label="onDeactivate"
-          list="onDeactivate"
-          actions={draft.onDeactivate}
-          focus={focus}
-          setFocus={setFocus}
-          onChange={(onDeactivate) => patch({ onDeactivate })}
-        />
-      </Section>
-
-      <Section title="Summary">
-        {summary.map((line, index) => (
-          <text key={index} fg={theme.colors.muted}>
-            {line}
-          </text>
-        ))}
-      </Section>
-
-      <box style={{ flexDirection: 'row', gap: 1 }}>
-        <Button label="Save" primary onPress={() => onSave(draft)} />
-        <Button label="Cancel" onPress={onCancel} />
+    <box style={{ flexDirection: 'column', flexGrow: 1, height: '100%' }}>
+      <box style={{ flexShrink: 0 }}>
+        <text fg={theme.colors.text}>
+          <b>{nameLocked ? `Edit ${draft.name}` : 'New vibe'}</b>
+        </text>
       </box>
 
-      <text fg={theme.colors.muted}>
-        esc cancel · Saves to vibes/&lt;name&gt;.yaml — same format as a hand-edited file.
-      </text>
+      <scrollbox style={{ flexGrow: 1 }}>
+        <box style={{ flexDirection: 'column', gap: sectionGap }}>
+          <Section title="Identity" scale={scale}>
+            <Field
+              label="name"
+              scale={scale}
+              focused={!nameLocked && focus === 'name'}
+              onFocus={() => {
+                if (!nameLocked) setFocus('name');
+              }}
+            >
+              {(focused) => (
+                <TextInput
+                  value={draft.name}
+                  placeholder="locked-in"
+                  focused={focused}
+                  onInput={(name) => {
+                    if (!nameLocked) patch({ name });
+                  }}
+                />
+              )}
+            </Field>
+            <Field
+              label="title"
+              scale={scale}
+              focused={focus === 'title'}
+              onFocus={() => setFocus('title')}
+            >
+              {(focused) => (
+                <TextInput
+                  value={draft.title}
+                  placeholder="Locked In"
+                  focused={focused}
+                  onInput={(title) => patch({ title })}
+                />
+              )}
+            </Field>
+            <Field
+              label="description"
+              scale={scale}
+              focused={focus === 'description'}
+              onFocus={() => setFocus('description')}
+            >
+              {(focused) => (
+                <TextInput
+                  value={draft.description}
+                  placeholder="Deep work."
+                  focused={focused}
+                  onInput={(description) => patch({ description })}
+                />
+              )}
+            </Field>
+          </Section>
+
+          <Section title="Look" scale={scale}>
+            <Field
+              label="theme"
+              scale={scale}
+              focused={focus === 'theme'}
+              onFocus={() => setFocus('theme')}
+            >
+              {(focused) => (
+                <SelectField
+                  value={draft.theme}
+                  options={themeOptions}
+                  placeholder="(none)"
+                  focused={focused}
+                  onFocus={() => setFocus('theme')}
+                  onChange={(themeName) => patch({ theme: themeName })}
+                />
+              )}
+            </Field>
+            <Field
+              label="dashboard"
+              scale={scale}
+              focused={focus === 'dashboard'}
+              onFocus={() => setFocus('dashboard')}
+            >
+              {(focused) => (
+                <SelectField
+                  value={draft.dashboard}
+                  options={dashboardOptions}
+                  placeholder="(none)"
+                  focused={focused}
+                  onFocus={() => setFocus('dashboard')}
+                  onChange={(dashboard) => patch({ dashboard })}
+                />
+              )}
+            </Field>
+          </Section>
+
+          <Section title="On activate" scale={scale}>
+            <ActionListEditor
+              label="onActivate"
+              list="onActivate"
+              actions={draft.onActivate}
+              focus={focus}
+              scale={scale}
+              setFocus={setFocus}
+              onChange={(onActivate) => patch({ onActivate })}
+            />
+          </Section>
+
+          <Section title="On deactivate" scale={scale}>
+            <ActionListEditor
+              label="onDeactivate"
+              list="onDeactivate"
+              actions={draft.onDeactivate}
+              focus={focus}
+              scale={scale}
+              setFocus={setFocus}
+              onChange={(onDeactivate) => patch({ onDeactivate })}
+            />
+          </Section>
+
+          <Section title="Summary" scale={scale}>
+            {summary.map((line, index) => (
+              <text key={index} fg={theme.colors.muted}>
+                {line}
+              </text>
+            ))}
+          </Section>
+        </box>
+      </scrollbox>
+
+      <box
+        style={{
+          flexDirection: 'row',
+          gap: 1,
+          flexShrink: 0,
+          width: '100%',
+          backgroundColor: theme.colors.surface,
+          alignItems: 'center',
+        }}
+      >
+        <Button label="Save" primary compact={false} onPress={() => onSave(draft)} />
+        <Button label="Cancel" compact={false} onPress={onCancel} />
+      </box>
+
+      <box style={{ flexShrink: 0 }}>
+        <text fg={theme.colors.muted}>{footerHint}</text>
+      </box>
     </box>
   );
 }

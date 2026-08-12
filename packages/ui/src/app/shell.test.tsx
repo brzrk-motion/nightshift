@@ -55,9 +55,8 @@ describe.skipIf(!renderable)('AppShell shell', () => {
 
     try {
       await setup.renderOnce();
-      // Row 0 is the header; the "Home" nav item sits at row 2 (its top
-      // margin separates it from the header), and "Notes" directly below it.
-      await setup.mockMouse.click(2, 3);
+      // Row 0 is the header; row 1 is the nav rail's top padding; Dashboard is row 2.
+      await setup.mockMouse.click(2, 4);
       await setup.renderOnce();
 
       const frame = setup.captureCharFrame();
@@ -214,7 +213,7 @@ describe.skipIf(!renderable)('AppShell shell', () => {
     }
   });
 
-  it('defaults to the five built-in screens when none are given', async () => {
+  it('defaults to the six built-in screens when none are given', async () => {
     const runtime = createAppRuntime();
     const setup = await testRender(
       <AppShell runtime={runtime}>
@@ -226,7 +225,7 @@ describe.skipIf(!renderable)('AppShell shell', () => {
     try {
       await setup.renderOnce();
       const frame = setup.captureCharFrame();
-      for (const label of ['Vibes', 'Apps', 'Entities', 'Automations', 'Settings']) {
+      for (const label of ['Dashboards', 'Vibes', 'Apps', 'Entities', 'Automations', 'Settings']) {
         expect(frame, label).toContain(label);
       }
     } finally {

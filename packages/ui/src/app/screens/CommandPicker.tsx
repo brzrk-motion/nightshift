@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { useKeyboard } from '@opentui/react';
 import { TextInput } from '../../components/controls.js';
 import { List } from '../../components/Table.js';
 import { useRuntime, useTheme } from '../context.js';
 import { filterCommands } from './commandPicker.js';
+import { CommandPickerListKeys } from './CommandPickerListKeys.js';
 
 export interface CommandPickerProps {
   value: string;
@@ -41,22 +41,6 @@ export function CommandPicker({
     setCursor((current) => Math.min(current, Math.max(0, results.length - 1)));
   }, [results.length]);
 
-  useKeyboard((key) => {
-    if (!focused) return;
-    if (results.length === 0) return;
-    if (key.name === 'up' || key.name === 'k') {
-      setCursor((index) => Math.max(0, index - 1));
-    } else if (key.name === 'down' || key.name === 'j') {
-      setCursor((index) => Math.min(results.length - 1, index + 1));
-    } else if (key.name === 'return') {
-      const command = results[cursor];
-      if (command) {
-        onChange(command.id);
-        setQuery(command.id);
-      }
-    }
-  });
-
   return (
     <box style={{ flexDirection: 'column', gap: 1, flexGrow: 1 }}>
       <box onMouseDown={onFocus} style={{ flexGrow: 1 }}>
@@ -72,19 +56,30 @@ export function CommandPicker({
         />
       </box>
       {focused && results.length > 0 && (
-        <List
-          items={results.map((command) => ({
-            id: command.id,
-            label: command.title,
-            detail: command.id,
-            marker: command.id === value ? '●' : '·',
-          }))}
-          selected={cursor}
-          onSelect={(_index, item) => {
-            onChange(item.id);
-            setQuery(item.id);
-          }}
-        />
+        <>
+          <CommandPickerListKeys
+            results={results}
+            cursor={cursor}
+            onCursorChange={setCursor}
+            onPick={(command) => {
+              onChange(command.id);
+              setQuery(command.id);
+            }}
+          />
+          <List
+            items={results.map((command) => ({
+              id: command.id,
+              label: command.title,
+              detail: command.id,
+              marker: command.id === value ? '●' : '·',
+            }))}
+            selected={cursor}
+            onSelect={(_index, item) => {
+              onChange(item.id);
+              setQuery(item.id);
+            }}
+          />
+        </>
       )}
       {focused && results.length === 0 && query.trim() !== '' && (
         <text fg={theme.colors.muted}>No matching commands — free-typed id will be saved.</text>

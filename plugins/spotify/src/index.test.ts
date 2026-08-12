@@ -283,4 +283,52 @@ describe('spotify plugin', () => {
     const session = context.entities.get<SpotifySessionState>(SPOTIFY_SESSION_ENTITY)?.state;
     expect(session?.status).toBe('needs_credentials');
   });
+
+  it('does not hit the network on setup when connected but the widget is off-screen', async () => {
+    const fetchFn = vi.fn(async () =>
+      new Response('{"error":{"message":"Service unavailable"}}', { status: 503 }),
+    );
+    const { context, commands } = mockContext({
+      storage: { auth: CONNECTED_AUTH },
+      fetch: fetchFn,
+    });
+    await plugin.setup(context);
+
+    expect(fetchFn).not.toHaveBeenCalled();
+
+    await commands.find((c) => c.id === 'spotify.widget-mounted')?.run();
+    expect(fetchFn).toHaveBeenCalled();
+  });
+
+  it('stops polling when the widget unmounts', async () => {
+    vi.useFakeTimers();
+    try {
+      let playingPolls = 0;
+      const fetchFn = vi.fn(async (url: string) => {
+        if (url.includes('currently-playing')) {
+          playingPolls += 1;
+          return new Response(null, { status: 204 });
+        }
+        return new Response(JSON.stringify({ items: [], next: null }));
+      });
+      const { context, commands } = mockContext({
+        storage: { auth: CONNECTED_AUTH },
+        fetch: fetchFn,
+      });
+      await plugin.setup(context);
+      const mounted = commands.find((c) => c.id === 'spotify.widget-mounted');
+      const unmounted = commands.find((c) => c.id === 'spotify.widget-unmounted');
+
+      await mounted?.run();
+      // refreshAll is fire-and-forget — flush it without advancing the poll timer.
+      await vi.advanceTimersByTimeAsync(0);
+
+      await unmounted?.run();
+      const pollsAfterUnmount = playingPolls;
+      await vi.advanceTimersByTimeAsync(30_000);
+      expect(playingPolls).toBe(pollsAfterUnmount);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

@@ -79,6 +79,8 @@ describe('home-assistant plugin', () => {
         'home-assistant.clear',
         'home-assistant.refresh',
         'home-assistant.activate-scene',
+        'home-assistant.widget-mounted',
+        'home-assistant.widget-unmounted',
       ]),
     );
     const connection = context.entities.get<ConnectionState>(
@@ -181,7 +183,7 @@ describe('home-assistant plugin', () => {
       fetch: fetchFn,
     });
     await plugin.setup(context);
-    // Let background reconnect settle.
+    await commands.find((c) => c.id === 'home-assistant.widget-mounted')?.run();
     await vi.waitFor(() => {
       expect(
         context.entities.get<ConnectionState>(HOME_ASSISTANT_CONNECTION_ENTITY)?.state?.status,
@@ -251,5 +253,25 @@ describe('home-assistant plugin', () => {
     await activate?.run({ entity_id: 'scene.a' });
     expect(tokensSeen.some((h) => h.includes('first'))).toBe(true);
     expect(tokensSeen.some((h) => h.includes('second'))).toBe(true);
+  });
+
+  it('does not hit the network on setup when credentials are stored but no widget is mounted', async () => {
+    const fetchFn = vi.fn(async () => new Response('[]', { status: 200 }));
+    const { context, commands } = mockContext({
+      storage: {
+        credentials: {
+          version: 1,
+          baseUrl: 'http://192.168.1.10:8123',
+          token: 'tok',
+        },
+      },
+      fetch: fetchFn,
+    });
+    await plugin.setup(context);
+
+    expect(fetchFn).not.toHaveBeenCalled();
+
+    await commands.find((c) => c.id === 'home-assistant.widget-mounted')?.run();
+    expect(fetchFn).toHaveBeenCalled();
   });
 });

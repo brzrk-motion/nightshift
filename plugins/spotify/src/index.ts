@@ -533,8 +533,9 @@ export default definePlugin({
       render: PlayerWidget,
     });
 
-    // Rescheduled after every poll rather than a fixed interval: a playing
-    // track is worth tracking closely, an idle one is not worth the requests.
+    // Poll only while the widget is on screen — credentials in storage must not
+    // mean background API traffic on dashboards that never show Spotify.
+    let widgetMounted = 0;
     let timer: ReturnType<typeof setTimeout> | undefined;
 
     const schedule = (): void => {
@@ -546,16 +547,47 @@ export default definePlugin({
 
     const poll = async (): Promise<void> => {
       if (readSession().status === 'ready') await refreshPlayer();
+      if (widgetMounted > 0) schedule();
+    };
+
+    const startPolling = (): void => {
+      if (timer !== undefined) return;
       schedule();
     };
 
-    schedule();
-    context.own(() => {
-      if (timer) clearTimeout(timer);
-      if (settleTimer) clearTimeout(settleTimer);
+    const stopPolling = (): void => {
+      if (timer === undefined) return;
+      clearTimeout(timer);
+      timer = undefined;
+    };
+
+    context.registerCommand({
+      id: 'spotify.widget-mounted',
+      title: 'Spotify widget mounted',
+      hidden: true,
+      run: () => {
+        widgetMounted += 1;
+        if (widgetMounted === 1) {
+          startPolling();
+          if (readSession().status === 'ready') void refreshAll();
+        }
+      },
     });
 
-    if (stored?.refreshToken) void refreshAll();
+    context.registerCommand({
+      id: 'spotify.widget-unmounted',
+      title: 'Spotify widget unmounted',
+      hidden: true,
+      run: () => {
+        widgetMounted = Math.max(0, widgetMounted - 1);
+        if (widgetMounted === 0) stopPolling();
+      },
+    });
+
+    context.own(() => {
+      stopPolling();
+      if (settleTimer) clearTimeout(settleTimer);
+    });
 
     context.log.info('Spotify plugin ready', {
       status: sessionFromStored(stored).status,

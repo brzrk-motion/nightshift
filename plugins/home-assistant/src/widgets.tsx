@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import {
   Button,
   EmptyState,
@@ -173,11 +173,19 @@ function SceneList({
 }
 
 export function ScenesWidget(_props: WidgetProps): ReactNode {
+  const commands = useCommands();
   const connection =
     useEntity<ConnectionState>(HOME_ASSISTANT_CONNECTION_ENTITY)?.state ??
     initialConnectionState();
   const scenes =
     useEntity<ScenesState>(HOME_ASSISTANT_SCENES_ENTITY)?.state ?? initialScenesState();
+
+  useEffect(() => {
+    void commands.run('home-assistant.widget-mounted');
+    return () => {
+      void commands.run('home-assistant.widget-unmounted');
+    };
+  }, [commands]);
 
   if (!connection.configured) {
     return <ConfigureForm error={connection.error} />;

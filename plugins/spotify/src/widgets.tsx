@@ -560,6 +560,7 @@ function ReadyPane({
  * Secrets stay in plugin storage; only status flags live on the session entity.
  */
 export function PlayerWidget({ width, height }: WidgetProps): ReactNode {
+  const commands = useCommands();
   const sessionEntity = useEntity<SpotifySessionState>(SPOTIFY_SESSION_ENTITY);
   const playerEntity = useEntity<SpotifyPlayerState>(SPOTIFY_PLAYER_ENTITY);
   const libraryEntity = useEntity<SpotifyLibraryState>(SPOTIFY_LIBRARY_ENTITY);
@@ -568,6 +569,13 @@ export function PlayerWidget({ width, height }: WidgetProps): ReactNode {
   const player = playerEntity?.state ?? initialPlayerState();
   const library = libraryEntity?.state ?? initialLibraryState();
   const episodes = episodesEntity?.state ?? initialEpisodesState();
+
+  useEffect(() => {
+    void commands.run('spotify.widget-mounted');
+    return () => {
+      void commands.run('spotify.widget-unmounted');
+    };
+  }, [commands]);
 
   if (session.status === 'needs_credentials') {
     return <CredentialsForm error={session.error} />;

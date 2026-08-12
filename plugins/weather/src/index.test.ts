@@ -123,6 +123,8 @@ describe('setup', () => {
       'weather.remove-location',
       'weather.set-primary',
       'weather.set-units',
+      'weather.widget-mounted',
+      'weather.widget-unmounted',
     ]);
     expect(widgets.map((widget) => widget.type).sort()).toEqual([
       'weather.forecast',
@@ -285,5 +287,107 @@ describe('setup', () => {
     // The last good reading stays on screen; only its currency is in doubt.
     const locations = entities.get(WEATHER_LOCATIONS_ENTITY) as WeatherLocationsState;
     expect(locations.locations['home']?.temperature).toBe(30);
+  });
+
+  it('does not hit the network on setup when locations are stored but no widget is mounted', async () => {
+    const fetchImpl = vi.fn(async () => jsonResponse({ results: [] }));
+    const { context, commands, storageData } = fakeContext(fetchImpl);
+    storageData.set('weather', {
+      primaryId: 'home',
+      units: 'metric',
+      locations: {
+        home: {
+          id: 'home',
+          label: 'Home',
+          query: '90210',
+          latitude: 34.07,
+          longitude: -118.4,
+          placeName: 'Beverly Hills',
+          temperature: 22,
+          feelsLike: 21,
+          humidity: 40,
+          windSpeed: 10,
+          windDirection: 180,
+          condition: 'Clear',
+          weatherCode: 0,
+          sunrise: null,
+          sunset: null,
+          days: [],
+          hours: [],
+          updatedAt: '2026-08-10T12:00:00.000Z',
+        },
+      },
+    });
+    await plugin.setup(context);
+
+    expect(fetchImpl).not.toHaveBeenCalled();
+
+    await commands.get('weather.widget-mounted')!.run();
+    expect(fetchImpl).toHaveBeenCalled();
+  });
+
+  it('stops polling when the widget unmounts', async () => {
+    const fetchImpl = vi.fn(async (url: string) => {
+      if (url.includes('geocoding-api')) {
+        return jsonResponse({ results: [{ name: 'Austin', latitude: 1, longitude: 2 }] });
+      }
+      return jsonResponse({
+        current: {
+          temperature_2m: 30,
+          apparent_temperature: 30,
+          relative_humidity_2m: 10,
+          weather_code: 0,
+          wind_speed_10m: 1,
+          wind_direction_10m: 1,
+        },
+        daily: {
+          time: [],
+          weather_code: [],
+          temperature_2m_max: [],
+          temperature_2m_min: [],
+          sunrise: [],
+          sunset: [],
+          precipitation_sum: [],
+        },
+        hourly: { time: [], temperature_2m: [], weather_code: [] },
+      });
+    });
+
+    const { context, commands, storageData } = fakeContext(fetchImpl);
+    storageData.set('weather', {
+      primaryId: 'home',
+      units: 'metric',
+      locations: {
+        home: {
+          id: 'home',
+          label: 'Home',
+          query: '78701',
+          latitude: 1,
+          longitude: 2,
+          placeName: 'Austin',
+          temperature: 30,
+          feelsLike: 30,
+          humidity: 10,
+          windSpeed: 1,
+          windDirection: 1,
+          condition: 'Clear',
+          weatherCode: 0,
+          sunrise: null,
+          sunset: null,
+          days: [],
+          hours: [],
+          updatedAt: '2026-08-10T12:00:00.000Z',
+        },
+      },
+    });
+    await plugin.setup(context);
+
+    await commands.get('weather.widget-mounted')!.run();
+    await vi.advanceTimersByTimeAsync(0);
+
+    await commands.get('weather.widget-unmounted')!.run();
+    fetchImpl.mockClear();
+    await vi.advanceTimersByTimeAsync(15 * 60 * 1000 + 1);
+    expect(fetchImpl).not.toHaveBeenCalled();
   });
 });

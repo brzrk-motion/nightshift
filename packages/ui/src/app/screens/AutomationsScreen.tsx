@@ -3,6 +3,7 @@ import type { Json } from '@nightshift/core';
 import { Table, type TableColumn } from '../../components/Table.js';
 import { EmptyState } from '../../components/States.js';
 import { useRuntime } from '../context.js';
+import { useShellContentSize } from '../useShellContentSize.js';
 
 interface AutomationRow {
   name: string;
@@ -23,6 +24,7 @@ const AUTOMATION_COLUMNS: readonly TableColumn<AutomationRow>[] = [
 
 export function AutomationsScreen(): ReactNode {
   const runtime = useRuntime();
+  const contentSize = useShellContentSize();
   const entity = runtime?.entities.get<{ automations: AutomationRow[]; [key: string]: Json }>(
     'nightshift.automations',
   );
@@ -31,6 +33,6 @@ export function AutomationsScreen(): ReactNode {
   const automations = entity?.state.automations ?? [];
   if (automations.length === 0) return <EmptyState message="No automations registered." />;
   return (
-    <Table columns={AUTOMATION_COLUMNS} rows={[...automations]} width={runtime.size.width - 20} />
+    <Table columns={AUTOMATION_COLUMNS} rows={[...automations]} width={contentSize.width} />
   );
 }

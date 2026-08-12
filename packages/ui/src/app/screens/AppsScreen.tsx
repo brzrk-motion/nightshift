@@ -3,6 +3,7 @@ import type { Json } from '@nightshift/core';
 import { Table, type TableColumn } from '../../components/Table.js';
 import { EmptyState } from '../../components/States.js';
 import { useRuntime } from '../context.js';
+import { useShellContentSize } from '../useShellContentSize.js';
 
 interface PluginRow {
   id: string;
@@ -22,6 +23,7 @@ const PLUGIN_COLUMNS: readonly TableColumn<PluginRow>[] = [
 
 export function AppsScreen(): ReactNode {
   const runtime = useRuntime();
+  const contentSize = useShellContentSize();
   const entity = runtime?.entities.get<{ plugins: PluginRow[]; [key: string]: Json }>(
     'nightshift.plugins',
   );
@@ -33,5 +35,5 @@ export function AppsScreen(): ReactNode {
       <EmptyState message="No plugins loaded." hint={'Add one to "plugins" in config.json.'} />
     );
   }
-  return <Table columns={PLUGIN_COLUMNS} rows={[...plugins]} width={runtime.size.width - 20} />;
+  return <Table columns={PLUGIN_COLUMNS} rows={[...plugins]} width={contentSize.width} />;
 }

@@ -1,4 +1,5 @@
 export {
+  BLANK_DASHBOARD,
   BUILT_IN_DASHBOARDS,
   DASHBOARD_SCHEMA_VERSION,
   DEFAULT_DASHBOARD,
@@ -9,6 +10,7 @@ export {
   type WidgetSpec,
 } from './schema.js';
 export {
+  deleteDashboard,
   loadDashboardFile,
   loadDashboards,
   mergeDashboards,

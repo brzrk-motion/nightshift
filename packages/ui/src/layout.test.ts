@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { distribute, isRenderable, planLayout, resolveBreakpoint } from './layout.js';
+import {
+  distribute,
+  isNavRailCollapsed,
+  isRenderable,
+  planLayout,
+  resolveBreakpoint,
+  shellContentSize,
+} from './layout.js';
 
 describe('resolveBreakpoint', () => {
   it.each([
@@ -19,6 +26,29 @@ describe('isRenderable', () => {
     expect(isRenderable({ width: 80, height: 24 })).toBe(true);
     expect(isRenderable({ width: 39, height: 24 })).toBe(false);
     expect(isRenderable({ width: 80, height: 11 })).toBe(false);
+  });
+});
+
+describe('shellContentSize', () => {
+  it('subtracts the header, footer, and expanded nav rail', () => {
+    expect(shellContentSize({ width: 100, height: 24 }, false)).toEqual({
+      width: 84,
+      height: 22,
+    });
+  });
+
+  it('uses the collapsed nav rail width on a narrow terminal', () => {
+    expect(shellContentSize({ width: 60, height: 20 }, true)).toEqual({
+      width: 56,
+      height: 18,
+    });
+  });
+});
+
+describe('isNavRailCollapsed', () => {
+  it('collapses below the compact breakpoint', () => {
+    expect(isNavRailCollapsed(71)).toBe(true);
+    expect(isNavRailCollapsed(72)).toBe(false);
   });
 });
 

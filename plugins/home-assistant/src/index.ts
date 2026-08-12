@@ -254,9 +254,30 @@ export default definePlugin({
       render: ScenesWidget,
     });
 
-    if (credentials) {
-      void runCheckAndRefresh(credentials);
-    }
+    // Sync only while the widget is on screen — stored credentials must not
+    // mean background API traffic on dashboards that never show Home Assistant.
+    let widgetMounted = 0;
+
+    context.registerCommand({
+      id: 'home-assistant.widget-mounted',
+      title: 'Home Assistant widget mounted',
+      hidden: true,
+      run: () => {
+        widgetMounted += 1;
+        if (widgetMounted === 1 && credentials) {
+          void runCheckAndRefresh(credentials);
+        }
+      },
+    });
+
+    context.registerCommand({
+      id: 'home-assistant.widget-unmounted',
+      title: 'Home Assistant widget unmounted',
+      hidden: true,
+      run: () => {
+        widgetMounted = Math.max(0, widgetMounted - 1);
+      },
+    });
 
     context.log.info('Home Assistant plugin ready');
   },

@@ -1,4 +1,4 @@
-import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, readFile, unlink, writeFile } from 'node:fs/promises';
 import { basename, extname, join } from 'node:path';
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 import { NightshiftError, type Json } from '@nightshift/core';
@@ -317,4 +317,20 @@ export function mergeDashboards(
   return [...loaded, ...builtIn.filter((dashboard) => !names.has(dashboard.name))].sort((a, b) =>
     a.name.localeCompare(b.name),
   );
+}
+
+/** Removes `dashboards/<name>.yaml`. Refused when the file does not exist. */
+export async function deleteDashboard(directory: string, name: string): Promise<void> {
+  const path = join(directory, `${name}.yaml`);
+  try {
+    await unlink(path);
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    if (code === 'ENOENT') {
+      throw new NightshiftError('DASHBOARD_NOT_FOUND', `No user dashboard file at ${path}.`, {
+        hint: 'Built-in dashboards cannot be deleted unless you have saved a user override.',
+      });
+    }
+    throw new NightshiftError('CONFIG_UNWRITABLE', `Could not delete ${path}.`, { cause: error });
+  }
 }

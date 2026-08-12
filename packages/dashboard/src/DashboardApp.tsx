@@ -31,6 +31,8 @@ export interface DashboardAppProps {
   initial?: string;
   /** Called when the user switches dashboards, to persist the choice. */
   onSwitch?: (name: string) => void;
+  /** Notified when the host updates the merged dashboard list after save/delete. */
+  subscribeDashboards?: (listener: (dashboards: readonly DashboardSpec[]) => void) => () => void;
   /**
    * Where dashboard files live. Edit mode and `dashboard.reload` only
    * register when this is given — without it there is nowhere to save a
@@ -65,6 +67,7 @@ export function DashboardApp({
   registry,
   initial,
   onSwitch,
+  subscribeDashboards,
   dashboardsDir,
   builtInDashboards = [],
   onboarding = false,
@@ -111,6 +114,11 @@ export function DashboardApp({
     [dashboards, onSwitch, runtime.toasts],
   );
 
+  useEffect(() => {
+    if (!subscribeDashboards) return undefined;
+    return subscribeDashboards((next) => setDashboards(next));
+  }, [subscribeDashboards]);
+
   // A dashboard's theme wins over the configured one while it is open, and the
   // configured theme comes back when it is not.
   useEffect(() => {
@@ -126,7 +134,10 @@ export function DashboardApp({
         id: 'dashboard.refresh',
         title: 'Refresh every widget',
         category: 'Dashboard',
-        run: () => setGeneration((value) => value + 1),
+        run: () => {
+          if (runtime.keyboardCapture.isCaptured()) return;
+          setGeneration((value) => value + 1);
+        },
       }),
       runtime.commands.register({
         id: 'dashboard.switch',
@@ -383,7 +394,9 @@ export function DashboardApp({
   return (
     <AppShell
       runtime={runtime}
-      title={`nightshift · ${editing ? 'editing ' : ''}${current?.title ?? current?.name ?? 'no dashboard'}`}
+      title={`nightshift · ${editing ? 'editing ' : ''}${
+        current ? current.title?.trim() || current.name : 'no dashboard'
+      }`}
       {...(status === undefined ? {} : { status })}
     >
       {current ? (

@@ -130,6 +130,8 @@ export async function runDashboard(
 
     context.log.info('Opening dashboard', { dashboard: target });
 
+    runtime.setActiveDashboard(target);
+
     // From here the renderer owns the terminal: log lines go to the file, and
     // the ones a user needs to see come back as toasts.
     detachLog = attachLogToasts({ log: context.log, toasts: runtime.app.toasts });
@@ -142,7 +144,8 @@ export async function runDashboard(
           dashboards: runtime.dashboards,
           registry: runtime.widgets,
           initial: target,
-          onSwitch: (next: string) => context.log.debug('Dashboard switched', { dashboard: next }),
+          onSwitch: (next) => runtime.setActiveDashboard(next),
+          subscribeDashboards: runtime.subscribeDashboards,
           dashboardsDir: context.paths.dashboardsDir,
           builtInDashboards: BUILT_IN_DASHBOARDS,
           onboarding: !context.config.onboarded,

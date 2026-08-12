@@ -28,6 +28,8 @@ function unconfiguredRuntime(): ReturnType<typeof createAppRuntime> {
     'home-assistant.clear',
     'home-assistant.refresh',
     'home-assistant.activate-scene',
+    'home-assistant.widget-mounted',
+    'home-assistant.widget-unmounted',
   ]) {
     runtime.commands.register({ id, title: id, run: () => {} });
   }
@@ -55,6 +57,8 @@ function connectedRuntime(): ReturnType<typeof createAppRuntime> {
     'home-assistant.clear',
     'home-assistant.refresh',
     'home-assistant.activate-scene',
+    'home-assistant.widget-mounted',
+    'home-assistant.widget-unmounted',
   ]) {
     runtime.commands.register({ id, title: id, run: () => {} });
   }

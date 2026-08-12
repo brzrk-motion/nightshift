@@ -270,13 +270,50 @@ export default definePlugin({
       ],
     });
 
-    const timer = setInterval(() => {
-      void refreshAll();
-    }, POLL_MS);
-    timer.unref?.();
-    context.own(() => clearInterval(timer));
+    // Poll only while a weather widget is on screen — stored locations must not
+    // mean background API traffic on dashboards that never show weather.
+    let widgetMounted = 0;
+    let timer: ReturnType<typeof setInterval> | undefined;
 
-    void refreshAll();
+    const startPolling = (): void => {
+      if (timer !== undefined) return;
+      timer = setInterval(() => {
+        void refreshAll();
+      }, POLL_MS);
+      timer.unref?.();
+    };
+
+    const stopPolling = (): void => {
+      if (timer === undefined) return;
+      clearInterval(timer);
+      timer = undefined;
+    };
+
+    context.registerCommand({
+      id: 'weather.widget-mounted',
+      title: 'Weather widget mounted',
+      hidden: true,
+      run: () => {
+        widgetMounted += 1;
+        if (widgetMounted === 1) {
+          startPolling();
+          void refreshAll();
+        }
+      },
+    });
+
+    context.registerCommand({
+      id: 'weather.widget-unmounted',
+      title: 'Weather widget unmounted',
+      hidden: true,
+      run: () => {
+        widgetMounted = Math.max(0, widgetMounted - 1);
+        if (widgetMounted === 0) stopPolling();
+      },
+    });
+
+    context.own(() => stopPolling());
+
     context.log.info('Weather plugin ready', {
       locations: Object.keys(initial.locations).length,
     });

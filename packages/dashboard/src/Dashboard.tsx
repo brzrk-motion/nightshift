@@ -3,7 +3,9 @@ import { useTerminalDimensions } from '@opentui/react';
 import { checkCondition } from '@nightshift/automations';
 import {
   Panel,
+  isNavRailCollapsed,
   planLayout,
+  shellContentSize,
   useEntity,
   useRuntime,
   useTheme,
@@ -24,6 +26,11 @@ const NO_CONDITION: EntityId = 'nightshift.none';
 export interface DashboardProps {
   dashboard: DashboardSpec;
   registry: WidgetRegistry;
+  /**
+   * When true (default), layout uses the AppShell canvas size rather than the
+   * full terminal — header, footer and nav rail are subtracted.
+   */
+  shell?: boolean;
   /**
    * Bumping this remounts every widget — how `dashboard.refresh` and the
    * refresh command force a redraw of widgets holding their own state.
@@ -133,34 +140,45 @@ function WidgetSlot({
 export function Dashboard({
   dashboard,
   registry,
+  shell = true,
   generation = 0,
   editing = false,
   selected = null,
   onSelectWidget,
 }: DashboardProps): ReactNode {
   const theme = useTheme();
-  const size = useTerminalDimensions();
+  const runtime = useRuntime();
+  const terminalSize = useTerminalDimensions();
   const [tick, setTick] = useState(0);
+
+  const layoutSize = useMemo(() => {
+    if (!shell) return terminalSize;
+    return shellContentSize(terminalSize, isNavRailCollapsed(terminalSize.width));
+  }, [shell, terminalSize]);
 
   const plan = useMemo(
     () =>
       planLayout<WidgetSpec>(
         dashboard.rows.map((row) => ({ height: row.height, items: row.widgets })),
-        // The status bar owns the bottom row.
-        { width: size.width, height: Math.max(1, size.height - 1) },
+        layoutSize,
       ),
-    [dashboard.rows, size.height, size.width],
+    [dashboard.rows, layoutSize],
   );
 
   // A dashboard can ask to be redrawn on an interval, for widgets whose data
-  // ages rather than being pushed to them.
+  // ages rather than being pushed to them. Skip a tick while a plugin
+  // TextInput holds keyboard capture — remounting widgets would erase in-progress
+  // text (see `keyboardCapture.ts`).
   useEffect(() => {
     const seconds = dashboard.refresh ?? 0;
     if (seconds <= 0) return;
-    const timer = setInterval(() => setTick((current) => current + 1), seconds * 1000);
+    const timer = setInterval(() => {
+      if (runtime?.keyboardCapture.isCaptured()) return;
+      setTick((current) => current + 1);
+    }, seconds * 1000);
     timer.unref?.();
     return () => clearInterval(timer);
-  }, [dashboard.refresh]);
+  }, [dashboard.refresh, runtime]);
 
   if (plan.rows.length === 0) {
     return (
@@ -171,7 +189,7 @@ export function Dashboard({
   }
 
   return (
-    <box style={{ flexGrow: 1, flexDirection: 'column' }}>
+    <box style={{ flexGrow: 1, flexDirection: 'column', width: '100%', height: '100%', minHeight: 0 }}>
       {plan.rows.map((row, index) => (
         <box
           key={`${row.source}:${index}`}

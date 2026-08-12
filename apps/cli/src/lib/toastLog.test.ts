@@ -77,4 +77,19 @@ describe('attachLogToasts', () => {
     log.error('after the dashboard closed');
     expect(toasts.list()).toHaveLength(0);
   });
+
+  it('routes runtime warnings to toasts instead of stderr', () => {
+    const { stream, text } = captureStream();
+    const log = createLogger({ level: 'info', stream, color: false });
+    const toasts = createToastStore({ setTimer: () => undefined, clearTimer: () => undefined });
+    const detach = attachLogToasts({ log, toasts, restoreStream: stream });
+
+    process.stderr.write('(node:1) MaxListenersExceededWarning: Possible EventEmitter memory leak\n');
+
+    expect(text()).toBe('');
+    expect(toasts.list()[0]?.tone).toBe('warning');
+    expect(toasts.list()[0]?.message).toContain('MaxListenersExceededWarning');
+
+    detach();
+  });
 });

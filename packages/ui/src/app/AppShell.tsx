@@ -26,7 +26,7 @@ export type Overlay = 'palette' | 'help' | null;
 
 export interface AppShellProps {
   runtime: AppRuntime;
-  /** Shown as the "Dashboard" screen's label — a dashboard's own title. */
+  /** Shown in the footer while the dashboard is active — typically the open dashboard's title. */
   title?: string;
   /** Overrides the footer's right-hand hints entirely. */
   status?: string;
@@ -71,14 +71,16 @@ export function AppShell({
   const dashboardScreen: Screen = useMemo(
     () => ({
       id: DASHBOARD_SCREEN_ID,
-      label: title ?? 'Dashboard',
+      label: 'Home',
       icon: 'dashboard',
       render: () => children,
     }),
-    [children, title],
+    [children],
   );
   const allScreens = useMemo(() => [dashboardScreen, ...screens], [dashboardScreen, screens]);
   const current = allScreens.find((screen) => screen.id === activeScreen) ?? dashboardScreen;
+  const footerLabel =
+    activeScreen === DASHBOARD_SCREEN_ID ? (title ?? 'Dashboard') : current.label;
 
   // Commands the shell itself owns. Registering them here — rather than in the
   // CLI — keeps them available to anything that mounts a shell.
@@ -228,8 +230,8 @@ export function AppShell({
       <RuntimeProvider runtime={runtime}>
         <box
           style={{
-            width: '100%',
-            height: '100%',
+            width: dimensions.width,
+            height: dimensions.height,
             flexDirection: 'column',
             backgroundColor: theme.colors.background,
           }}
@@ -251,14 +253,21 @@ export function AppShell({
           ) : (
             <>
               <Header runtime={runtime} />
-              <box style={{ flexGrow: 1, flexDirection: 'row' }}>
+              <box style={{ flexGrow: 1, flexDirection: 'row', alignItems: 'stretch', minHeight: 0 }}>
                 <NavRail
                   screens={allScreens}
                   active={activeScreen}
                   onSelect={setActiveScreen}
                   collapsed={collapsedRail}
                 />
-                <box style={{ flexGrow: 1, flexDirection: 'column' }}>
+                <box
+                  style={{
+                    flexGrow: 1,
+                    flexDirection: 'column',
+                    minHeight: 0,
+                    backgroundColor: theme.colors.background,
+                  }}
+                >
                   {activeScreen === DASHBOARD_SCREEN_ID ? (
                     // Rendered directly, not through `current.render` — that
                     // closure is rebuilt whenever `children` changes identity,
@@ -288,7 +297,7 @@ export function AppShell({
               paddingRight: 1,
             }}
           >
-            <text fg={theme.colors.accent}>{current.label}</text>
+            <text fg={theme.colors.accent}>{footerLabel}</text>
             {status === undefined ? (
               <box style={{ flexDirection: 'row', gap: 3 }}>
                 <KeyHint keys={hint} label="commands" />

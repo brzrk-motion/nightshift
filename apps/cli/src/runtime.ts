@@ -8,12 +8,18 @@ import {
   type PluginHost,
 } from '@nightshift/services';
 import {
+  BLANK_DASHBOARD,
   BUILT_IN_DASHBOARDS,
   BUILT_IN_WIDGETS,
   createWidgetRegistry,
+  deleteDashboard,
   loadDashboards,
   mergeDashboards,
+  parseDashboard,
+  saveDashboard,
+  serializeDashboard,
   type DashboardSpec,
+  type RowSpec,
   type WidgetRegistry,
 } from '@nightshift/dashboard';
 import { createAutomationEngine, type AutomationEngine } from '@nightshift/automations';
@@ -51,6 +57,10 @@ export interface NightshiftRuntime {
   automations: AutomationEngine;
   /** Problems that did not stop startup, reported once the UI is up. */
   warnings: string[];
+  /** Called when Home switches dashboards — updates catalog active flags. */
+  setActiveDashboard(name: string): void;
+  /** Notified when the merged dashboard list changes after save/delete. */
+  subscribeDashboards(listener: (dashboards: readonly DashboardSpec[]) => void): () => void;
   dispose(): Promise<void>;
 }
 
@@ -65,6 +75,50 @@ function describe(failure: PluginFailure): string {
 }
 
 const VIBE_NAME = /^[a-z][a-z0-9-]*$/;
+const DASHBOARD_NAME = /^[a-z][a-z0-9-]*$/;
+
+function rowsFromJson(value: Json | undefined): RowSpec[] | undefined {
+  if (value === undefined) return undefined;
+  if (!Array.isArray(value)) {
+    throw new NightshiftError('CONFIG_INVALID', 'dashboard.save rows must be a list.');
+  }
+  return value as unknown as RowSpec[];
+}
+
+/** Turns a command-args blob into a validated DashboardSpec. */
+function dashboardFromArgs(
+  args: Record<string, Json> | undefined,
+  existingRows?: RowSpec[],
+): DashboardSpec {
+  if (args === undefined || typeof args['name'] !== 'string' || !DASHBOARD_NAME.test(args['name'])) {
+    throw new NightshiftError(
+      'CONFIG_INVALID',
+      'dashboard.save needs a name like `work-board` (lowercase letters, digits, hyphens).',
+    );
+  }
+  const name = args['name'];
+  const title = typeof args['title'] === 'string' ? args['title'] : undefined;
+  const theme = typeof args['theme'] === 'string' ? args['theme'] : undefined;
+  const refresh = args['refresh'];
+  const rowsArg = rowsFromJson(args['rows']);
+  const rows = rowsArg ?? existingRows ?? BLANK_DASHBOARD(name, title).rows;
+
+  const draft: DashboardSpec = {
+    version: 1,
+    name,
+    rows,
+    ...(title === undefined || title === '' ? {} : { title }),
+    ...(theme === undefined || theme === '' ? {} : { theme }),
+  };
+  if (refresh !== undefined) {
+    if (typeof refresh !== 'number' || !Number.isFinite(refresh) || refresh < 0) {
+      throw new NightshiftError('CONFIG_INVALID', 'dashboard.save refresh must be a number.');
+    }
+    draft.refresh = refresh;
+  }
+
+  return parseDashboard(serializeDashboard(draft), { source: 'dashboard.save' });
+}
 
 /** Turns a command-args blob into a validated VibeSpec. */
 function vibeFromArgs(args: Record<string, Json> | undefined): VibeSpec {
@@ -127,11 +181,22 @@ function publishVibesCatalog(
 function publishDashboardsCatalog(
   entities: EntityStore,
   dashboards: readonly DashboardSpec[],
+  userDashboardNames: ReadonlySet<string>,
 ): void {
-  const rows: Json[] = dashboards.map((dashboard) => ({
-    name: dashboard.name,
-    title: dashboard.title ?? dashboard.name,
-  }));
+  const active =
+    entities.get<{ active: string | null }>('nightshift.dashboard')?.state.active ?? null;
+  const rows: Json[] = dashboards.map((dashboard) => {
+    const row: Record<string, Json> = {
+      name: dashboard.name,
+      title: dashboard.title ?? dashboard.name,
+      source: userDashboardNames.has(dashboard.name) ? 'user' : 'built-in',
+      active: dashboard.name === active,
+    };
+    if (dashboard.theme !== undefined) row['theme'] = dashboard.theme;
+    if (dashboard.refresh !== undefined) row['refresh'] = dashboard.refresh;
+    row['rows'] = dashboard.rows as unknown as Json;
+    return row;
+  });
   const state: Json = { dashboards: rows };
   if (entities.get('nightshift.dashboards')) {
     entities.set('nightshift.dashboards', state);
@@ -201,7 +266,24 @@ export async function createNightshiftRuntime(
 
   // A user dashboard replaces the built-in of the same name rather than
   // appearing alongside it.
-  const dashboards = mergeDashboards(foundDashboards.dashboards, BUILT_IN_DASHBOARDS);
+  let dashboards = mergeDashboards(foundDashboards.dashboards, BUILT_IN_DASHBOARDS);
+  const userDashboardNames = new Set(foundDashboards.dashboards.map((dashboard) => dashboard.name));
+  const dashboardListeners = new Set<(dashboards: readonly DashboardSpec[]) => void>();
+
+  const syncDashboards = (next: DashboardSpec[]): void => {
+    dashboards = next;
+    publishDashboardsCatalog(entities, dashboards, userDashboardNames);
+    for (const listener of dashboardListeners) listener(dashboards);
+  };
+
+  const setActiveDashboard = (name: string): void => {
+    const spec = dashboards.find((dashboard) => dashboard.name === name);
+    entities.set('nightshift.dashboard', {
+      active: name,
+      title: spec?.title ?? name,
+    });
+    publishDashboardsCatalog(entities, dashboards, userDashboardNames);
+  };
 
   // Plugin commands become app commands, so a keybinding, the palette and a
   // vibe all reach them the same way. Tagging each with `source` is what lets
@@ -215,6 +297,7 @@ export async function createNightshiftRuntime(
         title: command.title,
         run: command.run,
         source: plugin.manifest.id,
+        ...(command.hidden === undefined ? {} : { hidden: command.hidden }),
         ...(category === undefined ? {} : { category }),
       });
     }
@@ -275,13 +358,80 @@ export async function createNightshiftRuntime(
   }
   for (const vibe of foundVibes.vibes) installVibe(vibe);
 
-  publishDashboardsCatalog(entities, dashboards);
+  publishDashboardsCatalog(entities, dashboards, userDashboardNames);
+
+  entities.register('nightshift.dashboard', { active: null, title: null }, { owner: 'nightshift' });
+  publishVibesCatalog(entities, vibes, userVibeNames);
+
+  app.commands.register({
+    id: 'dashboard.save',
+    title: 'Save dashboard',
+    category: 'Dashboard',
+    hidden: true,
+    run: async (args) => {
+      const existing = dashboards.find(
+        (dashboard) => dashboard.name === (typeof args?.['name'] === 'string' ? args['name'] : ''),
+      );
+      const spec = dashboardFromArgs(args, existing?.rows);
+      await saveDashboard(context.paths.dashboardsDir, spec);
+      userDashboardNames.add(spec.name);
+      const exists = dashboards.some((dashboard) => dashboard.name === spec.name);
+      const next = exists
+        ? dashboards.map((dashboard) => (dashboard.name === spec.name ? spec : dashboard))
+        : [...dashboards, spec];
+      syncDashboards([...next].sort((a, b) => a.name.localeCompare(b.name)));
+      const active =
+        entities.get<{ active: string | null }>('nightshift.dashboard')?.state.active ?? null;
+      if (active === spec.name) setActiveDashboard(spec.name);
+      app.toasts.push(`Saved dashboard "${spec.title ?? spec.name}"`, { tone: 'success' });
+    },
+  });
+
+  app.commands.register({
+    id: 'dashboard.delete',
+    title: 'Delete dashboard',
+    category: 'Dashboard',
+    hidden: true,
+    run: async (args) => {
+      const name = args?.['name'];
+      if (typeof name !== 'string' || !DASHBOARD_NAME.test(name)) {
+        throw new NightshiftError(
+          'CONFIG_INVALID',
+          'dashboard.delete needs a dashboard name like `work-board`.',
+        );
+      }
+      if (!userDashboardNames.has(name)) {
+        throw new NightshiftError(
+          'CONFIG_INVALID',
+          `Built-in dashboard "${name}" cannot be deleted.`,
+          { hint: 'Only user dashboard files in your dashboards/ directory can be removed.' },
+        );
+      }
+      const active =
+        entities.get<{ active: string | null }>('nightshift.dashboard')?.state.active ?? null;
+      await deleteDashboard(context.paths.dashboardsDir, name);
+      userDashboardNames.delete(name);
+      const loaded = await loadDashboards(context.paths.dashboardsDir);
+      const next = mergeDashboards(loaded.dashboards, BUILT_IN_DASHBOARDS);
+      syncDashboards(next);
+      app.commands.unregister(`dashboard.open.${name}`);
+      if (active === name) {
+        const fallback =
+          (context.config.defaultDashboard &&
+          next.some((dashboard) => dashboard.name === context.config.defaultDashboard)
+            ? context.config.defaultDashboard
+            : undefined) ?? next[0]?.name;
+        if (fallback) await app.commands.run(`dashboard.open.${fallback}`);
+        else entities.set('nightshift.dashboard', { active: null, title: null });
+      }
+      app.toasts.push(`Deleted dashboard "${name}"`, { tone: 'success' });
+    },
+  });
 
   // The shell's header reads this to show "● locked in" — see `Header.tsx` —
   // and it is the other half of the same entity-bridge convention as
   // `nightshift.plugins` above.
   entities.register('nightshift.vibe', { active: null, title: null }, { owner: 'nightshift' });
-  publishVibesCatalog(entities, vibes, userVibeNames);
 
   app.commands.register({
     id: 'vibe.save',
@@ -380,10 +530,17 @@ export async function createNightshiftRuntime(
     entities,
     plugins,
     widgets,
-    dashboards,
+    get dashboards() {
+      return dashboards;
+    },
     vibes,
     automations,
     warnings,
+    setActiveDashboard,
+    subscribeDashboards(listener) {
+      dashboardListeners.add(listener);
+      return () => dashboardListeners.delete(listener);
+    },
     async dispose() {
       automations.stop();
       // The outgoing vibe's onDeactivate actions may reference plugin

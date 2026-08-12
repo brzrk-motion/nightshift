@@ -14,6 +14,12 @@ export const WIDE_WIDTH = 132;
 export const MIN_WIDTH = 40;
 export const MIN_HEIGHT = 12;
 
+/** AppShell chrome that consumes terminal cells outside the main canvas. */
+export const SHELL_HEADER_ROWS = 1;
+export const SHELL_FOOTER_ROWS = 1;
+export const NAV_RAIL_WIDTH = 16;
+export const NAV_RAIL_WIDTH_COLLAPSED = 4;
+
 export type Breakpoint = 'compact' | 'normal' | 'wide';
 
 export interface TerminalSize {
@@ -30,6 +36,20 @@ export function resolveBreakpoint(width: number): Breakpoint {
 /** Whether a terminal this size can show a dashboard at all. */
 export function isRenderable(size: TerminalSize): boolean {
   return size.width >= MIN_WIDTH && size.height >= MIN_HEIGHT;
+}
+
+/** Whether the nav rail is icon-only at this terminal width. */
+export function isNavRailCollapsed(width: number): boolean {
+  return width < COMPACT_WIDTH;
+}
+
+/** Canvas inside AppShell — after the header, footer, and nav rail. */
+export function shellContentSize(size: TerminalSize, navCollapsed: boolean): TerminalSize {
+  const navWidth = navCollapsed ? NAV_RAIL_WIDTH_COLLAPSED : NAV_RAIL_WIDTH;
+  return {
+    width: Math.max(0, size.width - navWidth),
+    height: Math.max(0, size.height - SHELL_HEADER_ROWS - SHELL_FOOTER_ROWS),
+  };
 }
 
 /**

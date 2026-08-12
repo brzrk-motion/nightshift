@@ -4,47 +4,46 @@ import { Button } from '../../components/controls.js';
 import { Modal } from '../../components/Modal.js';
 import { EmptyState } from '../../components/States.js';
 import { useEntity, useRuntime, useToasts } from '../context.js';
-import { VibeEditor } from './VibeEditor.js';
-import { VibesList } from './VibesList.js';
+import { DashboardEditor } from './DashboardEditor.js';
+import { DashboardsList } from './DashboardsList.js';
 import {
   draftFromCatalog,
   draftToSaveArgs,
   duplicateDraft,
   emptyDraft,
-  type VibeCatalogRow,
-  type VibeDraft,
-} from './vibeDraft.js';
+  type DashboardCatalogRow,
+  type DashboardDraft,
+} from './dashboardDraft.js';
 
-interface VibesCatalogState {
-  vibes: VibeCatalogRow[];
+interface DashboardsCatalogState {
+  dashboards: DashboardCatalogRow[];
   [key: string]: Json;
 }
 
 type View =
   | { kind: 'list' }
-  | { kind: 'create'; draft: VibeDraft }
-  | { kind: 'edit'; draft: VibeDraft };
+  | { kind: 'create'; draft: DashboardDraft }
+  | { kind: 'edit'; draft: DashboardDraft };
 
 /**
- * Vibes catalog and in-screen editor. Reads `nightshift.vibes` for the list
- * and persists through `vibe.save` / `vibe.delete` — never imports the vibe
- * engine or touches the filesystem directly. See
- * `specs/003-vibe-editor/contracts/vibe-editor-surface.md`.
+ * Dashboards catalog and in-screen metadata editor. Reads `nightshift.dashboards`
+ * and persists through `dashboard.save` / `dashboard.delete` — never imports
+ * the dashboard package or touches the filesystem directly.
  */
-export function VibesScreen(): ReactNode {
+export function DashboardsScreen(): ReactNode {
   const runtime = useRuntime();
   const toasts = useToasts();
-  const catalog = useEntity<VibesCatalogState>('nightshift.vibes');
+  const catalog = useEntity<DashboardsCatalogState>('nightshift.dashboards');
   const [view, setView] = useState<View>({ kind: 'list' });
-  const [pendingDelete, setPendingDelete] = useState<VibeCatalogRow | null>(null);
-  const [pendingOverride, setPendingOverride] = useState<VibeDraft | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<DashboardCatalogRow | null>(null);
+  const [pendingOverride, setPendingOverride] = useState<DashboardDraft | null>(null);
 
-  const vibes = catalog?.state.vibes ?? [];
+  const dashboards = catalog?.state.dashboards ?? [];
 
-  const saveDraft = (draft: VibeDraft): void => {
+  const saveDraft = (draft: DashboardDraft): void => {
     try {
       const args = draftToSaveArgs(draft);
-      void runtime?.commands.run('vibe.save', args).then(
+      void runtime?.commands.run('dashboard.save', args).then(
         () => setView({ kind: 'list' }),
         () => {
           // Failure is already toasted by AppShell's command listener.
@@ -56,8 +55,8 @@ export function VibesScreen(): ReactNode {
     }
   };
 
-  const requestSave = (draft: VibeDraft): void => {
-    const builtIn = vibes.find(
+  const requestSave = (draft: DashboardDraft): void => {
+    const builtIn = dashboards.find(
       (row) => row.name === draft.name.trim() && row.source === 'built-in',
     );
     if (builtIn && view.kind === 'create') {
@@ -65,6 +64,11 @@ export function VibesScreen(): ReactNode {
       return;
     }
     saveDraft(draft);
+  };
+
+  const openDashboard = (row: DashboardCatalogRow): void => {
+    void runtime?.commands.run(`dashboard.open.${row.name}`);
+    void runtime?.commands.run('nav.dashboard');
   };
 
   if (!runtime) return <EmptyState message="No runtime available." />;
@@ -80,7 +84,7 @@ export function VibesScreen(): ReactNode {
           paddingRight: 1,
         }}
       >
-        <VibeEditor
+        <DashboardEditor
           key={view.kind === 'edit' ? `edit-${view.draft.name}` : 'create'}
           draft={view.draft}
           nameLocked={view.kind === 'edit'}
@@ -93,24 +97,25 @@ export function VibesScreen(): ReactNode {
 
   return (
     <>
-      <VibesList
-        vibes={vibes}
+      <DashboardsList
+        dashboards={dashboards}
         onCreate={() => setView({ kind: 'create', draft: emptyDraft() })}
         onEdit={(row) => setView({ kind: 'edit', draft: draftFromCatalog(row) })}
         onDuplicate={(row) => setView({ kind: 'create', draft: duplicateDraft(row) })}
         onDelete={(row) => setPendingDelete(row)}
+        onOpen={openDashboard}
       />
 
       <Modal
         open={pendingDelete !== null}
-        title="Delete vibe?"
+        title="Delete dashboard?"
         hint="y confirm · esc cancel"
         width={48}
       >
         <box style={{ flexDirection: 'column', gap: 1 }}>
           <text>
-            Delete user vibe “{pendingDelete?.title ?? pendingDelete?.name}”? This removes{' '}
-            vibes/{pendingDelete?.name}.yaml.
+            Delete user dashboard “{pendingDelete?.title ?? pendingDelete?.name}”? This removes{' '}
+            dashboards/{pendingDelete?.name}.yaml.
           </text>
           <box style={{ flexDirection: 'row', gap: 1 }}>
             <Button
@@ -119,7 +124,7 @@ export function VibesScreen(): ReactNode {
               onPress={() => {
                 if (!pendingDelete) return;
                 void runtime.commands
-                  .run('vibe.delete', { name: pendingDelete.name })
+                  .run('dashboard.delete', { name: pendingDelete.name })
                   .then(() => setPendingDelete(null));
               }}
             />
@@ -136,8 +141,8 @@ export function VibesScreen(): ReactNode {
       >
         <box style={{ flexDirection: 'column', gap: 1 }}>
           <text>
-            A built-in vibe named “{pendingOverride?.name}” already exists. Saving will create a
-            user file that overrides it.
+            A built-in dashboard named “{pendingOverride?.name}” already exists. Saving will create
+            a user file that overrides it.
           </text>
           <box style={{ flexDirection: 'row', gap: 1 }}>
             <Button
