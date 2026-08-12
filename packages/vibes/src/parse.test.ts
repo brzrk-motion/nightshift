@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { isNightshiftError } from '@nightshift/core';
-import { loadVibeFile, loadVibes, parseVibe, saveVibe, serializeVibe } from './parse.js';
+import { loadVibeFile, loadVibes, parseVibe, deleteVibe, saveVibe, serializeVibe } from './parse.js';
 
 const LOCKED_IN = `
 name: locked-in
@@ -127,6 +127,15 @@ describe('serializeVibe', () => {
     const reparsed = parseVibe(serializeVibe(vibe));
     expect(reparsed).toEqual({ name: 'quiet', theme: 'midnight' });
   });
+
+  it('round-trips title and description', () => {
+    const vibe = parseVibe('title: Quiet\ndescription: Shhh', { name: 'quiet' });
+    expect(parseVibe(serializeVibe(vibe))).toEqual({
+      name: 'quiet',
+      title: 'Quiet',
+      description: 'Shhh',
+    });
+  });
 });
 
 describe('saveVibe', () => {
@@ -160,5 +169,33 @@ describe('saveVibe', () => {
       name: 'quiet',
       title: 'Renamed',
     });
+  });
+});
+
+describe('deleteVibe', () => {
+  let dir: string;
+
+  beforeEach(async () => {
+    dir = await mkdtemp(join(tmpdir(), 'nightshift-vibe-delete-'));
+  });
+
+  afterEach(async () => {
+    await rm(dir, { recursive: true, force: true });
+  });
+
+  it('deletes an existing vibe file', async () => {
+    await saveVibe(dir, { name: 'quiet', theme: 'midnight' });
+    await deleteVibe(dir, 'quiet');
+    await expect(loadVibeFile(join(dir, 'quiet.yaml'))).rejects.toThrowError(/Could not read/);
+  });
+
+  it('errors when the file is missing', async () => {
+    await expect(deleteVibe(dir, 'nope')).rejects.toThrowError(/No user vibe file/);
+  });
+
+  it('errors when the directory is missing', async () => {
+    await expect(deleteVibe(join(dir, 'nested', 'missing'), 'quiet')).rejects.toThrowError(
+      /No user vibe file/,
+    );
   });
 });

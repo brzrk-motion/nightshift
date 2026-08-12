@@ -10,7 +10,7 @@ description: "Task list for user-friendly vibe editor implementation"
 
 **Tests**: Included — FR-015 and SC-004 require co-located Vitest for draft↔save-args, serialize/save/delete round-trips, and catalog publish after save/delete.
 
-**Organization**: Phases by user story priority (US1 → US2 → US3 → US4 → US5). Baseline already landed (`serializeVibe` / `saveVibe` / `vibe.save` / `nightshift.vibes` / raw `VibeEditor`); tasks below harden that base and add pickers, summary, duplicate/delete.
+**Organization**: Phases by user story priority (US1 → US2 → US3 → US4 → US5). Baseline already landed (`serializeVibe` / `saveVibe` / `vibe.save` / `nightshift.vibes` / raw `VibeEditor` with TextInput fields); tasks below harden that base and add pickers, summary, duplicate/delete.
 
 ## Format: `[ID] [P?] [Story] Description`
 
@@ -30,9 +30,9 @@ description: "Task list for user-friendly vibe editor implementation"
 
 **Purpose**: Confirm feature baseline and shared types align with the spec contracts
 
-- [ ] T001 Audit existing vibe editor surface against `specs/003-vibe-editor/contracts/vibe-editor-surface.md` and note gaps in `specs/003-vibe-editor/plan.md` Complexity Tracking (or a short comment block at top of `packages/ui/src/app/screens/VibesScreen.tsx` if no plan edit needed)
-- [ ] T002 [P] Confirm exports of `serializeVibe` / `saveVibe` from `packages/vibes/src/index.ts` and that `packages/ui` has zero imports of `@nightshift/vibes` (grep gate)
-- [ ] T003 [P] Add changeset stub `.changeset/nightshift-vibe-editor-ux.md` for the user-visible editor upgrade (fill when shipping)
+- [x] T001 Audit existing vibe editor surface against `specs/003-vibe-editor/contracts/vibe-editor-surface.md` and note gaps in `specs/003-vibe-editor/plan.md` Complexity Tracking (or a short comment block at top of `packages/ui/src/app/screens/VibesScreen.tsx` if no plan edit needed)
+- [x] T002 [P] Confirm exports of `serializeVibe` / `saveVibe` from `packages/vibes/src/index.ts` and that `packages/ui` has zero imports of `@nightshift/vibes` (grep gate)
+- [x] T003 [P] Extend or add changeset `.changeset/nightshift-vibes-editor.md` (or `.changeset/nightshift-vibe-editor-ux.md`) for the user-visible picker/summary/delete upgrade
 
 ---
 
@@ -42,13 +42,13 @@ description: "Task list for user-friendly vibe editor implementation"
 
 **CRITICAL**: No user-story polish that depends on delete/pickers until this phase completes
 
-- [ ] T004 [P] Implement `deleteVibe(directory, name)` in `packages/vibes/src/parse.ts` (unlink `vibes/<name>.yaml`, `VIBE_NOT_FOUND` / `CONFIG_UNWRITABLE` as appropriate); export from `packages/vibes/src/index.ts`
-- [ ] T005 [P] Write Vitest cases for `deleteVibe` (deletes file, missing file errors, directory missing) in `packages/vibes/src/parse.test.ts`
-- [ ] T006 Extract/publish catalog helpers in `apps/cli/src/runtime.ts`: keep `publishVibesCatalog`; after delete/save, re-register built-in if user override removed; ensure `vibe.activate.*` stays in sync
-- [ ] T007 Publish `nightshift.dashboards` entity snapshot `{ dashboards: { name, title }[] }` from loaded dashboards in `apps/cli/src/runtime.ts` per `specs/003-vibe-editor/data-model.md`
-- [ ] T008 [P] Add a reusable single-select list field (keyboard ↑↓ + enter, clear/none option) in `packages/ui/src/components/SelectField.tsx` (or extend `packages/ui/src/components/controls.tsx` if smaller) suitable for theme/dashboard picking
-- [ ] T009 [P] Export the new select control from `packages/ui/src/components/index.ts` and `packages/ui/src/index.ts` if it is a public component
-- [ ] T010 Register hidden `vibe.delete` command in `apps/cli/src/runtime.ts` per `specs/003-vibe-editor/contracts/vibe-editor-surface.md` (refuse built-in-only; soft toast errors)
+- [x] T004 [P] Implement `deleteVibe(directory, name)` in `packages/vibes/src/parse.ts` (unlink `vibes/<name>.yaml`, `VIBE_NOT_FOUND` / `CONFIG_UNWRITABLE` as appropriate); export from `packages/vibes/src/index.ts`
+- [x] T005 [P] Write Vitest cases for `deleteVibe` (deletes file, missing file errors, directory missing) in `packages/vibes/src/parse.test.ts`
+- [x] T006 Extract/publish catalog helpers in `apps/cli/src/runtime.ts`: keep `publishVibesCatalog`; after delete/save, re-register built-in if user override removed; ensure `vibe.activate.*` stays in sync
+- [x] T007 Publish `nightshift.dashboards` entity snapshot `{ dashboards: { name, title }[] }` from loaded dashboards in `apps/cli/src/runtime.ts` per `specs/003-vibe-editor/data-model.md`
+- [x] T008 [P] Add a reusable single-select list field (keyboard ↑↓ + enter, clear/none option) in `packages/ui/src/components/SelectField.tsx` (or extend `packages/ui/src/components/controls.tsx` if smaller) suitable for theme/dashboard picking
+- [x] T009 [P] Export the new select control from `packages/ui/src/components/index.ts` and `packages/ui/src/index.ts` if it is a public component
+- [x] T010 Register hidden `vibe.delete` command in `apps/cli/src/runtime.ts` per `specs/003-vibe-editor/contracts/vibe-editor-surface.md` (refuse built-in-only; soft toast errors)
 
 **Checkpoint**: `deleteVibe` tests green; `nightshift.dashboards` present at runtime; SelectField usable in isolation; `vibe.delete` callable
 
@@ -62,13 +62,13 @@ description: "Task list for user-friendly vibe editor implementation"
 
 ### Tests for User Story 1
 
-- [ ] T011 [P] [US1] Extend or add a pure helper test for catalog row display mapping (active marker, title fallback) in `packages/ui/src/app/screens/vibeDraft.test.ts` or `packages/ui/src/app/screens/vibeCatalog.test.ts` if mapping is extracted
+- [x] T011 [P] [US1] Extend or add a pure helper test for catalog row display mapping (active marker, title fallback) in `packages/ui/src/app/screens/vibeDraft.test.ts` or `packages/ui/src/app/screens/vibeCatalog.test.ts` if mapping is extracted
 
 ### Implementation for User Story 1
 
-- [ ] T012 [US1] Harden `packages/ui/src/app/screens/VibesScreen.tsx` list: columns title/theme/dashboard/source/active, selection, full-width surface toolbar with Add / Edit / Activate, empty state with Add CTA
-- [ ] T013 [US1] Wire list keyboard shortcuts (↑↓ / enter activate / e edit / a add) with `keyboardCapture` guard in `packages/ui/src/app/screens/VibesScreen.tsx`
-- [ ] T014 [US1] Ensure `publishVibesCatalog` refreshes `active` flags on vibe activate/deactivate in `apps/cli/src/runtime.ts` (verify/fix if already present)
+- [x] T012 [US1] Verify and harden `packages/ui/src/app/screens/VibesScreen.tsx` list: columns title/theme/dashboard/source/active, selection, full-width surface toolbar with Add / Edit / Activate, empty state with Add CTA (baseline exists — fill any gaps vs spec)
+- [x] T013 [US1] Verify list keyboard shortcuts (↑↓ / enter activate / e edit / a add) with `keyboardCapture` guard in `packages/ui/src/app/screens/VibesScreen.tsx`
+- [x] T014 [US1] Ensure `publishVibesCatalog` refreshes `active` flags on vibe activate/deactivate in `apps/cli/src/runtime.ts` (verify/fix if already present)
 
 **Checkpoint**: Catalog-only MVP usable without opening the editor
 
@@ -82,16 +82,16 @@ description: "Task list for user-friendly vibe editor implementation"
 
 ### Tests for User Story 2
 
-- [ ] T015 [P] [US2] Extend `packages/ui/src/app/screens/vibeDraft.test.ts` for name regex rejection path (or document host-side validation) and entities preservation through `draftToSaveArgs`
-- [ ] T016 [P] [US2] Confirm/extend `packages/vibes/src/parse.test.ts` serialize/save round-trip coverage for identity + actions (already present — add any missing title/description cases)
+- [x] T015 [P] [US2] Extend `packages/ui/src/app/screens/vibeDraft.test.ts` for name regex rejection path (or document host-side validation) and entities preservation through `draftToSaveArgs`
+- [x] T016 [P] [US2] Confirm/extend `packages/vibes/src/parse.test.ts` serialize/save round-trip coverage for identity + actions (add any missing title/description cases)
 
 ### Implementation for User Story 2
 
-- [ ] T017 [US2] Restructure `packages/ui/src/app/screens/VibeEditor.tsx` into sections: Identity, Look, onActivate, onDeactivate (Look may still be text until US3)
-- [ ] T018 [US2] Enforce create-only editable name, locked name on edit, Cancel/Esc discard in `packages/ui/src/app/screens/VibeEditor.tsx` + `VibesScreen.tsx`
-- [ ] T019 [US2] Keep action add/remove (+ reorder up/down controls) in `packages/ui/src/app/screens/VibeEditor.tsx`; blank command rows skipped on save via `packages/ui/src/app/screens/vibeDraft.ts`
-- [ ] T020 [US2] On save validation errors (bad args JSON, bad name), toast/inline error and do not call `vibe.save` in `packages/ui/src/app/screens/VibesScreen.tsx`
-- [ ] T021 [US2] Preserve `entities` from catalog row into draft on edit in `packages/ui/src/app/screens/vibeDraft.ts` (verify end-to-end)
+- [x] T017 [US2] Restructure `packages/ui/src/app/screens/VibeEditor.tsx` into sections: Identity, Look, onActivate, onDeactivate (Look may still be text until US3)
+- [x] T018 [US2] Enforce create-only editable name, locked name on edit, Cancel/Esc discard in `packages/ui/src/app/screens/VibeEditor.tsx` + `packages/ui/src/app/screens/VibesScreen.tsx`
+- [x] T019 [US2] Add action reorder up/down controls plus add/remove in `packages/ui/src/app/screens/VibeEditor.tsx`; blank command rows skipped on save via `packages/ui/src/app/screens/vibeDraft.ts`
+- [x] T020 [US2] On save validation errors (bad args JSON, bad name), toast/inline error and do not call `vibe.save` in `packages/ui/src/app/screens/VibesScreen.tsx`
+- [x] T021 [US2] Verify `entities` from catalog row flow into draft on edit and back through save in `packages/ui/src/app/screens/vibeDraft.ts` (end-to-end)
 
 **Checkpoint**: Create/edit/save/cancel works with sectioned form; YAML round-trip OK
 
@@ -105,15 +105,15 @@ description: "Task list for user-friendly vibe editor implementation"
 
 ### Tests for User Story 3
 
-- [ ] T022 [P] [US3] Add unit tests for command-picker filter helper (hide `hidden`, match search) in `packages/ui/src/app/screens/commandPicker.test.ts` (or colocated with the helper module)
+- [x] T022 [P] [US3] Add unit tests for command-picker filter helper (hide `hidden`, match search) in `packages/ui/src/app/screens/commandPicker.test.ts` (or colocated with the helper module)
 
 ### Implementation for User Story 3
 
-- [ ] T023 [US3] Wire theme SelectField to `runtime.themes.list()` (clear/none allowed) in `packages/ui/src/app/screens/VibeEditor.tsx`
-- [ ] T024 [US3] Wire dashboard SelectField to `useEntity('nightshift.dashboards')` in `packages/ui/src/app/screens/VibeEditor.tsx`
-- [ ] T025 [US3] Implement searchable command picker UI (list + query field, free-type fallback) in `packages/ui/src/app/screens/CommandPicker.tsx` (or inline in `VibeEditor.tsx` if small)
-- [ ] T026 [US3] Integrate command picker into onActivate/onDeactivate rows in `packages/ui/src/app/screens/VibeEditor.tsx`; keep args JSON field with validation via `vibeDraft.ts`
-- [ ] T027 [US3] Ensure `keyboardCapture` held while picker search / TextInputs focused so digit nav does not steal keys (`packages/ui/src/app/screens/VibeEditor.tsx` / `CommandPicker.tsx`)
+- [x] T023 [US3] Wire theme SelectField to `runtime.themes.list()` (clear/none allowed) in `packages/ui/src/app/screens/VibeEditor.tsx`
+- [x] T024 [US3] Wire dashboard SelectField to `useEntity('nightshift.dashboards')` in `packages/ui/src/app/screens/VibeEditor.tsx`
+- [x] T025 [US3] Implement searchable command picker UI (list + query field, free-type fallback) in `packages/ui/src/app/screens/CommandPicker.tsx` (or inline in `VibeEditor.tsx` if small)
+- [x] T026 [US3] Integrate command picker into onActivate/onDeactivate rows in `packages/ui/src/app/screens/VibeEditor.tsx`; keep args JSON field with validation via `vibeDraft.ts`
+- [x] T027 [US3] Ensure `keyboardCapture` held while picker search / TextInputs focused so digit nav does not steal keys in `packages/ui/src/app/screens/VibeEditor.tsx` / `CommandPicker.tsx`
 
 **Checkpoint**: Happy-path create needs zero memorized ids for theme/dashboard/command
 
@@ -127,12 +127,12 @@ description: "Task list for user-friendly vibe editor implementation"
 
 ### Tests for User Story 4
 
-- [ ] T028 [P] [US4] Write Vitest cases for `summariseDraft` in `packages/ui/src/app/screens/vibeSummary.test.ts`
+- [x] T028 [P] [US4] Write Vitest cases for `summariseDraft` in `packages/ui/src/app/screens/vibeSummary.test.ts`
 
 ### Implementation for User Story 4
 
-- [ ] T029 [US4] Implement `summariseDraft(draft)` in `packages/ui/src/app/screens/vibeSummary.ts` (theme, dashboard, command titles/counts, omit empties; mention entities count if preserved)
-- [ ] T030 [US4] Render live Summary section in `packages/ui/src/app/screens/VibeEditor.tsx` from `summariseDraft`
+- [x] T029 [US4] Implement `summariseDraft(draft)` in `packages/ui/src/app/screens/vibeSummary.ts` (theme, dashboard, command titles/counts, omit empties; mention entities count if preserved)
+- [x] T030 [US4] Render live Summary section in `packages/ui/src/app/screens/VibeEditor.tsx` from `summariseDraft`
 
 **Checkpoint**: Summary always reflects current draft without side effects
 
@@ -146,14 +146,14 @@ description: "Task list for user-friendly vibe editor implementation"
 
 ### Tests for User Story 5
 
-- [ ] T031 [P] [US5] Extend `packages/vibes/src/parse.test.ts` / CLI-focused unit coverage for delete + built-in restore behavior if extractable; otherwise document manual quickstart steps covered by T035
+- [x] T031 [P] [US5] Extend `packages/vibes/src/parse.test.ts` / CLI-focused unit coverage for delete + built-in restore behavior if extractable; otherwise document manual quickstart steps covered by T035
 
 ### Implementation for User Story 5
 
-- [ ] T032 [US5] Add Duplicate toolbar action in `packages/ui/src/app/screens/VibesScreen.tsx` (prefill create draft via `draftFromCatalog`, clear `name`)
-- [ ] T033 [US5] Add Delete toolbar action with confirm step in `packages/ui/src/app/screens/VibesScreen.tsx`; call `vibe.delete`; disable/refuse when `source === 'built-in'`
-- [ ] T034 [US5] On save when name matches a built-in and `source` would become user override, show confirm warning before `vibe.save` in `packages/ui/src/app/screens/VibesScreen.tsx`
-- [ ] T035 [US5] After `vibe.delete`, ensure catalog + activate commands + optional built-in reappear correctly in `apps/cli/src/runtime.ts`
+- [x] T032 [US5] Add Duplicate toolbar action in `packages/ui/src/app/screens/VibesScreen.tsx` (prefill create draft via `draftFromCatalog`, clear `name`)
+- [x] T033 [US5] Add Delete toolbar action with confirm step in `packages/ui/src/app/screens/VibesScreen.tsx`; call `vibe.delete`; disable/refuse when `source === 'built-in'`
+- [x] T034 [US5] On save when name matches a built-in and `source` would become user override, show confirm warning before `vibe.save` in `packages/ui/src/app/screens/VibesScreen.tsx`
+- [x] T035 [US5] After `vibe.delete`, ensure catalog + activate commands + optional built-in reappear correctly in `apps/cli/src/runtime.ts`
 
 **Checkpoint**: Catalog hygiene complete; built-ins protected
 
@@ -163,11 +163,11 @@ description: "Task list for user-friendly vibe editor implementation"
 
 **Purpose**: Docs, gates, quickstart validation
 
-- [ ] T036 [P] Update Vibes section in `README.md` to mention in-app create/edit (pickers + save to `vibes/`)
-- [ ] T037 [P] Refresh screen folder doc comment in `packages/ui/src/app/screens/index.ts` for `nightshift.dashboards` / editor flow
-- [ ] T038 Run `pnpm --filter @nightshift/vibes test typecheck` and `pnpm --filter @nightshift/ui test typecheck` and `pnpm --filter @nightshift/cli typecheck`
+- [x] T036 [P] Update Vibes section in `README.md` to mention in-app create/edit (pickers + save to `vibes/`)
+- [x] T037 [P] Refresh screen folder doc comment in `packages/ui/src/app/screens/index.ts` for `nightshift.dashboards` / editor flow
+- [x] T038 Run `pnpm --filter @nightshift/vibes test`, `pnpm --filter @nightshift/ui test`, and `pnpm --filter @nightshift/vibes typecheck`, `pnpm --filter @nightshift/ui typecheck`, `pnpm --filter @nightshift/cli typecheck`
 - [ ] T039 Execute manual checklist in `specs/003-vibe-editor/quickstart.md`
-- [ ] T040 Finalize `.changeset/nightshift-vibe-editor-ux.md` changelog text
+- [x] T040 Finalize changeset changelog text in `.changeset/nightshift-vibes-editor.md` (or the UX changeset from T003)
 
 ---
 

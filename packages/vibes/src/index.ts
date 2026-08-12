@@ -1,5 +1,6 @@
 export { BUILT_IN_VIBES, findVibe, type VibeAction, type VibeSpec } from './schema.js';
 export {
+  deleteVibe,
   loadVibeFile,
   loadVibes,
   parseVibe,

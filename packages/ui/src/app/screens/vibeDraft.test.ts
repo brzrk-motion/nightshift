@@ -28,6 +28,11 @@ describe('draftFromCatalog', () => {
     ]);
     expect(draft.onDeactivate).toEqual([{ command: 'focus.pause', args: '' }]);
   });
+
+  it('clears title when it matches the vibe name', () => {
+    const draft = draftFromCatalog({ ...ROW, title: 'locked-in' });
+    expect(draft.title).toBe('');
+  });
 });
 
 describe('draftToSaveArgs', () => {
@@ -64,5 +69,16 @@ describe('draftToSaveArgs', () => {
       name: 'quiet',
       onActivate: [{ command: 'focus.pause' }],
     });
+  });
+
+  it('rejects invalid vibe names', () => {
+    const draft = emptyDraft();
+    draft.name = 'Bad Name';
+    expect(() => draftToSaveArgs(draft)).toThrowError(/lowercase letters/);
+  });
+
+  it('preserves entities through save args', () => {
+    const draft = draftFromCatalog(ROW);
+    expect(draftToSaveArgs(draft).entities).toEqual({ 'timer.focus': { status: 'idle' } });
   });
 });

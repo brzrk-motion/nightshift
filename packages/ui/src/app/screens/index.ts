@@ -5,8 +5,9 @@
  * plugin host or the automation engine directly. Where a screen needs data
  * only the CLI's runtime wiring can produce (which plugins are loaded, which
  * vibes exist, which vibe is active), it reads it from a well-known entity
- * id (`nightshift.plugins`, `nightshift.vibes`, `nightshift.vibe`, …) and
- * simply shows less if nothing has published one — see `apps/cli/src/runtime.ts`.
+ * id (`nightshift.plugins`, `nightshift.vibes`, `nightshift.vibe`,
+ * `nightshift.dashboards`, …) and simply shows less if nothing has published
+ * one — see `apps/cli/src/runtime.ts`.
  */
 
 import type { Screen } from '../screen.js';

@@ -46,6 +46,15 @@ export function emptyDraft(): VibeDraft {
   };
 }
 
+const VIBE_NAME = /^[a-z][a-z0-9-]*$/;
+
+/** Prefill a create draft from an existing catalog row (duplicate flow). */
+export function duplicateDraft(row: VibeCatalogRow): VibeDraft {
+  const draft = draftFromCatalog(row);
+  draft.name = '';
+  return draft;
+}
+
 export function draftFromCatalog(row: VibeCatalogRow): VibeDraft {
   return {
     name: row.name,
@@ -106,6 +115,9 @@ function parseActionDrafts(
  */
 export function draftToSaveArgs(draft: VibeDraft): Record<string, Json> {
   const name = draft.name.trim();
+  if (name === '' || !VIBE_NAME.test(name)) {
+    throw new Error('Name must be lowercase letters, digits, and hyphens (e.g. locked-in).');
+  }
   const args: Record<string, Json> = { name };
   const title = optional(draft.title);
   const description = optional(draft.description);

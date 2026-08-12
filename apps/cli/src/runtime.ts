@@ -21,6 +21,8 @@ import { NightshiftError, type Json } from '@nightshift/core';
 import {
   BUILT_IN_VIBES,
   createVibeEngine,
+  deleteVibe,
+  findVibe,
   loadVibes,
   parseVibe,
   saveVibe,
@@ -118,6 +120,25 @@ function publishVibesCatalog(
     entities.register('nightshift.vibes', state, {
       owner: 'nightshift',
       title: 'Registered vibes',
+    });
+  }
+}
+
+function publishDashboardsCatalog(
+  entities: EntityStore,
+  dashboards: readonly DashboardSpec[],
+): void {
+  const rows: Json[] = dashboards.map((dashboard) => ({
+    name: dashboard.name,
+    title: dashboard.title ?? dashboard.name,
+  }));
+  const state: Json = { dashboards: rows };
+  if (entities.get('nightshift.dashboards')) {
+    entities.set('nightshift.dashboards', state);
+  } else {
+    entities.register('nightshift.dashboards', state, {
+      owner: 'nightshift',
+      title: 'Registered dashboards',
     });
   }
 }
@@ -230,10 +251,7 @@ export async function createNightshiftRuntime(
   );
   const userVibeNames = new Set(foundVibes.vibes.map((vibe) => vibe.name));
   const vibes = createVibeEngine({ themes: app.themes, entities, commands: app.commands });
-  vibes.registerAll([
-    ...BUILT_IN_VIBES.filter((vibe) => !userVibeNames.has(vibe.name)),
-    ...foundVibes.vibes,
-  ]);
+  const vibeDisposers = new Map<string, () => void>();
 
   const registerActivateCommand = (vibe: VibeSpec): void => {
     app.commands.register({
@@ -246,10 +264,18 @@ export async function createNightshiftRuntime(
     });
   };
 
-  // One command per vibe, the same way DashboardApp gives one command per
-  // dashboard — this is what makes a vibe reachable from the palette, not
-  // just from `nightshift vibe <name>` at boot.
-  for (const vibe of vibes.list()) registerActivateCommand(vibe);
+  const installVibe = (vibe: VibeSpec): void => {
+    vibeDisposers.get(vibe.name)?.();
+    vibeDisposers.set(vibe.name, vibes.register(vibe));
+    registerActivateCommand(vibe);
+  };
+
+  for (const vibe of BUILT_IN_VIBES.filter((entry) => !userVibeNames.has(entry.name))) {
+    installVibe(vibe);
+  }
+  for (const vibe of foundVibes.vibes) installVibe(vibe);
+
+  publishDashboardsCatalog(entities, dashboards);
 
   // The shell's header reads this to show "● locked in" — see `Header.tsx` —
   // and it is the other half of the same entity-bridge convention as
@@ -265,11 +291,44 @@ export async function createNightshiftRuntime(
     run: async (args) => {
       const spec = vibeFromArgs(args);
       await saveVibe(context.paths.vibesDir, spec);
-      vibes.register(spec);
+      installVibe(spec);
       userVibeNames.add(spec.name);
-      registerActivateCommand(spec);
       publishVibesCatalog(entities, vibes, userVibeNames);
       app.toasts.push(`Saved vibe "${spec.title ?? spec.name}"`, { tone: 'success' });
+    },
+  });
+
+  app.commands.register({
+    id: 'vibe.delete',
+    title: 'Delete vibe',
+    category: 'Vibes',
+    hidden: true,
+    run: async (args) => {
+      const name = args?.['name'];
+      if (typeof name !== 'string' || !VIBE_NAME.test(name)) {
+        throw new NightshiftError(
+          'CONFIG_INVALID',
+          'vibe.delete needs a vibe name like `locked-in`.',
+        );
+      }
+      if (!userVibeNames.has(name)) {
+        throw new NightshiftError(
+          'CONFIG_INVALID',
+          `Built-in vibe "${name}" cannot be deleted.`,
+          { hint: 'Only user vibe files in your vibes/ directory can be removed.' },
+        );
+      }
+      const active = entities.get<{ active: string | null }>('nightshift.vibe')?.state.active;
+      if (active === name) await vibes.deactivate();
+      await deleteVibe(context.paths.vibesDir, name);
+      userVibeNames.delete(name);
+      vibeDisposers.get(name)?.();
+      vibeDisposers.delete(name);
+      app.commands.unregister(`vibe.activate.${name}`);
+      const builtIn = findVibe(name);
+      if (builtIn) installVibe(builtIn);
+      publishVibesCatalog(entities, vibes, userVibeNames);
+      app.toasts.push(`Deleted vibe "${name}"`, { tone: 'success' });
     },
   });
 

@@ -273,6 +273,13 @@ than aborting the rest, the same way a broken plugin does not stop startup.
 `home`, so activating it demonstrates a vibe changing the dashboard, the
 theme and starting a timer all at once, not just the theme.
 
+From the **Vibes** screen (nav key `2`) you can browse every vibe, activate
+one, and create or edit user vibes in a guided form — pick a theme and
+dashboard from what Nightshift has registered, search for commands instead of
+memorizing ids, and save to `vibes/<name>.yaml` without hand-editing YAML.
+Duplicate and delete user-owned vibes from the same screen; built-in vibes
+cannot be deleted, but saving under a built-in name creates a user override.
+
 ## Automations
 
 An automation reacts to something rather than being invoked by name: a trigger

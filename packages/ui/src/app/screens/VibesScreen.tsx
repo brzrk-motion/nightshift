@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { useKeyboard } from '@opentui/react';
 import type { Json } from '@nightshift/core';
 import { Button } from '../../components/controls.js';
+import { Modal } from '../../components/Modal.js';
 import { Table, type TableColumn } from '../../components/Table.js';
 import { EmptyState } from '../../components/States.js';
 import { useEntity, useRuntime, useToasts } from '../context.js';
@@ -9,6 +10,7 @@ import { VibeEditor } from './VibeEditor.js';
 import {
   draftFromCatalog,
   draftToSaveArgs,
+  duplicateDraft,
   emptyDraft,
   type VibeCatalogRow,
   type VibeDraft,
@@ -37,9 +39,10 @@ type View =
   | { kind: 'edit'; draft: VibeDraft };
 
 /**
- * Vibes catalog: a table of every registered vibe, plus an in-screen form for
- * creating or editing one. Save goes through the `vibe.save` command the CLI
- * registers — this screen never touches the vibe engine or the filesystem.
+ * Vibes catalog and in-screen editor. Reads `nightshift.vibes` for the list
+ * and persists through `vibe.save` / `vibe.delete` — never imports the vibe
+ * engine or touches the filesystem directly. See
+ * `specs/003-vibe-editor/contracts/vibe-editor-surface.md`.
  */
 export function VibesScreen(): ReactNode {
   const runtime = useRuntime();
@@ -47,10 +50,38 @@ export function VibesScreen(): ReactNode {
   const catalog = useEntity<VibesCatalogState>('nightshift.vibes');
   const [view, setView] = useState<View>({ kind: 'list' });
   const [selected, setSelected] = useState(0);
+  const [pendingDelete, setPendingDelete] = useState<VibeCatalogRow | null>(null);
+  const [pendingOverride, setPendingOverride] = useState<VibeDraft | null>(null);
 
   const vibes = catalog?.state.vibes ?? [];
   const selectedIndex = vibes.length === 0 ? 0 : Math.min(selected, vibes.length - 1);
   const selectedRow = vibes[selectedIndex];
+
+  const saveDraft = (draft: VibeDraft): void => {
+    try {
+      const args = draftToSaveArgs(draft);
+      void runtime?.commands.run('vibe.save', args).then(
+        () => setView({ kind: 'list' }),
+        () => {
+          // Failure is already toasted by AppShell's command listener.
+        },
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      toasts.push(message, { tone: 'danger' });
+    }
+  };
+
+  const requestSave = (draft: VibeDraft): void => {
+    const builtIn = vibes.find(
+      (row) => row.name === draft.name.trim() && row.source === 'built-in',
+    );
+    if (builtIn && view.kind === 'create') {
+      setPendingOverride(draft);
+      return;
+    }
+    saveDraft(draft);
+  };
 
   useKeyboard((key) => {
     if (view.kind !== 'list') return;
@@ -73,24 +104,11 @@ export function VibesScreen(): ReactNode {
   if (view.kind === 'create' || view.kind === 'edit') {
     return (
       <VibeEditor
+        key={view.kind === 'edit' ? `edit-${view.draft.name}` : 'create'}
         draft={view.draft}
         nameLocked={view.kind === 'edit'}
-        onChange={(draft) => setView({ ...view, draft })}
         onCancel={() => setView({ kind: 'list' })}
-        onSave={() => {
-          try {
-            const args = draftToSaveArgs(view.draft);
-            void runtime.commands.run('vibe.save', args).then(
-              () => setView({ kind: 'list' }),
-              () => {
-                // Failure is already toasted by AppShell's command listener.
-              },
-            );
-          } catch (error) {
-            const message = error instanceof Error ? error.message : String(error);
-            toasts.push(message, { tone: 'danger' });
-          }
-        }}
+        onSave={(draft) => requestSave(draft)}
       />
     );
   }
@@ -130,6 +148,20 @@ export function VibesScreen(): ReactNode {
             if (selectedRow) void runtime.commands.run(`vibe.activate.${selectedRow.name}`);
           }}
         />
+        <Button
+          label="Duplicate"
+          disabled={selectedRow === undefined}
+          onPress={() => {
+            if (selectedRow) setView({ kind: 'create', draft: duplicateDraft(selectedRow) });
+          }}
+        />
+        <Button
+          label="Delete"
+          disabled={selectedRow === undefined || selectedRow.source === 'built-in'}
+          onPress={() => {
+            if (selectedRow) setPendingDelete(selectedRow);
+          }}
+        />
       </box>
 
       <box style={{ flexDirection: 'column', gap: 1, flexGrow: 1, paddingLeft: 1, paddingRight: 1 }}>
@@ -149,6 +181,60 @@ export function VibesScreen(): ReactNode {
           ↑↓ move · enter activate · e edit · a add
         </text>
       </box>
+
+      <Modal
+        open={pendingDelete !== null}
+        title="Delete vibe?"
+        hint="y confirm · esc cancel"
+        width={48}
+      >
+        <box style={{ flexDirection: 'column', gap: 1 }}>
+          <text>
+            Delete user vibe “{pendingDelete?.title ?? pendingDelete?.name}”? This removes{' '}
+            vibes/{pendingDelete?.name}.yaml.
+          </text>
+          <box style={{ flexDirection: 'row', gap: 1 }}>
+            <Button
+              label="Delete"
+              primary
+              onPress={() => {
+                if (!pendingDelete) return;
+                void runtime.commands
+                  .run('vibe.delete', { name: pendingDelete.name })
+                  .then(() => setPendingDelete(null));
+              }}
+            />
+            <Button label="Cancel" onPress={() => setPendingDelete(null)} />
+          </box>
+        </box>
+      </Modal>
+
+      <Modal
+        open={pendingOverride !== null}
+        title="Override built-in?"
+        hint="y confirm · esc cancel"
+        width={52}
+      >
+        <box style={{ flexDirection: 'column', gap: 1 }}>
+          <text>
+            A built-in vibe named “{pendingOverride?.name}” already exists. Saving will create a
+            user file that overrides it.
+          </text>
+          <box style={{ flexDirection: 'row', gap: 1 }}>
+            <Button
+              label="Save anyway"
+              primary
+              onPress={() => {
+                if (!pendingOverride) return;
+                const draft = pendingOverride;
+                setPendingOverride(null);
+                saveDraft(draft);
+              }}
+            />
+            <Button label="Cancel" onPress={() => setPendingOverride(null)} />
+          </box>
+        </box>
+      </Modal>
     </box>
   );
 }

@@ -8,6 +8,11 @@ export {
   type ToggleProps,
 } from './controls.js';
 export {
+  SelectField,
+  type SelectFieldProps,
+  type SelectOption,
+} from './SelectField.js';
+export {
   ProgressBar,
   progressTrack,
   type ProgressBarProps,

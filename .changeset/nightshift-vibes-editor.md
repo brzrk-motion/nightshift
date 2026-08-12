@@ -4,5 +4,6 @@
 '@nightshift/cli': minor
 ---
 
-Add a Vibes screen editor: table of vibes, in-screen create/edit form, and
-`vibe.save` that writes `vibes/<name>.yaml`.
+Upgrade the Vibes screen editor with theme/dashboard/command pickers, a live
+activate summary, duplicate/delete for user vibes, and sectioned create/edit
+forms that save to `vibes/<name>.yaml`.
