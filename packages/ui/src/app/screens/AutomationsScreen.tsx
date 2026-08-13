@@ -32,7 +32,5 @@ export function AutomationsScreen(): ReactNode {
   if (!runtime) return <EmptyState message="No runtime available." />;
   const automations = entity?.state.automations ?? [];
   if (automations.length === 0) return <EmptyState message="No automations registered." />;
-  return (
-    <Table columns={AUTOMATION_COLUMNS} rows={[...automations]} width={contentSize.width} />
-  );
+  return <Table columns={AUTOMATION_COLUMNS} rows={[...automations]} width={contentSize.width} />;
 }

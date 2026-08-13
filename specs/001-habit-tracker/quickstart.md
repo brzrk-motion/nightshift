@@ -35,6 +35,7 @@ pnpm --filter @nightshift/plugin-habit lint
 ```
 
 Expected:
+
 - Window helper returns 7 dates ending on injected “today”
 - Streak fixtures match [spec.md](./spec.md) FR-006/FR-007 / [data-model.md](./data-model.md)
 - Storage parse of corrupt JSON yields empty safe state

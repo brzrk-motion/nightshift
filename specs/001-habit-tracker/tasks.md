@@ -1,5 +1,5 @@
 ---
-description: "Task list for habit tracker plugin implementation"
+description: 'Task list for habit tracker plugin implementation'
 ---
 
 # Tasks: Habit Tracker
@@ -28,9 +28,9 @@ Plugin package at `plugins/habit/` (mirrors `plugins/focus`). Host wiring in `ap
 
 **Purpose**: Scaffold the `@nightshift/plugin-habit` workspace package
 
-- [X] T001 Create `plugins/habit/` package skeleton mirroring `plugins/focus` (`package.json` name `@nightshift/plugin-habit`, `tsconfig.json`, `tsconfig.typecheck.json`, empty `src/`)
-- [X] T002 [P] Set `plugins/habit/package.json` scripts/deps (`@nightshift/sdk`, `@opentui/react`, `react`; devDeps `@nightshift/entities`, `@nightshift/ui`, `@types/react`) matching focus
-- [X] T003 Run `pnpm install` from repo root so the new workspace package links
+- [x] T001 Create `plugins/habit/` package skeleton mirroring `plugins/focus` (`package.json` name `@nightshift/plugin-habit`, `tsconfig.json`, `tsconfig.typecheck.json`, empty `src/`)
+- [x] T002 [P] Set `plugins/habit/package.json` scripts/deps (`@nightshift/sdk`, `@opentui/react`, `react`; devDeps `@nightshift/entities`, `@nightshift/ui`, `@types/react`) matching focus
+- [x] T003 Run `pnpm install` from repo root so the new workspace package links
 
 ---
 
@@ -40,14 +40,14 @@ Plugin package at `plugins/habit/` (mirrors `plugins/focus`). Host wiring in `ap
 
 **⚠️ CRITICAL**: No user story work until this phase completes
 
-- [X] T004 Define `HABIT_ENTITY`, `Habit`, `HabitState`, and `initialState()` in `plugins/habit/src/entity.ts` per `specs/001-habit-tracker/data-model.md`
-- [X] T005 [P] Implement rolling 7-day helpers (`todayKey`, `rollingWindow(today)`, date arithmetic) in `plugins/habit/src/window.ts`
-- [X] T006 [P] Write failing Vitest cases for the 7-day window (injected today) in `plugins/habit/src/window.test.ts`
-- [X] T007 Implement `window.ts` until `plugins/habit/src/window.test.ts` passes
-- [X] T008 [P] Implement defensive parse/serialize for storage schema v1 (`habits` + `completions` map) in `plugins/habit/src/storage.ts`
-- [X] T009 [P] Write failing Vitest cases for corrupt/partial/empty storage → safe empty state in `plugins/habit/src/storage.test.ts`
-- [X] T010 Implement `storage.ts` until `plugins/habit/src/storage.test.ts` passes
-- [X] T011 Add `definePlugin` shell in `plugins/habit/src/index.ts` (id `habit`, caps including `storage`, load storage → `registerEntity(HABIT_ENTITY, …)`, no widgets/commands yet)
+- [x] T004 Define `HABIT_ENTITY`, `Habit`, `HabitState`, and `initialState()` in `plugins/habit/src/entity.ts` per `specs/001-habit-tracker/data-model.md`
+- [x] T005 [P] Implement rolling 7-day helpers (`todayKey`, `rollingWindow(today)`, date arithmetic) in `plugins/habit/src/window.ts`
+- [x] T006 [P] Write failing Vitest cases for the 7-day window (injected today) in `plugins/habit/src/window.test.ts`
+- [x] T007 Implement `window.ts` until `plugins/habit/src/window.test.ts` passes
+- [x] T008 [P] Implement defensive parse/serialize for storage schema v1 (`habits` + `completions` map) in `plugins/habit/src/storage.ts`
+- [x] T009 [P] Write failing Vitest cases for corrupt/partial/empty storage → safe empty state in `plugins/habit/src/storage.test.ts`
+- [x] T010 Implement `storage.ts` until `plugins/habit/src/storage.test.ts` passes
+- [x] T011 Add `definePlugin` shell in `plugins/habit/src/index.ts` (id `habit`, caps including `storage`, load storage → `registerEntity(HABIT_ENTITY, …)`, no widgets/commands yet)
 
 **Checkpoint**: Package builds; window + storage tests green; entity registers on load without crashing on bad storage
 
@@ -61,18 +61,18 @@ Plugin package at `plugins/habit/` (mirrors `plugins/focus`). Host wiring in `ap
 
 ### Tests for User Story 1
 
-- [X] T012 [P] [US1] Write failing Vitest cases for `addHabit` / `toggleCompletion` (empty name rejected, toggle on/off, no future dates) in `plugins/habit/src/habits.test.ts`
+- [x] T012 [P] [US1] Write failing Vitest cases for `addHabit` / `toggleCompletion` (empty name rejected, toggle on/off, no future dates) in `plugins/habit/src/habits.test.ts`
 
 ### Implementation for User Story 1
 
-- [X] T013 [US1] Implement pure reducers `addHabit` and `toggleCompletion` in `plugins/habit/src/habits.ts` until `habits.test.ts` passes
-- [X] T014 [US1] Register `habit.add` and `habit.toggle` commands (write-through entity + `context.storage`) in `plugins/habit/src/index.ts` per `specs/001-habit-tracker/contracts/plugin-surface.md`
-- [X] T015 [US1] Implement `HabitTrackerWidget` rolling grid (day headers + `[ ]`/`[x]` day buttons calling commands, empty state + add via `TextInput`) in `plugins/habit/src/widgets.tsx`
-- [X] T016 [US1] Register widget type `habit.tracker` and wire render from `plugins/habit/src/index.ts`
-- [X] T017 [US1] Add `@nightshift/plugin-habit` dependency in `apps/cli/package.json`
-- [X] T018 [US1] Append `@nightshift/plugin-habit` to `DEFAULT_CONFIG.plugins` and add config migration (bump `CONFIG_VERSION`) in `packages/services/src/config.ts`
-- [X] T019 [US1] Add `habit.tracker` widget to the default/sample home dashboard YAML used by the CLI (same place other bundled widgets are listed)
-- [X] T020 [US1] Add plugin setup smoke assertions in `plugins/habit/src/index.test.ts` (entity + commands register; corrupt storage does not throw)
+- [x] T013 [US1] Implement pure reducers `addHabit` and `toggleCompletion` in `plugins/habit/src/habits.ts` until `habits.test.ts` passes
+- [x] T014 [US1] Register `habit.add` and `habit.toggle` commands (write-through entity + `context.storage`) in `plugins/habit/src/index.ts` per `specs/001-habit-tracker/contracts/plugin-surface.md`
+- [x] T015 [US1] Implement `HabitTrackerWidget` rolling grid (day headers + `[ ]`/`[x]` day buttons calling commands, empty state + add via `TextInput`) in `plugins/habit/src/widgets.tsx`
+- [x] T016 [US1] Register widget type `habit.tracker` and wire render from `plugins/habit/src/index.ts`
+- [x] T017 [US1] Add `@nightshift/plugin-habit` dependency in `apps/cli/package.json`
+- [x] T018 [US1] Append `@nightshift/plugin-habit` to `DEFAULT_CONFIG.plugins` and add config migration (bump `CONFIG_VERSION`) in `packages/services/src/config.ts`
+- [x] T019 [US1] Add `habit.tracker` widget to the default/sample home dashboard YAML used by the CLI (same place other bundled widgets are listed)
+- [x] T020 [US1] Add plugin setup smoke assertions in `plugins/habit/src/index.test.ts` (entity + commands register; corrupt storage does not throw)
 
 **Checkpoint**: MVP — add/toggle/persist works in dashboard; US1 independent test passes
 
@@ -86,12 +86,12 @@ Plugin package at `plugins/habit/` (mirrors `plugins/focus`). Host wiring in `ap
 
 ### Tests for User Story 2
 
-- [X] T021 [P] [US2] Write failing Vitest streak fixtures (current from today/yesterday, longest historical, gap → 0) in `plugins/habit/src/streaks.test.ts`
+- [x] T021 [P] [US2] Write failing Vitest streak fixtures (current from today/yesterday, longest historical, gap → 0) in `plugins/habit/src/streaks.test.ts`
 
 ### Implementation for User Story 2
 
-- [X] T022 [US2] Implement `currentStreak` / `longestStreak` (injectable today) in `plugins/habit/src/streaks.ts` until `streaks.test.ts` passes
-- [X] T023 [US2] Display current and longest streak per habit row in `plugins/habit/src/widgets.tsx`
+- [x] T022 [US2] Implement `currentStreak` / `longestStreak` (injectable today) in `plugins/habit/src/streaks.ts` until `streaks.test.ts` passes
+- [x] T023 [US2] Display current and longest streak per habit row in `plugins/habit/src/widgets.tsx`
 
 **Checkpoint**: Streak values match fixtures and appear in the widget
 
@@ -105,9 +105,9 @@ Plugin package at `plugins/habit/` (mirrors `plugins/focus`). Host wiring in `ap
 
 ### Implementation for User Story 4
 
-- [X] T024 [US4] Add density helper (short vs weekday+date headers from available width) in `plugins/habit/src/widgets.tsx` (or `plugins/habit/src/layout.ts` if split)
-- [X] T025 [US4] Apply compact/normal/wide row layout (habit name truncation, streak column visibility, scrollable habit list) in `plugins/habit/src/widgets.tsx`
-- [X] T026 [P] [US4] Add Vitest coverage for density/label helpers in `plugins/habit/src/widgets.test.tsx` (or colocated layout test file)
+- [x] T024 [US4] Add density helper (short vs weekday+date headers from available width) in `plugins/habit/src/widgets.tsx` (or `plugins/habit/src/layout.ts` if split)
+- [x] T025 [US4] Apply compact/normal/wide row layout (habit name truncation, streak column visibility, scrollable habit list) in `plugins/habit/src/widgets.tsx`
+- [x] T026 [P] [US4] Add Vitest coverage for density/label helpers in `plugins/habit/src/widgets.test.tsx` (or colocated layout test file)
 
 **Checkpoint**: Widget usable at compact widths and richer at wide widths
 
@@ -121,13 +121,13 @@ Plugin package at `plugins/habit/` (mirrors `plugins/focus`). Host wiring in `ap
 
 ### Tests for User Story 3
 
-- [X] T027 [P] [US3] Extend failing/passing cases for `renameHabit` / `removeHabit` in `plugins/habit/src/habits.test.ts`
+- [x] T027 [P] [US3] Extend failing/passing cases for `renameHabit` / `removeHabit` in `plugins/habit/src/habits.test.ts`
 
 ### Implementation for User Story 3
 
-- [X] T028 [US3] Implement `renameHabit` and `removeHabit` in `plugins/habit/src/habits.ts` (empty rename no-op; remove drops completions)
-- [X] T029 [US3] Register `habit.rename` and `habit.remove` commands with storage write-through in `plugins/habit/src/index.ts`
-- [X] T030 [US3] Add Edit/Delete (or equivalent) controls and inline rename `TextInput` on habit rows in `plugins/habit/src/widgets.tsx`
+- [x] T028 [US3] Implement `renameHabit` and `removeHabit` in `plugins/habit/src/habits.ts` (empty rename no-op; remove drops completions)
+- [x] T029 [US3] Register `habit.rename` and `habit.remove` commands with storage write-through in `plugins/habit/src/index.ts`
+- [x] T030 [US3] Add Edit/Delete (or equivalent) controls and inline rename `TextInput` on habit rows in `plugins/habit/src/widgets.tsx`
 
 **Checkpoint**: Full CRUD for habits; completions preserved on rename, removed on delete
 
@@ -137,10 +137,10 @@ Plugin package at `plugins/habit/` (mirrors `plugins/focus`). Host wiring in `ap
 
 **Purpose**: Docs, quality gates, release hygiene
 
-- [X] T031 [P] Document the habit plugin in `README.md` (bundled plugins list + brief capability note)
-- [X] T032 [P] Add a changeset for user-visible `@nightshift/*` release via `pnpm changeset` (or `.changeset/*.md`)
-- [X] T033 Run `pnpm --filter @nightshift/plugin-habit lint`, `typecheck`, and `test`
-- [X] T034 Run end-to-end checks from `specs/001-habit-tracker/quickstart.md` (`pnpm start`, add/toggle/restart/rename/delete)
+- [x] T031 [P] Document the habit plugin in `README.md` (bundled plugins list + brief capability note)
+- [x] T032 [P] Add a changeset for user-visible `@nightshift/*` release via `pnpm changeset` (or `.changeset/*.md`)
+- [x] T033 Run `pnpm --filter @nightshift/plugin-habit lint`, `typecheck`, and `test`
+- [x] T034 Run end-to-end checks from `specs/001-habit-tracker/quickstart.md` (`pnpm start`, add/toggle/restart/rename/delete)
 
 ---
 

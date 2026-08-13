@@ -6,22 +6,22 @@
 
 ## Plugin manifest
 
-| Field | Value |
-|-------|--------|
-| `id` | `habit` |
-| Package | `@nightshift/plugin-habit` |
+| Field        | Value                                                                                 |
+| ------------ | ------------------------------------------------------------------------------------- |
+| `id`         | `habit`                                                                               |
+| Package      | `@nightshift/plugin-habit`                                                            |
 | Capabilities | `entities:read`, `entities:write`, `widgets:register`, `commands:register`, `storage` |
 
 ## Entity
 
-| Id | Title | Shape |
-|----|-------|--------|
+| Id              | Title         | Shape                                              |
+| --------------- | ------------- | -------------------------------------------------- |
 | `habit.tracker` | Habit tracker | See [data-model.md](../data-model.md) `HabitState` |
 
 ## Widget
 
-| Type | Title | Entities | Notes |
-|------|-------|----------|--------|
+| Type            | Title  | Entities            | Notes                                       |
+| --------------- | ------ | ------------------- | ------------------------------------------- |
 | `habit.tracker` | Habits | `['habit.tracker']` | Rolling 7-day grid; density adapts to width |
 
 Dashboard YAML example:
@@ -37,34 +37,34 @@ All commands are idempotent where noted; invalid args no-op or no-op with log (m
 
 ### `habit.add`
 
-| Arg | Type | Required | Description |
-|-----|------|----------|-------------|
-| `name` | string | yes | Trimmed; empty → no-op |
+| Arg    | Type   | Required | Description            |
+| ------ | ------ | -------- | ---------------------- |
+| `name` | string | yes      | Trimmed; empty → no-op |
 
 **Effect**: Appends habit with new `id`; persists.
 
 ### `habit.toggle`
 
-| Arg | Type | Required | Description |
-|-----|------|----------|-------------|
-| `id` | string | yes | Habit id |
-| `date` | string | no | `YYYY-MM-DD`; default `today` |
-| | | | Must be ≤ today and within retained history policy; UI only offers window dates |
+| Arg    | Type   | Required | Description                                                                     |
+| ------ | ------ | -------- | ------------------------------------------------------------------------------- |
+| `id`   | string | yes      | Habit id                                                                        |
+| `date` | string | no       | `YYYY-MM-DD`; default `today`                                                   |
+|        |        |          | Must be ≤ today and within retained history policy; UI only offers window dates |
 
 **Effect**: Toggles completion for `(id, date)`; persists; streaks recompute on read.
 
 ### `habit.rename`
 
-| Arg | Type | Required | Description |
-|-----|------|----------|-------------|
-| `id` | string | yes | |
-| `name` | string | yes | Trimmed; empty → no-op |
+| Arg    | Type   | Required | Description            |
+| ------ | ------ | -------- | ---------------------- |
+| `id`   | string | yes      |                        |
+| `name` | string | yes      | Trimmed; empty → no-op |
 
 ### `habit.remove`
 
-| Arg | Type | Required | Description |
-|-----|------|----------|-------------|
-| `id` | string | yes | Removes habit and its completions |
+| Arg  | Type   | Required | Description                       |
+| ---- | ------ | -------- | --------------------------------- |
+| `id` | string | yes      | Removes habit and its completions |
 
 ## Storage schema (v1)
 

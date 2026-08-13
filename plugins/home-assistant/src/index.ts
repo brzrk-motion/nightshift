@@ -165,8 +165,7 @@ export default definePlugin({
         try {
           baseUrl = normalizeBaseUrl(address);
         } catch (error: unknown) {
-          const message =
-            error instanceof UrlValidationError ? error.message : errorMessage(error);
+          const message = error instanceof UrlValidationError ? error.message : errorMessage(error);
           writeConnection({
             ...readConnection(),
             status: 'error',

@@ -41,8 +41,7 @@ export function DashboardsList({
   const contentSize = useShellContentSize(2);
   const [selected, setSelected] = useState(0);
 
-  const selectedIndex =
-    dashboards.length === 0 ? 0 : Math.min(selected, dashboards.length - 1);
+  const selectedIndex = dashboards.length === 0 ? 0 : Math.min(selected, dashboards.length - 1);
   const selectedRow = dashboards[selectedIndex];
 
   useListKeyboard({
@@ -94,9 +93,14 @@ export function DashboardsList({
         />
       </ActionBar>
 
-      <box style={{ flexDirection: 'column', gap: 1, flexGrow: 1, paddingLeft: 1, paddingRight: 1 }}>
+      <box
+        style={{ flexDirection: 'column', gap: 1, flexGrow: 1, paddingLeft: 1, paddingRight: 1 }}
+      >
         {dashboards.length === 0 ? (
-          <EmptyState message="No dashboards available." hint="Press Add dashboard to create one." />
+          <EmptyState
+            message="No dashboards available."
+            hint="Press Add dashboard to create one."
+          />
         ) : (
           <Table
             columns={COLUMNS}

@@ -13,11 +13,7 @@ export { ColorField, type ColorFieldProps } from './ColorField.js';
 export { FooterHint, type FooterHintProps } from './FooterHint.js';
 export { FormField, formFieldLabel, type FormFieldProps } from './FormField.js';
 export { FormSection, type FormSectionProps } from './FormSection.js';
-export {
-  SelectField,
-  type SelectFieldProps,
-  type SelectOption,
-} from './SelectField.js';
+export { SelectField, type SelectFieldProps, type SelectOption } from './SelectField.js';
 export { ScreenLayout, type ScreenLayoutProps } from './ScreenLayout.js';
 export {
   clampListSelection,

@@ -32,21 +32,21 @@ Add a **Themes** nav screen (mirroring Dashboards/Vibes catalog/editor UX) for b
 
 ## Constitution Check
 
-*GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
+_GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 
 `.specify/memory/constitution.md` is still the Speckit placeholder. Gates from `AGENTS.md` / README:
 
-| Gate | Status | Notes |
-|------|--------|-------|
-| Everything is a plugin | N/A / PASS | Themes are core shell + ui package |
-| Public SDK only for plugins | PASS | No plugin changes; `Theme` types already in ui/sdk re-exports |
-| Dashboards consume widgets | PASS | Unchanged |
-| Vibes orchestrate actions | PASS | Vibe theme picker reads refreshed `runtime.themes.list()` |
-| Entities provide shared state | PASS | New `nightshift.themes` catalog |
-| UI must not import parse/save directly | PASS | Save/delete via commands |
-| Never let one bad input break startup | PASS | Soft-fail load/save/delete; broken YAML skipped |
-| No console outside CLI | PASS | Toasts via AppRuntime |
-| Tests co-located | PASS | Draft + parse/delete + ColorField tests |
+| Gate                                   | Status     | Notes                                                         |
+| -------------------------------------- | ---------- | ------------------------------------------------------------- |
+| Everything is a plugin                 | N/A / PASS | Themes are core shell + ui package                            |
+| Public SDK only for plugins            | PASS       | No plugin changes; `Theme` types already in ui/sdk re-exports |
+| Dashboards consume widgets             | PASS       | Unchanged                                                     |
+| Vibes orchestrate actions              | PASS       | Vibe theme picker reads refreshed `runtime.themes.list()`     |
+| Entities provide shared state          | PASS       | New `nightshift.themes` catalog                               |
+| UI must not import parse/save directly | PASS       | Save/delete via commands                                      |
+| Never let one bad input break startup  | PASS       | Soft-fail load/save/delete; broken YAML skipped               |
+| No console outside CLI                 | PASS       | Toasts via AppRuntime                                         |
+| Tests co-located                       | PASS       | Draft + parse/delete + ColorField tests                       |
 
 **Post-design re-check**: Still PASS — contracts are command/entity surfaces; theme engine registration stays in runtime; UI screens remain decoupled from filesystem.
 
@@ -105,7 +105,7 @@ apps/cli/src/
 > **Fill ONLY if Constitution Check has violations that must be justified**
 
 | Violation | Why Needed | Simpler Alternative Rejected Because |
-|-----------|------------|-------------------------------------|
-| — | — | — |
+| --------- | ---------- | ------------------------------------ |
+| —         | —          | —                                    |
 
 **Baseline audit (T001)**: Theme engine + 3 built-ins exist; Settings has session-only theme list; `theme.activate.*` registered in AppShell at mount (no config persist, no user themes). Missing: `themesDir`, parse/save, `nightshift.themes`, Themes screen, runtime `theme.save`/`theme.delete`, dynamic activate refresh.

@@ -8,7 +8,7 @@
 
 **Input**: User description: "Overhaul UI component system: audit existing components, identify gaps, build responsive UI helpers"
 
-## User Scenarios & Testing *(mandatory)*
+## User Scenarios & Testing _(mandatory)_
 
 ### User Story 1 - Consistent form screens (Priority: P1)
 
@@ -94,7 +94,7 @@ As a maintainer, I want shared `ConfirmModal` and optional `CatalogScreen` scaff
 - ColorField hex validation: must not import from screen-layer `themeDraft.ts`.
 - Tabs underline at narrow width: should not hardcode 120 columns (follow-up fix).
 
-## Requirements *(mandatory)*
+## Requirements _(mandatory)_
 
 ### Functional Requirements
 
@@ -121,7 +121,7 @@ As a maintainer, I want shared `ConfirmModal` and optional `CatalogScreen` scaff
 - **ScreenLayout**: Column shell slots: `title`, `children` (scroll), `actions`, `hint`.
 - **ListKeyboardOptions**: Keys, item count, selection index, callbacks, capture guard.
 
-## Success Criteria *(mandatory)*
+## Success Criteria _(mandatory)_
 
 ### Measurable Outcomes
 

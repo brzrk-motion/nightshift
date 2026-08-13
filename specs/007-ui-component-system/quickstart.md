@@ -49,14 +49,15 @@ pnpm --filter @nightshift/ui test
 pnpm start
 ```
 
-| Screen | Action | Expected |
-|--------|--------|----------|
-| Themes | Add theme | Scroll color fields; Save/Cancel bar full width at bottom, surface background |
-| Themes | Edit theme | Name locked; same footer bar |
-| Dashboards | Add dashboard | Save button same size as Vibe Save (not compact default) |
-| Vibes | Add vibe | Esc cancels only when no TextInput focused; typing in name field does not trigger shell shortcuts |
+| Screen     | Action        | Expected                                                                                          |
+| ---------- | ------------- | ------------------------------------------------------------------------------------------------- |
+| Themes     | Add theme     | Scroll color fields; Save/Cancel bar full width at bottom, surface background                     |
+| Themes     | Edit theme    | Name locked; same footer bar                                                                      |
+| Dashboards | Add dashboard | Save button same size as Vibe Save (not compact default)                                          |
+| Vibes      | Add vibe      | Esc cancels only when no TextInput focused; typing in name field does not trigger shell shortcuts |
 
 **Keyboard capture check**:
+
 1. Focus vibe name TextInput, type characters — no nav/dashboard shortcuts fire
 2. Press Esc — cancels editor (when capture released on blur)
 
@@ -69,12 +70,12 @@ pnpm --filter @nightshift/ui test
 pnpm start
 ```
 
-| Screen | Keys | Expected |
-|--------|------|----------|
-| Themes | j/k or ↓/↑ | Row selection moves |
-| Themes | Enter | Edit selected (or documented action) |
-| Themes | a | Add theme |
-| Vibes | Same | Parity with pre-refactor |
+| Screen   | Keys                             | Expected                                    |
+| -------- | -------------------------------- | ------------------------------------------- |
+| Themes   | j/k or ↓/↑                       | Row selection moves                         |
+| Themes   | Enter                            | Edit selected (or documented action)        |
+| Themes   | a                                | Add theme                                   |
+| Vibes    | Same                             | Parity with pre-refactor                    |
 | Any list | Type in filter/search if present | List keys inactive while TextInput captured |
 
 ## Phase D — SDK export validation
@@ -90,7 +91,11 @@ pnpm test
 Create or extend a minimal plugin dev test:
 
 ```ts
-import { SelectField, resolveBreakpoint, useShellContentSize } from '@nightshift/sdk';
+import {
+  SelectField,
+  resolveBreakpoint,
+  useShellContentSize,
+} from '@nightshift/sdk';
 // compile-only smoke — no @nightshift/ui import
 ```
 
@@ -128,9 +133,9 @@ pnpm build
 
 ## Troubleshooting
 
-| Issue | Check |
-|-------|-------|
-| Save button too narrow | ActionBar footer buttons need `compact={false}` |
-| Esc cancels while typing | Editor `useKeyboard` missing capture guard |
-| List keys fire during input | `useListKeyboard` capture check |
+| Issue                       | Check                                                                                 |
+| --------------------------- | ------------------------------------------------------------------------------------- |
+| Save button too narrow      | ActionBar footer buttons need `compact={false}`                                       |
+| Esc cancels while typing    | Editor `useKeyboard` missing capture guard                                            |
+| List keys fire during input | `useListKeyboard` capture check                                                       |
 | Wrong stack/inline at width | `formContentSize` padding vs `useShellContentSize(2)` mismatch — align padding option |

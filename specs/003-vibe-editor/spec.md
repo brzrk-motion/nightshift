@@ -8,7 +8,7 @@
 
 **Input**: User description: "Let's create a plan to build a much more user friendly vibe editor"
 
-## User Scenarios & Testing *(mandatory)*
+## User Scenarios & Testing _(mandatory)_
 
 ### User Story 1 - Browse vibes with clear status (Priority: P1)
 
@@ -103,7 +103,7 @@ A user can duplicate an existing vibe as a starting point (new name) and delete 
 - Esc / Cancel discards unsaved draft changes without writing.
 - Keyboard capture while focused in text fields must not trigger global nav or list shortcuts.
 
-## Requirements *(mandatory)*
+## Requirements _(mandatory)_
 
 ### Functional Requirements
 
@@ -123,14 +123,14 @@ A user can duplicate an existing vibe as a starting point (new name) and delete 
 - **FR-014**: All failures MUST toast or inline-error without crashing Nightshift.
 - **FR-015**: Automated tests MUST cover draft↔save-args shaping, serialize/save round-trips, and catalog publish after save/delete.
 
-### Key Entities *(include if feature involves data)*
+### Key Entities _(include if feature involves data)_
 
 - **VibeSpec**: Name, title, description, theme, dashboard, entities, onActivate, onDeactivate (file + engine).
 - **Vibe catalog row**: Display projection published on `nightshift.vibes` for the UI.
 - **Vibe draft**: In-memory editor state including action drafts and preserved entities.
 - **Vibe action**: Command id + optional args object.
 
-## Success Criteria *(mandatory)*
+## Success Criteria _(mandatory)_
 
 ### Measurable Outcomes
 

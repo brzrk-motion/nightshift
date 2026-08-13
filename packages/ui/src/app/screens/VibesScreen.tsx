@@ -20,9 +20,7 @@ interface VibesCatalogState {
 }
 
 type View =
-  | { kind: 'list' }
-  | { kind: 'create'; draft: VibeDraft }
-  | { kind: 'edit'; draft: VibeDraft };
+  { kind: 'list' } | { kind: 'create'; draft: VibeDraft } | { kind: 'edit'; draft: VibeDraft };
 
 /**
  * Vibes catalog and in-screen editor. Reads `nightshift.vibes` for the list

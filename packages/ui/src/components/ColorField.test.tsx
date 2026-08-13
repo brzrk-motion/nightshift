@@ -9,10 +9,10 @@ const renderable = detectRuntime().ffi;
 describe.skipIf(!renderable)('ColorField', () => {
   it('renders a swatch for valid hex input', async () => {
     const runtime = createAppRuntime();
-    const setup = await testRender(
-      <ColorField label="Accent" value="#7aa2ff" focused />,
-      { width: 60, height: 10 },
-    );
+    const setup = await testRender(<ColorField label="Accent" value="#7aa2ff" focused />, {
+      width: 60,
+      height: 10,
+    });
 
     try {
       await setup.renderOnce();

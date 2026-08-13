@@ -42,7 +42,8 @@ export function DashboardEditor({
     if (key.name === 'escape') onCancel();
   });
 
-  const update = (patch: Partial<DashboardDraft>): void => setDraft((current) => ({ ...current, ...patch }));
+  const update = (patch: Partial<DashboardDraft>): void =>
+    setDraft((current) => ({ ...current, ...patch }));
 
   const footerHint = scale.shortFooter ? 'esc cancel' : 'esc cancel · layout edits on Home (e)';
 

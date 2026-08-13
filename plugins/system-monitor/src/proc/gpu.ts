@@ -15,10 +15,7 @@ function parsePercent(content: string): number | null {
   return Math.min(100, Math.max(0, value));
 }
 
-async function readGpuFromCard(
-  cardPath: string,
-  readFileFn: ReadFileFn,
-): Promise<number | null> {
+async function readGpuFromCard(cardPath: string, readFileFn: ReadFileFn): Promise<number | null> {
   const devicePath = join(cardPath, 'device');
   for (const fileName of GPU_BUSY_FILES) {
     try {

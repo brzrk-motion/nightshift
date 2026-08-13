@@ -137,12 +137,12 @@ is swallowed unless it fails). `pnpm --filter <pkg> test` / `build` /
 Four MCP servers are wired in `.cursor/mcp.json`. Use the right one for the
 job — they answer different questions:
 
-| Server               | Question it answers                                        | Auth                          |
-| -------------------- | ---------------------------------------------------------- | ----------------------------- |
+| Server               | Question it answers                                        | Auth                           |
+| -------------------- | ---------------------------------------------------------- | ------------------------------ |
 | `nightshift-context` | Where is X defined in _this repo_? Who references it?      | None (run `pnpm mcp:up` first) |
-| `context7`           | How does library Y work? What's the current API for Z?       | Optional `CONTEXT7_API_KEY`   |
-| `deepwiki`           | How is upstream repo Y structured? What does its wiki say? | None                          |
-| `semgrep`            | Does this code have security issues?                       | None (core scanning)          |
+| `context7`           | How does library Y work? What's the current API for Z?     | Optional `CONTEXT7_API_KEY`    |
+| `deepwiki`           | How is upstream repo Y structured? What does its wiki say? | None                           |
+| `semgrep`            | Does this code have security issues?                       | None (core scanning)           |
 
 **Decision guide:** Nightshift internals → `nightshift-context`. Dependency
 APIs and examples → `context7`. Upstream repo architecture (OpenTUI, MCP SDK,
@@ -177,15 +177,15 @@ arguments (or restart the server).
 
 ### Tools — when to use which
 
-| Tool              | Reach for it when…                                                                 |
-| ----------------- | ---------------------------------------------------------------------------------- |
+| Tool              | Reach for it when…                                                                  |
+| ----------------- | ----------------------------------------------------------------------------------- |
 | `index_status`    | A query returns nothing unexpected — check root, counts, languages, parse failures. |
-| `search_symbols`  | You know a name/kind/path glob and want definitions without opening files.         |
-| `get_symbol`      | You know what to fetch and want the exact source (optionally with doc/context).    |
-| `file_outline`    | You need the shape of a file (all defs + signatures, no bodies) before diving in.  |
-| `find_references` | You need every syntax-tree mention of an identifier (not comments/strings).        |
-| `read_lines`      | Another tool gave you line numbers and you only need that inclusive range.         |
-| `reindex`         | The watcher missed a bulk change, or a new file is not indexed yet.                |
+| `search_symbols`  | You know a name/kind/path glob and want definitions without opening files.          |
+| `get_symbol`      | You know what to fetch and want the exact source (optionally with doc/context).     |
+| `file_outline`    | You need the shape of a file (all defs + signatures, no bodies) before diving in.   |
+| `find_references` | You need every syntax-tree mention of an identifier (not comments/strings).         |
+| `read_lines`      | Another tool gave you line numbers and you only need that inclusive range.          |
+| `reindex`         | The watcher missed a bulk change, or a new file is not indexed yet.                 |
 
 Suggested flow: `search_symbols` → `get_symbol` or `file_outline` → `read_lines`
 for surrounding context → `find_references` when tracing call sites. Prefer
@@ -249,11 +249,11 @@ it for Nightshift's own code.
 Repository parameters use `owner/repo` form (e.g. `sst/opentui`,
 `modelcontextprotocol/typescript-sdk`).
 
-| Tool                   | Reach for it when…                                              |
-| ---------------------- | --------------------------------------------------------------- |
-| `read_wiki_structure`  | You want the table of contents / topic list for a repo.         |
-| `read_wiki_contents`   | You know the topic and want the full wiki page.                 |
-| `ask_question`         | You have a natural-language question about how a repo works.    |
+| Tool                  | Reach for it when…                                           |
+| --------------------- | ------------------------------------------------------------ |
+| `read_wiki_structure` | You want the table of contents / topic list for a repo.      |
+| `read_wiki_contents`  | You know the topic and want the full wiki page.              |
+| `ask_question`        | You have a natural-language question about how a repo works. |
 
 Suggested flow: `read_wiki_structure` → `read_wiki_contents` or
 `ask_question`. Prefer `ask_question` for exploratory questions; prefer
@@ -268,13 +268,13 @@ storage, shell capability declarations, YAML/config parsing, or anything that
 handles user-controlled input. The hosted endpoint is experimental; for
 proprietary code you can run `uvx semgrep-mcp` locally instead.
 
-| Tool                          | Reach for it when…                                           |
-| ----------------------------- | ------------------------------------------------------------ |
-| `security_check`              | Quick scan of code snippets for common vulnerabilities.      |
-| `semgrep_scan`                | Scan with a specific Semgrep config or rule set.             |
-| `semgrep_scan_with_custom_rule` | You need a one-off rule for a pattern you are checking.    |
-| `get_abstract_syntax_tree`    | You need the AST to reason about structure before scanning.  |
-| `supported_languages`         | You want to confirm Semgrep covers the language you are scanning. |
+| Tool                            | Reach for it when…                                                |
+| ------------------------------- | ----------------------------------------------------------------- |
+| `security_check`                | Quick scan of code snippets for common vulnerabilities.           |
+| `semgrep_scan`                  | Scan with a specific Semgrep config or rule set.                  |
+| `semgrep_scan_with_custom_rule` | You need a one-off rule for a pattern you are checking.           |
+| `get_abstract_syntax_tree`      | You need the AST to reason about structure before scanning.       |
+| `supported_languages`           | You want to confirm Semgrep covers the language you are scanning. |
 
 Suggested flow: after generating or editing security-sensitive code, run
 `security_check` on the diff or new snippets before considering the change
@@ -357,17 +357,17 @@ it's deliberately targeting an older contract.
 `setup(context)` is called once at load; everything a plugin can do goes
 through `context`:
 
-| `context` member               | Requires capability                                  |
-| ------------------------------ | ---------------------------------------------------- |
-| `context.entities.*`           | `entities:read` / `entities:write`                   |
-| `context.registerEntity()`     | `entities:write`                                     |
-| `context.registerWidget()`     | `widgets:register`                                   |
-| `context.registerCommand()`    | `commands:register`                                  |
-| `context.registerAutomation()` | `automations:register`                               |
-| `context.storage.*`            | `storage`                                            |
+| `context` member               | Requires capability                                                       |
+| ------------------------------ | ------------------------------------------------------------------------- |
+| `context.entities.*`           | `entities:read` / `entities:write`                                        |
+| `context.registerEntity()`     | `entities:write`                                                          |
+| `context.registerWidget()`     | `widgets:register`                                                        |
+| `context.registerCommand()`    | `commands:register`                                                       |
+| `context.registerAutomation()` | `automations:register`                                                    |
+| `context.storage.*`            | `storage`                                                                 |
 | `context.fetch(url, init?)`    | `network` (HTTPS; HTTP only to loopback/private IPs; 15s default timeout) |
-| `context.own(disposable)`      | (always available — ties cleanup to plugin lifetime) |
-| `context.log.*`                | (always available)                                   |
+| `context.own(disposable)`      | (always available — ties cleanup to plugin lifetime)                      |
+| `context.log.*`                | (always available)                                                        |
 
 `network` and `shell` are declarable capabilities (`CAPABILITIES` in the SDK)
 that the host checks at load time. `context.fetch` is the gated network surface:

@@ -8,7 +8,7 @@
 
 **Input**: User description: "Let's add a new page to the sidebar named Dashboards above vibes, and the current dashboard menu item will change to Home. The dashboards page will work just like the vibes page but will allow you to create new blank dashboards, name them, and set them as the active dashboard. All dashboards created should show up in the dropdown in the vibe editor as well, and they should all be saved to dashboard config files as well. Let's use the same UI conventions we used for the vibes page"
 
-## User Scenarios & Testing *(mandatory)*
+## User Scenarios & Testing _(mandatory)_
 
 ### User Story 1 - Browse and switch dashboards from the shell (Priority: P1)
 
@@ -66,7 +66,7 @@ A user edits an existing user dashboard's title (and name on create-only flow), 
 - What happens when YAML on disk fails to parse? — Soft-fail with warning toast; broken file omitted from catalog (existing load behavior).
 - What happens when the terminal is too narrow? — Dashboards list/editor use the same responsive conventions as Vibes (toolbar, scroll, keyboardCapture on TextInput).
 
-## Requirements *(mandatory)*
+## Requirements _(mandatory)_
 
 ### Functional Requirements
 
@@ -81,13 +81,13 @@ A user edits an existing user dashboard's title (and name on create-only flow), 
 - **FR-009**: Built-in dashboards MUST NOT be deletable without a user file; deleting a user file MUST re-register the built-in if one exists.
 - **FR-010**: Keyboard navigation on the Dashboards list MUST match Vibes conventions (`j`/`k`, Enter to open, `a` add, `e` edit) and MUST respect `keyboardCapture` while typing in the editor.
 
-### Key Entities *(include if feature involves data)*
+### Key Entities _(include if feature involves data)_
 
 - **DashboardSpec**: Canonical on-disk dashboard model (name, title, theme, rows, …) — unchanged schema.
 - **DashboardCatalogRow**: Row in `nightshift.dashboards` — name, title, source (`built-in` | `user`), active (matches Home canvas), optional payload for edit round-trip.
 - **DashboardDraft**: UI-only editor state for create/edit metadata (not widget layout — layout editing stays on Home edit mode).
 
-## Success Criteria *(mandatory)*
+## Success Criteria _(mandatory)_
 
 ### Measurable Outcomes
 

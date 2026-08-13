@@ -32,7 +32,15 @@ export function ColorField({
       style={{ flexDirection: 'row', gap: 2, alignItems: 'center', minHeight: 1 }}
     >
       <text fg={theme.colors.muted}>{label.padEnd(16)}</text>
-      <box style={{ width: 2, height: 1, backgroundColor: swatchColor, alignItems: 'center', justifyContent: 'center' }}>
+      <box
+        style={{
+          width: 2,
+          height: 1,
+          backgroundColor: swatchColor,
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
         <text fg={swatchColor}>██</text>
       </box>
       <TextInput

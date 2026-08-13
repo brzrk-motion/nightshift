@@ -88,11 +88,7 @@ function ActionListEditor({
     ) : (
       <>
         <Button label="↑" disabled={index === 0} onPress={() => move(index, -1)} />
-        <Button
-          label="↓"
-          disabled={index === actions.length - 1}
-          onPress={() => move(index, 1)}
-        />
+        <Button label="↓" disabled={index === actions.length - 1} onPress={() => move(index, 1)} />
         <Button label="Remove" onPress={() => removeAction(index)} />
       </>
     );

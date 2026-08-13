@@ -32,20 +32,20 @@ Ship a bundled `@nightshift/plugin-system-monitor` plugin that polls Linux `/pro
 
 ## Constitution Check
 
-*GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
+_GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 
 `.specify/memory/constitution.md` is still the Speckit placeholder. Gates below follow `AGENTS.md` / README:
 
-| Gate | Status | Notes |
-|------|--------|-------|
-| Everything is a plugin | PASS | `plugins/system-monitor` |
-| Public SDK is the only plugin interface | PASS | Runtime dep: `@nightshift/sdk` only |
-| Dashboards consume widgets | PASS | `system-monitor.overview` |
-| Entities provide shared state | PASS | `system-monitor.metrics` + settings entity or combined state |
-| Never let one bad input break startup | PASS | Corrupt storage → defaults; `/proc` errors → per-metric unavailable |
-| Capability model honored | PASS | Auto-granted only: entities, widgets, commands, storage |
-| No console outside CLI | PASS | `context.log` |
-| Tests co-located; lint/typecheck/test before done | PASS | Mirror clock/focus |
+| Gate                                              | Status | Notes                                                               |
+| ------------------------------------------------- | ------ | ------------------------------------------------------------------- |
+| Everything is a plugin                            | PASS   | `plugins/system-monitor`                                            |
+| Public SDK is the only plugin interface           | PASS   | Runtime dep: `@nightshift/sdk` only                                 |
+| Dashboards consume widgets                        | PASS   | `system-monitor.overview`                                           |
+| Entities provide shared state                     | PASS   | `system-monitor.metrics` + settings entity or combined state        |
+| Never let one bad input break startup             | PASS   | Corrupt storage → defaults; `/proc` errors → per-metric unavailable |
+| Capability model honored                          | PASS   | Auto-granted only: entities, widgets, commands, storage             |
+| No console outside CLI                            | PASS   | `context.log`                                                       |
+| Tests co-located; lint/typecheck/test before done | PASS   | Mirror clock/focus                                                  |
 
 **Post-design re-check**: Still PASS — contracts are plugin entities/commands/widget only; no host changes; collectors are internal modules testable with fixture `/proc` snippets.
 

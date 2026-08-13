@@ -37,7 +37,9 @@ export function ScreenLayout({
 
   return (
     <box style={{ flexDirection: 'column', flexGrow: 1, height: '100%' }}>
-      {title === undefined ? null : <box style={{ flexShrink: 0, paddingLeft: 1, paddingRight: 1 }}>{title}</box>}
+      {title === undefined ? null : (
+        <box style={{ flexShrink: 0, paddingLeft: 1, paddingRight: 1 }}>{title}</box>
+      )}
       {body}
       {actions}
       {hint === undefined ? null : <FooterHint text={hint} />}

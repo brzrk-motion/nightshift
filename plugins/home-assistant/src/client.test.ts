@@ -4,7 +4,9 @@ import { activateScene, checkConnection, HomeAssistantApiError, listScenes } fro
 describe('checkConnection', () => {
   it('succeeds on HTTP 200', async () => {
     const fetchFn = vi.fn(async () => new Response('{"message":"API running."}', { status: 200 }));
-    await expect(checkConnection(fetchFn, 'http://192.168.1.10:8123', 'tok')).resolves.toBeUndefined();
+    await expect(
+      checkConnection(fetchFn, 'http://192.168.1.10:8123', 'tok'),
+    ).resolves.toBeUndefined();
     expect(fetchFn).toHaveBeenCalledWith('http://192.168.1.10:8123/api/', {
       headers: {
         Authorization: 'Bearer tok',
@@ -15,10 +17,12 @@ describe('checkConnection', () => {
 
   it('throws on 401', async () => {
     const fetchFn = vi.fn(async () => new Response('Unauthorized', { status: 401 }));
-    await expect(checkConnection(fetchFn, 'http://192.168.1.10:8123', 'bad')).rejects.toMatchObject({
-      name: 'HomeAssistantApiError',
-      status: 401,
-    });
+    await expect(checkConnection(fetchFn, 'http://192.168.1.10:8123', 'bad')).rejects.toMatchObject(
+      {
+        name: 'HomeAssistantApiError',
+        status: 401,
+      },
+    );
   });
 
   it('propagates network failures', async () => {

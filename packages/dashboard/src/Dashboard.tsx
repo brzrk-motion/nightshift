@@ -190,7 +190,9 @@ export function Dashboard({
   }
 
   return (
-    <box style={{ flexGrow: 1, flexDirection: 'column', width: '100%', height: '100%', minHeight: 0 }}>
+    <box
+      style={{ flexGrow: 1, flexDirection: 'column', width: '100%', height: '100%', minHeight: 0 }}
+    >
       {plan.rows.map((row, index) => (
         <box
           key={`${row.source}:${index}`}

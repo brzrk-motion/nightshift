@@ -6,10 +6,10 @@
 
 ## Entities
 
-| Id | Publisher | Shape | Consumers |
-|----|-----------|-------|-----------|
-| `nightshift.dashboard` | `DashboardApp` / CLI runtime | `{ active: string \| null, title: string \| null }` | Dashboards list active column, optional header |
-| `nightshift.dashboards` | CLI runtime | `{ dashboards: DashboardCatalogRow[] }` | DashboardsScreen, VibeEditor picker |
+| Id                      | Publisher                    | Shape                                               | Consumers                                      |
+| ----------------------- | ---------------------------- | --------------------------------------------------- | ---------------------------------------------- |
+| `nightshift.dashboard`  | `DashboardApp` / CLI runtime | `{ active: string \| null, title: string \| null }` | Dashboards list active column, optional header |
+| `nightshift.dashboards` | CLI runtime                  | `{ dashboards: DashboardCatalogRow[] }`             | DashboardsScreen, VibeEditor picker            |
 
 UI MUST NOT import `@nightshift/dashboard` or read `dashboardsDir` directly.
 
@@ -31,13 +31,13 @@ UI MUST NOT import `@nightshift/dashboard` or read `dashboardsDir` directly.
 
 ### `dashboard.save` (new; hidden)
 
-| Arg | Type | Required | Description |
-|-----|------|----------|-------------|
-| `name` | string | yes | `/^[a-z][a-z0-9-]*$/` |
-| `title` | string | no | |
-| `theme` | string | no | |
-| `refresh` | number | no | Non-negative integer |
-| `rows` | array | no | Row specs; if omitted on edit, host loads existing file rows |
+| Arg       | Type   | Required | Description                                                  |
+| --------- | ------ | -------- | ------------------------------------------------------------ |
+| `name`    | string | yes      | `/^[a-z][a-z0-9-]*$/`                                        |
+| `title`   | string | no       |                                                              |
+| `theme`   | string | no       |                                                              |
+| `refresh` | number | no       | Non-negative integer                                         |
+| `rows`    | array  | no       | Row specs; if omitted on edit, host loads existing file rows |
 
 **Effect**: Validate via serialize→parse → `saveDashboard(dashboardsDir)` → update in-memory merged list → re-register `dashboard.open.*` → `publishDashboardsCatalog` → if saved dashboard is active, refresh Home canvas → success toast.
 
@@ -45,9 +45,9 @@ UI MUST NOT import `@nightshift/dashboard` or read `dashboardsDir` directly.
 
 ### `dashboard.delete` (new; hidden)
 
-| Arg | Type | Required | Description |
-|-----|------|----------|-------------|
-| `name` | string | yes | Dashboard name |
+| Arg    | Type   | Required | Description    |
+| ------ | ------ | -------- | -------------- |
+| `name` | string | yes      | Dashboard name |
 
 **Effect**: If no user file → error "built-in dashboards cannot be deleted". Else delete file → re-merge built-ins → unregister/register open commands → if deleted was active, open fallback → refresh catalog → toast.
 
@@ -72,18 +72,18 @@ Open → dashboard.open.<selected.name>
 
 ## Shell changes
 
-| Location | Change |
-|----------|--------|
-| `AppShell` dashboard screen | `label: 'Home'` (was `Dashboard`) |
-| `DEFAULT_SCREENS` | Insert `{ id: 'dashboards', label: 'Dashboards', render: DashboardsScreen }` before Vibes |
-| Footer | On Home: dynamic dashboard title; on Dashboards: `"Dashboards"` |
+| Location                    | Change                                                                                    |
+| --------------------------- | ----------------------------------------------------------------------------------------- |
+| `AppShell` dashboard screen | `label: 'Home'` (was `Dashboard`)                                                         |
+| `DEFAULT_SCREENS`           | Insert `{ id: 'dashboards', label: 'Dashboards', render: DashboardsScreen }` before Vibes |
+| Footer                      | On Home: dynamic dashboard title; on Dashboards: `"Dashboards"`                           |
 
 ## Picker data sources (Dashboards editor)
 
-| Field | Source |
-|-------|--------|
-| Theme | `runtime.themes.list()` |
-| List rows | `nightshift.dashboards` |
+| Field            | Source                                        |
+| ---------------- | --------------------------------------------- |
+| Theme            | `runtime.themes.list()`                       |
+| List rows        | `nightshift.dashboards`                       |
 | Active indicator | `row.active` or `nightshift.dashboard.active` |
 
 ## File format
@@ -93,6 +93,7 @@ Unchanged dashboard YAML. Machine writes via `serializeDashboard`. Blank create 
 ## DashboardApp obligations
 
 On `open(name)`:
+
 1. Set internal active state (existing).
 2. Update `nightshift.dashboard` entity `{ active: name, title }`.
 3. Trigger catalog republish or patch `active` flags on `nightshift.dashboards` rows.

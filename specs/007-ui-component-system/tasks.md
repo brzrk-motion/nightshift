@@ -1,5 +1,5 @@
 ---
-description: "Task list for UI component system overhaul"
+description: 'Task list for UI component system overhaul'
 ---
 
 # Tasks: UI Component System Overhaul
@@ -186,27 +186,30 @@ description: "Task list for UI component system overhaul"
 
 ### User Story Dependencies
 
-| Story | Depends on | Can parallel with |
-|-------|------------|-----------------|
-| US1 | Phase 2 | — (do first for MVP) |
-| US2 | Phase 2, US1 editor files for T021 | US3, US4, US5 after T014 |
-| US3 | Phase 2 (ActionBar) | US4, US5 |
-| US4 | T014 index exports | US3, US5 |
-| US5 | Phase 2 (Modal exists) | US3, US4 |
+| Story | Depends on                         | Can parallel with        |
+| ----- | ---------------------------------- | ------------------------ |
+| US1   | Phase 2                            | — (do first for MVP)     |
+| US2   | Phase 2, US1 editor files for T021 | US3, US4, US5 after T014 |
+| US3   | Phase 2 (ActionBar)                | US4, US5                 |
+| US4   | T014 index exports                 | US3, US5                 |
+| US5   | Phase 2 (Modal exists)             | US3, US4                 |
 
 ### Within-Phase Parallel Examples
 
 **Foundational components (after T005–T006):**
+
 ```text
 T009 FormSection.tsx ∥ T010 FormField.tsx ∥ T011 ActionBar.tsx ∥ T012 ScreenLayout.tsx ∥ T013 FooterHint.tsx
 ```
 
 **List migrations (after T027):**
+
 ```text
 T030 DashboardsList.tsx ∥ T031 VibesList.tsx  (T029 ThemesList first as proof)
 ```
 
 **Catalog modals (after T035–T036):**
+
 ```text
 T038 VibesScreen.tsx ∥ T039 DashboardsScreen.tsx  (T037 ThemesScreen first)
 ```

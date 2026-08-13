@@ -1,10 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  draftFromCatalog,
-  draftToSaveArgs,
-  emptyDraft,
-  type VibeCatalogRow,
-} from './vibeDraft.js';
+import { draftFromCatalog, draftToSaveArgs, emptyDraft, type VibeCatalogRow } from './vibeDraft.js';
 
 const ROW: VibeCatalogRow = {
   name: 'locked-in',
@@ -23,9 +18,7 @@ describe('draftFromCatalog', () => {
   it('preserves entities and expands actions', () => {
     const draft = draftFromCatalog(ROW);
     expect(draft.entities).toEqual({ 'timer.focus': { status: 'idle' } });
-    expect(draft.onActivate).toEqual([
-      { command: 'focus.start', args: '{"minutes":50}' },
-    ]);
+    expect(draft.onActivate).toEqual([{ command: 'focus.start', args: '{"minutes":50}' }]);
     expect(draft.onDeactivate).toEqual([{ command: 'focus.pause', args: '' }]);
   });
 

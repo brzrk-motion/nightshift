@@ -8,7 +8,7 @@
 
 **Input**: User description: "We need a new plugin for our Home Assistant app, it should ask the user for their home assistant ip address and an access token to be configured, from there it should expose the different scenes in home assistant and let the user trigger them from the UI. We also need to be able to tie scenes to different Vibes in nightshift, so when we change the vibe, home automation scenes will trigger as well. This needs to be robust and highly tested, and it should remain simple, change scenes, and automate them with vibes"
 
-## User Scenarios & Testing *(mandatory)*
+## User Scenarios & Testing _(mandatory)_
 
 ### User Story 1 - Connect to Home Assistant (Priority: P1)
 
@@ -85,7 +85,7 @@ The user can update address/token or clear configuration from the widget when th
 - Corrupt storage loads as unconfigured (safe empty), not a startup failure.
 - Access token must not appear in entity state intended for general dashboard display.
 
-## Requirements *(mandatory)*
+## Requirements _(mandatory)_
 
 ### Functional Requirements
 
@@ -101,14 +101,14 @@ The user can update address/token or clear configuration from the widget when th
 - **FR-010**: Plugin MUST support local Home Assistant instances addressed by LAN IP (typical `http://host:8123`) as well as HTTPS remote URLs.
 - **FR-011**: Automated tests MUST cover credential normalization/validation, HA client request shaping, scene filtering, soft-fail activate paths, and plugin setup against a fake context with mocked fetch.
 
-### Key Entities *(include if feature involves data)*
+### Key Entities _(include if feature involves data)_
 
 - **Connection config**: Base URL + access token (durable); connection status/error (live, non-secret).
 - **Scene**: Home Assistant `entity_id`, friendly name, optional state metadata for display.
 - **Scene catalog**: Ordered list of scenes for the widget.
 - **Vibe binding**: Not a separate store — a vibe YAML action that invokes the activate-scene command with an `entity_id`.
 
-## Success Criteria *(mandatory)*
+## Success Criteria _(mandatory)_
 
 ### Measurable Outcomes
 

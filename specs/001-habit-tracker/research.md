@@ -11,6 +11,7 @@ All Technical Context unknowns resolved against Nightshift `AGENTS.md`, sibling 
 **Rationale**: Nightshift’s shell “Apps” screen lists loaded plugins; product features that own UI + state ship as plugins consuming `@nightshift/sdk`. A new `packages/*` host module would violate “Everything is a plugin” and widen the dependency graph without need.
 
 **Alternatives considered**:
+
 - New shell screen in `packages/ui` — rejected (host change; not plugin-extensible).
 - Dashboard-only YAML without a plugin — rejected (no state/commands).
 - Third-party-only (not bundled) — rejected for a first-party “next app” experience; still discoverable via config, but defaults should include it.
@@ -22,6 +23,7 @@ All Technical Context unknowns resolved against Nightshift `AGENTS.md`, sibling 
 **Rationale**: Habit grids and streak history are structured data, not meant for hand-editing like `todo.md`. Storage is opaque, per-plugin, and already the SDK contract for this.
 
 **Alternatives considered**:
+
 - User-facing `habits.md` — rejected for v1 (parser complexity, weak fit for date matrices).
 - EntityStore only — rejected (entities are not durable across process restarts).
 - Hybrid (entity live + storage durable) — **chosen operationally**: entity holds live `HabitState`; storage is the source of truth loaded in `setup` and written on mutation (focus pattern).
@@ -33,18 +35,21 @@ All Technical Context unknowns resolved against Nightshift `AGENTS.md`, sibling 
 **Rationale**: Matches the user’s “rolling 7 day window”; always ends on today so “this week” never shows future empty cells. Align date keys with focus’s `todayKey()` local-calendar convention.
 
 **Alternatives considered**:
+
 - Fixed Mon–Sun week — rejected (does not roll; mid-week UX odd).
-- Last 7 *completed* days — rejected (breaks empty days / checkbox grid).
+- Last 7 _completed_ days — rejected (breaks empty days / checkbox grid).
 
 ## 4. Streak rules
 
 **Decision**:
+
 - **Current streak**: Walk backward from today if today is complete; else from yesterday if yesterday is complete; else `0`. Count consecutive completed dates.
 - **Longest streak**: Max consecutive run over retained completion history for that habit; never less than current.
 
 **Rationale**: Common habit-tracker UX (miss today before logging → still show yesterday’s run as current; miss yesterday → reset). Pure functions enable deterministic Vitest fixtures (no clock flakes: inject “today”).
 
 **Alternatives considered**:
+
 - Require today complete for any current streak — harsher; rejected for morning-before-check UX.
 - Only compute over the visible 7 days — rejected (FR keeps history for longest streak).
 
@@ -55,6 +60,7 @@ All Technical Context unknowns resolved against Nightshift `AGENTS.md`, sibling 
 **Rationale**: Proven plugin UX; no new SDK primitives required. Dashboard already reflows by breakpoint (`COMPACT_WIDTH` 72 / `WIDE_WIDTH` 132); widget should also react to its own allocated width via layout props/`WidgetProps` if available, else terminal width heuristics.
 
 **Alternatives considered**:
+
 - Custom checkbox primitive in `@nightshift/ui` — YAGNI for v1; Button labels suffice.
 - Separate full-screen shell app — rejected (see §1).
 
@@ -82,11 +88,11 @@ All Technical Context unknowns resolved against Nightshift `AGENTS.md`, sibling 
 
 ## Resolved clarifications
 
-| Former unknown | Resolution |
-|----------------|------------|
-| App vs plugin | Plugin + widget |
-| Storage medium | `context.storage` JSON |
-| Week meaning | Rolling 7 local days ending today |
-| Streak definition | Backward consecutive from today/yesterday; track longest |
-| Multi check-in/day | Binary only |
-| Reminders | Out of scope v1 |
+| Former unknown     | Resolution                                               |
+| ------------------ | -------------------------------------------------------- |
+| App vs plugin      | Plugin + widget                                          |
+| Storage medium     | `context.storage` JSON                                   |
+| Week meaning       | Rolling 7 local days ending today                        |
+| Streak definition  | Backward consecutive from today/yesterday; track longest |
+| Multi check-in/day | Binary only                                              |
+| Reminders          | Out of scope v1                                          |

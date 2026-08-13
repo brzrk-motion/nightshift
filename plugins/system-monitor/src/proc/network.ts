@@ -17,7 +17,10 @@ export function parseNetDev(content: string): NetworkCounters | null {
     const iface = trimmed.slice(0, colon).trim();
     if (iface === 'lo') continue;
 
-    const parts = trimmed.slice(colon + 1).trim().split(/\s+/);
+    const parts = trimmed
+      .slice(colon + 1)
+      .trim()
+      .split(/\s+/);
     const rxBytes = Number.parseInt(parts[0] ?? '', 10);
     const txBytes = Number.parseInt(parts[8] ?? '', 10);
     if (Number.isNaN(rxBytes) || Number.isNaN(txBytes)) continue;

@@ -124,9 +124,7 @@ function HabitRow({
         );
       })}
       {showStreaks ? (
-        <text fg={theme.colors.accentSecondary}>
-          {` ${streaks.current}/${streaks.longest}`}
-        </text>
+        <text fg={theme.colors.accentSecondary}>{` ${streaks.current}/${streaks.longest}`}</text>
       ) : null}
       <box style={{ flexGrow: 1 }} />
       <Button label="Edit" onPress={() => setEditing(true)} />

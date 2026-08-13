@@ -8,7 +8,7 @@
 
 **Input**: User description: "Let's create a new page the same way we did for dashboards but for themes. Themes should be able to be created, made active and new themes should be created from a basic theme editor UI. Themes should be simple with just a few colors and the UI should be intutive, with color pickers, etc if possible. Themes created should also be saved locally the same way dashboards and vibes are."
 
-## User Scenarios & Testing *(mandatory)*
+## User Scenarios & Testing _(mandatory)_
 
 ### User Story 1 - Browse and activate themes from the shell (Priority: P1)
 
@@ -66,7 +66,7 @@ A user duplicates an existing theme as a starting point, or deletes a user theme
 - What happens when a color field is invalid hex? — Editor validation blocks save with a toast; no partial file write.
 - What happens when the terminal is too narrow? — Themes list/editor use the same responsive conventions as Dashboards/Vibes (toolbar, scroll, keyboardCapture on TextInput).
 
-## Requirements *(mandatory)*
+## Requirements _(mandatory)_
 
 ### Functional Requirements
 
@@ -81,13 +81,13 @@ A user duplicates an existing theme as a starting point, or deletes a user theme
 - **FR-009**: Renaming a theme name on create is allowed; on edit the name field is locked (same as vibes/dashboards).
 - **FR-010**: The Settings screen theme list MUST be removed or reduced to a link/hint pointing users to the Themes screen (avoid duplicate activation UX).
 
-### Key Entities *(include if feature involves data)*
+### Key Entities _(include if feature involves data)_
 
 - **ThemeSpec**: Canonical on-disk theme model (name, appearance, colors) — aligned with `Theme` in `@nightshift/ui`.
 - **ThemeCatalogRow**: Row in `nightshift.themes` — name, title/display, source (`built-in` | `user`), active (matches current theme), appearance, colors payload for edit round-trip.
 - **ThemeDraft**: UI-only editor state for create/edit (name, appearance, color hex strings per field).
 
-## Success Criteria *(mandatory)*
+## Success Criteria _(mandatory)_
 
 ### Measurable Outcomes
 

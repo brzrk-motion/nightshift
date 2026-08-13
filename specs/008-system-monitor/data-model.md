@@ -10,13 +10,13 @@ Graph visibility preferences are durable in plugin storage. Live samples and rol
 
 ### MonitorSettings (storage + entity field or separate `system-monitor.settings`)
 
-| Field | Type | Default | Rules |
-|-------|------|---------|-------|
-| `version` | `1` | `1` | Schema version |
-| `showCpu` | boolean | `true` | When false, hide CPU section |
-| `showGpu` | boolean | `true` | When false, hide GPU section |
-| `showNetwork` | boolean | `true` | When false, hide network section |
-| `showRam` | boolean | `true` | When false, hide RAM section |
+| Field         | Type    | Default | Rules                            |
+| ------------- | ------- | ------- | -------------------------------- |
+| `version`     | `1`     | `1`     | Schema version                   |
+| `showCpu`     | boolean | `true`  | When false, hide CPU section     |
+| `showGpu`     | boolean | `true`  | When false, hide GPU section     |
+| `showNetwork` | boolean | `true`  | When false, hide network section |
+| `showRam`     | boolean | `true`  | When false, hide RAM section     |
 
 **Lifecycle**: load on setup → user toggles → persist async to storage.
 
@@ -24,14 +24,14 @@ Graph visibility preferences are durable in plugin storage. Live samples and rol
 
 ### MetricSample (component of live state)
 
-| Field | Type | Rules |
-|-------|------|--------|
-| `status` | `'ok' \| 'unavailable' \| 'error'` | Per-metric probe outcome |
-| `value` | number \| null | Primary scalar (%, B/s, etc.) |
-| `label` | string | Display value, e.g. `42%`, `4.2 GB`, `12.3 MB/s` |
-| `detail` | string \| null | Optional secondary, e.g. `8.1 / 16 GB` for RAM |
-| `history` | `number[]` | Rolling samples for charts; same unit as `value` |
-| `error` | string \| null | Short message when `status !== 'ok'` |
+| Field     | Type                               | Rules                                            |
+| --------- | ---------------------------------- | ------------------------------------------------ |
+| `status`  | `'ok' \| 'unavailable' \| 'error'` | Per-metric probe outcome                         |
+| `value`   | number \| null                     | Primary scalar (%, B/s, etc.)                    |
+| `label`   | string                             | Display value, e.g. `42%`, `4.2 GB`, `12.3 MB/s` |
+| `detail`  | string \| null                     | Optional secondary, e.g. `8.1 / 16 GB` for RAM   |
+| `history` | `number[]`                         | Rolling samples for charts; same unit as `value` |
+| `error`   | string \| null                     | Short message when `status !== 'ok'`             |
 
 ### MetricKey
 
@@ -39,24 +39,24 @@ Union: `'cpu' | 'gpu' | 'network' | 'ram'`.
 
 ### MonitorMetricsState (entity `system-monitor.metrics`)
 
-| Field | Type | Rules |
-|-------|------|--------|
-| `platform` | `'linux' \| 'unsupported'` | Set once at setup |
-| `polling` | boolean | True while mount ref-count > 0 and interval active |
-| `lastUpdatedAt` | number \| null | Epoch ms of last successful poll |
-| `intervalMs` | number | Poll interval (default 1000) |
-| `metrics` | `Record<MetricKey, MetricSample>` | Four keys always present |
+| Field           | Type                              | Rules                                              |
+| --------------- | --------------------------------- | -------------------------------------------------- |
+| `platform`      | `'linux' \| 'unsupported'`        | Set once at setup                                  |
+| `polling`       | boolean                           | True while mount ref-count > 0 and interval active |
+| `lastUpdatedAt` | number \| null                    | Epoch ms of last successful poll                   |
+| `intervalMs`    | number                            | Poll interval (default 1000)                       |
+| `metrics`       | `Record<MetricKey, MetricSample>` | Four keys always present                           |
 
 **GPU sample when unavailable**: `status: 'unavailable'`, `value: null`, `history: []`, `error` optional.
 
 ### PollInternals (in-memory only, not entity)
 
-| Field | Type | Rules |
-|-------|------|--------|
-| `mountCount` | number | Increment on widget mount command |
-| `previousCpu` | CpuCounters \| null | For delta utilization |
-| `previousNetwork` | NetworkCounters \| null | For delta throughput |
-| `timer` | Timer handle | Cleared when mountCount → 0 |
+| Field             | Type                    | Rules                             |
+| ----------------- | ----------------------- | --------------------------------- |
+| `mountCount`      | number                  | Increment on widget mount command |
+| `previousCpu`     | CpuCounters \| null     | For delta utilization             |
+| `previousNetwork` | NetworkCounters \| null | For delta throughput              |
+| `timer`           | Timer handle            | Cleared when mountCount → 0       |
 
 ## Validation rules
 
@@ -79,19 +79,19 @@ Union: `'cpu' | 'gpu' | 'network' | 'ram'`.
 
 ## Persistence mapping
 
-| Layer | Key / id | Contents |
-|-------|----------|----------|
-| Storage | `settings` | `{ version: 1, showCpu, showGpu, showNetwork, showRam }` |
-| Entity | `system-monitor.settings` | `MonitorSettings` (optional mirror; may embed in single entity — pick one in implementation, document in contract) |
-| Entity | `system-monitor.metrics` | `MonitorMetricsState` |
+| Layer   | Key / id                  | Contents                                                                                                           |
+| ------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| Storage | `settings`                | `{ version: 1, showCpu, showGpu, showNetwork, showRam }`                                                           |
+| Entity  | `system-monitor.settings` | `MonitorSettings` (optional mirror; may embed in single entity — pick one in implementation, document in contract) |
+| Entity  | `system-monitor.metrics`  | `MonitorMetricsState`                                                                                              |
 
 **Recommended**: Two entities — `system-monitor.settings` (user toggles) and `system-monitor.metrics` (live data) — so settings changes do not rewrite large history blobs unnecessarily.
 
 ## Display mapping (widget)
 
-| MetricKey | Section title | Chart | Compact caption |
-|-----------|---------------|-------|-----------------|
-| `cpu` | CPU | Sparkline/LineChart 0–100 | `{value}%` |
-| `ram` | RAM | Sparkline/LineChart 0–100 | `{value}%` + detail |
-| `network` | Network | Sparkline/LineChart auto-scale | `{label}` rate |
-| `gpu` | GPU | Sparkline/LineChart 0–100 | `{value}%` or unavailable |
+| MetricKey | Section title | Chart                          | Compact caption           |
+| --------- | ------------- | ------------------------------ | ------------------------- |
+| `cpu`     | CPU           | Sparkline/LineChart 0–100      | `{value}%`                |
+| `ram`     | RAM           | Sparkline/LineChart 0–100      | `{value}%` + detail       |
+| `network` | Network       | Sparkline/LineChart auto-scale | `{label}` rate            |
+| `gpu`     | GPU           | Sparkline/LineChart 0–100      | `{value}%` or unavailable |

@@ -30,19 +30,19 @@ Audit-driven refactor of `@nightshift/ui`: extract duplicated form layout patter
 
 ## Constitution Check
 
-*GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
+_GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 
 `.specify/memory/constitution.md` is the Speckit placeholder. Gates from `AGENTS.md`:
 
-| Gate | Status | Notes |
-|------|--------|-------|
-| Dependency direction (`ui` ← `core`, `entities`) | PASS | New code stays in `packages/ui`; SDK re-exports only |
-| Public SDK only for plugins | PASS | FR-012 adds exports; no plugin imports services |
-| Never let one bad input break startup | PASS | Presentational only; no startup path changes |
-| No console outside CLI | PASS | No logging added |
-| Tests co-located | PASS | `*.test.ts` beside new modules |
-| Minimal scope / YAGNI | PASS | Defer generic CatalogScreen to P3 |
-| OpenTUI keyboard capture | PASS | FR-009 fixes gaps |
+| Gate                                             | Status | Notes                                                |
+| ------------------------------------------------ | ------ | ---------------------------------------------------- |
+| Dependency direction (`ui` ← `core`, `entities`) | PASS   | New code stays in `packages/ui`; SDK re-exports only |
+| Public SDK only for plugins                      | PASS   | FR-012 adds exports; no plugin imports services      |
+| Never let one bad input break startup            | PASS   | Presentational only; no startup path changes         |
+| No console outside CLI                           | PASS   | No logging added                                     |
+| Tests co-located                                 | PASS   | `*.test.ts` beside new modules                       |
+| Minimal scope / YAGNI                            | PASS   | Defer generic CatalogScreen to P3                    |
+| OpenTUI keyboard capture                         | PASS   | FR-009 fixes gaps                                    |
 
 **Post-design re-check**: PASS — contracts define component props and hook APIs only; no reverse dependencies; ColorField fix removes screen import.
 
@@ -97,31 +97,35 @@ packages/sdk/src/index.ts        # re-export SelectField, resolveBreakpoint, use
 
 ## Complexity Tracking
 
-| Violation | Why Needed | Simpler Alternative Rejected Because |
-|-----------|------------|-------------------------------------|
+| Violation                                          | Why Needed                                                                       | Simpler Alternative Rejected Because                                        |
+| -------------------------------------------------- | -------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
 | Two layout modules (`layout.ts` + `formLayout.ts`) | Dashboard breakpoints (72/132) vs form density (52/68) serve different consumers | Single breakpoint enum would force wrong tradeoffs in editors or dashboards |
-| ScreenLayout 4-slot API | Editors need scroll + sticky footer pattern repeated 3× | Raw scrollbox in each editor preserves duplication |
+| ScreenLayout 4-slot API                            | Editors need scroll + sticky footer pattern repeated 3×                          | Raw scrollbox in each editor preserves duplication                          |
 
 ## Implementation Phases (for tasks.md)
 
 ### Phase A — Foundation (P1)
+
 1. Add `formLayout.ts` + tests (port from `vibeEditorLayout.test.ts`)
 2. Add `FormSection`, `FormField`, `ActionBar`, `ScreenLayout`, `FooterHint`
 3. Move `isValidHex` → `theme/validate.ts`
 4. Export new modules from `components/index.ts` and `packages/ui/src/index.ts`
 
 ### Phase B — Editor migration (P1)
+
 5. Migrate ThemeEditor → ScreenLayout + FormField + ActionBar
 6. Migrate DashboardEditor (fix compact button)
 7. Migrate VibeEditor (fix keyboard capture on esc)
 8. Shim `vibeEditorLayout.ts` → re-export from `formLayout`
 
 ### Phase C — List screens (P2)
+
 9. Add `useListKeyboard` + tests
 10. Migrate ThemesList, DashboardsList, VibesList
 11. Add `ConfirmModal`; refactor catalog screen modals
 
 ### Phase D — SDK & polish (P2–P3)
+
 12. SDK re-exports: SelectField, resolveBreakpoint, useShellContentSize
 13. Fix CommandPickerListKeys capture; Tabs responsive underline
 14. Optional: CatalogScreen scaffold (P3)
@@ -130,26 +134,26 @@ packages/sdk/src/index.ts        # re-export SelectField, resolveBreakpoint, use
 
 ### Existing inventory (keep)
 
-| Category | Components |
-|----------|------------|
-| Containers | Panel, Card, Modal |
-| Controls | Button, TextInput, Toggle, SelectField, ColorField |
-| Data display | Table, List, Tabs, StatusBadge, Metric, StatRow |
-| Charts | BarChart, LineChart, Sparkline, charts.js helpers |
-| Chrome | Toolbar, IconButton, Icon, KeyHint, Divider, Toasts |
-| States | EmptyState, ErrorState, LoadingState |
-| Visuals | ProgressBar, Meter, Timeline, ActivityWaveform |
+| Category           | Components                                                  |
+| ------------------ | ----------------------------------------------------------- |
+| Containers         | Panel, Card, Modal                                          |
+| Controls           | Button, TextInput, Toggle, SelectField, ColorField          |
+| Data display       | Table, List, Tabs, StatusBadge, Metric, StatRow             |
+| Charts             | BarChart, LineChart, Sparkline, charts.js helpers           |
+| Chrome             | Toolbar, IconButton, Icon, KeyHint, Divider, Toasts         |
+| States             | EmptyState, ErrorState, LoadingState                        |
+| Visuals            | ProgressBar, Meter, Timeline, ActivityWaveform              |
 | Layout (dashboard) | planLayout, distribute, resolveBreakpoint, shellContentSize |
 
 ### Gaps to build (this feature)
 
-| New | Replaces |
-|-----|----------|
-| FormSection | 3× inline Section |
-| FormField | 3× inline Field |
-| ActionBar | 6× inline toolbar/footer boxes |
-| ScreenLayout | Editor column structure |
+| New                       | Replaces                             |
+| ------------------------- | ------------------------------------ |
+| FormSection               | 3× inline Section                    |
+| FormField                 | 3× inline Field                      |
+| ActionBar                 | 6× inline toolbar/footer boxes       |
+| ScreenLayout              | Editor column structure              |
 | formLayout / useFormScale | vibeEditorLayout + ad-hoc width math |
-| useListKeyboard | 3× list key handlers |
-| ConfirmModal | 6× duplicate modal bodies |
-| theme/validate.isValidHex | screen-layer import in ColorField |
+| useListKeyboard           | 3× list key handlers                 |
+| ConfirmModal              | 6× duplicate modal bodies            |
+| theme/validate.isValidHex | screen-layer import in ColorField    |

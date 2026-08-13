@@ -57,7 +57,9 @@ describe('themeDraft', () => {
     const args = draftToSaveArgs(draft);
     expect(args['name']).toBe('forest');
     expect(args['appearance']).toBe('dark');
-    expect(args['colors']).toEqual(expect.objectContaining({ accent: '#5ad19b', background: '#0b1020' }));
+    expect(args['colors']).toEqual(
+      expect.objectContaining({ accent: '#5ad19b', background: '#0b1020' }),
+    );
   });
 
   it('rejects invalid names', () => {

@@ -165,7 +165,9 @@ describe('setup', () => {
 
     vi.advanceTimersByTime(1000);
     await vi.waitFor(() =>
-      expect((entities.get(METRICS_ENTITY) as { lastUpdatedAt: number | null }).lastUpdatedAt).not.toBeNull(),
+      expect(
+        (entities.get(METRICS_ENTITY) as { lastUpdatedAt: number | null }).lastUpdatedAt,
+      ).not.toBeNull(),
     );
 
     await commands.get('system-monitor.widget-unmounted')?.run();

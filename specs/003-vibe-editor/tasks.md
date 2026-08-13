@@ -1,5 +1,5 @@
 ---
-description: "Task list for user-friendly vibe editor implementation"
+description: 'Task list for user-friendly vibe editor implementation'
 ---
 
 # Tasks: User-Friendly Vibe Editor

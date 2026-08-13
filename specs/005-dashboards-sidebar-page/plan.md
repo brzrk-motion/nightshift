@@ -32,21 +32,21 @@ Add a **Dashboards** nav screen (above Vibes) that mirrors the Vibes catalog/edi
 
 ## Constitution Check
 
-*GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
+_GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 
 `.specify/memory/constitution.md` is still the Speckit placeholder. Gates from `AGENTS.md` / README:
 
-| Gate | Status | Notes |
-|------|--------|-------|
-| Everything is a plugin | N/A / PASS | Dashboards are core shell + dashboard package |
-| Public SDK only for plugins | PASS | No plugin changes |
-| Dashboards consume widgets | PASS | Blank dashboards valid YAML; widgets added on Home |
-| Vibes orchestrate actions | PASS | Vibe picker reads enriched `nightshift.dashboards` |
-| Entities provide shared state | PASS | Extended catalog + optional `nightshift.dashboard` active snapshot |
-| UI must not import dashboard parse | PASS | Save/delete via commands |
-| Never let one bad input break startup | PASS | Soft-fail load/save/delete; broken YAML skipped |
-| No console outside CLI | PASS | Toasts via AppRuntime |
-| Tests co-located | PASS | Draft + parse/delete tests |
+| Gate                                  | Status     | Notes                                                              |
+| ------------------------------------- | ---------- | ------------------------------------------------------------------ |
+| Everything is a plugin                | N/A / PASS | Dashboards are core shell + dashboard package                      |
+| Public SDK only for plugins           | PASS       | No plugin changes                                                  |
+| Dashboards consume widgets            | PASS       | Blank dashboards valid YAML; widgets added on Home                 |
+| Vibes orchestrate actions             | PASS       | Vibe picker reads enriched `nightshift.dashboards`                 |
+| Entities provide shared state         | PASS       | Extended catalog + optional `nightshift.dashboard` active snapshot |
+| UI must not import dashboard parse    | PASS       | Save/delete via commands                                           |
+| Never let one bad input break startup | PASS       | Soft-fail load/save/delete; broken YAML skipped                    |
+| No console outside CLI                | PASS       | Toasts via AppRuntime                                              |
+| Tests co-located                      | PASS       | Draft + parse/delete tests                                         |
 
 **Post-design re-check**: Still PASS — contracts are command/entity surfaces; `DashboardApp` publishes active name to entities (host-side callback), UI screens remain decoupled from filesystem.
 
@@ -99,5 +99,5 @@ packages/dashboard/src/
 **Baseline audit (T001)**: Gaps closed in this branch — enriched `nightshift.dashboards` catalog, `nightshift.dashboard` active entity, `dashboard.save`/`dashboard.delete` host commands, Dashboards screen mirroring Vibes UX, Home nav label.
 
 | Violation | Why Needed | Simpler Alternative Rejected Because |
-|-----------|------------|-------------------------------------|
-| — | — | — |
+| --------- | ---------- | ------------------------------------ |
+| —         | —          | —                                    |

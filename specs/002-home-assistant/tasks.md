@@ -1,5 +1,5 @@
 ---
-description: "Task list for Home Assistant scenes plugin implementation"
+description: 'Task list for Home Assistant scenes plugin implementation'
 ---
 
 # Tasks: Home Assistant Scenes
@@ -28,9 +28,9 @@ Plugin package at `plugins/home-assistant/` (mirrors `plugins/weather` / `plugin
 
 **Purpose**: Scaffold the `@nightshift/plugin-home-assistant` workspace package
 
-- [X] T001 Create `plugins/home-assistant/` package skeleton mirroring `plugins/weather` (`package.json` name `@nightshift/plugin-home-assistant`, `tsconfig.json`, `tsconfig.typecheck.json`, `vitest.config.ts` copied from weather, empty `src/`)
-- [X] T002 [P] Set `plugins/home-assistant/package.json` scripts/deps (`@nightshift/sdk`, `@opentui/react`, `react`; devDeps `@nightshift/entities`, `@nightshift/ui`, `@types/react`) and description for Home Assistant scenes
-- [X] T003 Run `pnpm install` from repo root so the new workspace package links
+- [x] T001 Create `plugins/home-assistant/` package skeleton mirroring `plugins/weather` (`package.json` name `@nightshift/plugin-home-assistant`, `tsconfig.json`, `tsconfig.typecheck.json`, `vitest.config.ts` copied from weather, empty `src/`)
+- [x] T002 [P] Set `plugins/home-assistant/package.json` scripts/deps (`@nightshift/sdk`, `@opentui/react`, `react`; devDeps `@nightshift/entities`, `@nightshift/ui`, `@types/react`) and description for Home Assistant scenes
+- [x] T003 Run `pnpm install` from repo root so the new workspace package links
 
 ---
 
@@ -40,15 +40,15 @@ Plugin package at `plugins/home-assistant/` (mirrors `plugins/weather` / `plugin
 
 **âš ï¸ CRITICAL**: No user story work until this phase completes
 
-- [X] T004 [P] Extend `context.fetch` in `packages/services/src/plugins/host.ts` to allow `http:` only for loopback (`localhost`, `127.0.0.1`, `::1`) and RFC1918 IPv4 hosts; keep denying public `http:`
-- [X] T005 [P] Update `PluginContext.fetch` JSDoc in `packages/sdk/src/index.ts` to document HTTPS + private-network HTTP policy
-- [X] T006 Write Vitest cases in `packages/services/src/plugins/host.test.ts` for `http://192.168.0.2/` allowed, `http://127.0.0.1:8123/` allowed, `http://example.com/` denied, `https://example.com/` allowed (with `network` grant)
-- [X] T007 [P] Define `HOME_ASSISTANT_CONNECTION_ENTITY`, `HOME_ASSISTANT_SCENES_ENTITY`, `ConnectionState`, `ScenesState`, `Scene`, and initial empty states in `plugins/home-assistant/src/entity.ts` per `specs/002-home-assistant/data-model.md`
-- [X] T008 [P] Write failing Vitest cases for address normalization table in `plugins/home-assistant/src/url.test.ts` per `specs/002-home-assistant/contracts/plugin-surface.md`
-- [X] T009 Implement `normalizeBaseUrl` / validation in `plugins/home-assistant/src/url.ts` until `url.test.ts` passes
-- [X] T010 [P] Write failing Vitest cases for corrupt/partial/empty credentials storage → safe unconfigured in `plugins/home-assistant/src/storage.test.ts`
-- [X] T011 Implement parse/serialize for storage key `credentials` v1 in `plugins/home-assistant/src/storage.ts` until `storage.test.ts` passes
-- [X] T012 Add `definePlugin` shell in `plugins/home-assistant/src/index.ts` (id `home-assistant`, caps including `storage` + `network`, load credentials defensively, `registerEntity` for connection + scenes, no commands/widgets yet)
+- [x] T004 [P] Extend `context.fetch` in `packages/services/src/plugins/host.ts` to allow `http:` only for loopback (`localhost`, `127.0.0.1`, `::1`) and RFC1918 IPv4 hosts; keep denying public `http:`
+- [x] T005 [P] Update `PluginContext.fetch` JSDoc in `packages/sdk/src/index.ts` to document HTTPS + private-network HTTP policy
+- [x] T006 Write Vitest cases in `packages/services/src/plugins/host.test.ts` for `http://192.168.0.2/` allowed, `http://127.0.0.1:8123/` allowed, `http://example.com/` denied, `https://example.com/` allowed (with `network` grant)
+- [x] T007 [P] Define `HOME_ASSISTANT_CONNECTION_ENTITY`, `HOME_ASSISTANT_SCENES_ENTITY`, `ConnectionState`, `ScenesState`, `Scene`, and initial empty states in `plugins/home-assistant/src/entity.ts` per `specs/002-home-assistant/data-model.md`
+- [x] T008 [P] Write failing Vitest cases for address normalization table in `plugins/home-assistant/src/url.test.ts` per `specs/002-home-assistant/contracts/plugin-surface.md`
+- [x] T009 Implement `normalizeBaseUrl` / validation in `plugins/home-assistant/src/url.ts` until `url.test.ts` passes
+- [x] T010 [P] Write failing Vitest cases for corrupt/partial/empty credentials storage → safe unconfigured in `plugins/home-assistant/src/storage.test.ts`
+- [x] T011 Implement parse/serialize for storage key `credentials` v1 in `plugins/home-assistant/src/storage.ts` until `storage.test.ts` passes
+- [x] T012 Add `definePlugin` shell in `plugins/home-assistant/src/index.ts` (id `home-assistant`, caps including `storage` + `network`, load credentials defensively, `registerEntity` for connection + scenes, no commands/widgets yet)
 
 **Checkpoint**: Package builds; host allowlist tests green; url + storage tests green; plugin loads without throwing on bad storage
 
@@ -62,16 +62,16 @@ Plugin package at `plugins/home-assistant/` (mirrors `plugins/weather` / `plugin
 
 ### Tests for User Story 1
 
-- [X] T013 [P] [US1] Write failing Vitest cases for `checkConnection` (200 ok, 401 auth error, network throw) in `plugins/home-assistant/src/client.test.ts`
-- [X] T014 [P] [US1] Write failing fake-context setup tests in `plugins/home-assistant/src/index.test.ts` asserting `network` capability, entities register, corrupt storage does not throw, and configure persists without putting `token` on `home-assistant.connection`
+- [x] T013 [P] [US1] Write failing Vitest cases for `checkConnection` (200 ok, 401 auth error, network throw) in `plugins/home-assistant/src/client.test.ts`
+- [x] T014 [P] [US1] Write failing fake-context setup tests in `plugins/home-assistant/src/index.test.ts` asserting `network` capability, entities register, corrupt storage does not throw, and configure persists without putting `token` on `home-assistant.connection`
 
 ### Implementation for User Story 1
 
-- [X] T015 [US1] Implement `checkConnection(fetch, baseUrl, token)` in `plugins/home-assistant/src/client.ts` (`GET {baseUrl}/api/` + Bearer) until connection cases in `client.test.ts` pass
-- [X] T016 [US1] Register `home-assistant.configure` command (normalize address, reject empty, persist storage, update connection entity, run check) in `plugins/home-assistant/src/index.ts` per `specs/002-home-assistant/contracts/plugin-surface.md`
-- [X] T017 [US1] On setup when credentials exist, restore connection entity and run check (soft-fail) in `plugins/home-assistant/src/index.ts`
-- [X] T018 [US1] Implement configure form UI (address + token `TextInput`, save → `home-assistant.configure`, show `connection.error`) in `plugins/home-assistant/src/widgets.tsx`
-- [X] T019 [US1] Register widget type `home-assistant.scenes` (entities connection + scenes) and wire render from `plugins/home-assistant/src/index.ts`
+- [x] T015 [US1] Implement `checkConnection(fetch, baseUrl, token)` in `plugins/home-assistant/src/client.ts` (`GET {baseUrl}/api/` + Bearer) until connection cases in `client.test.ts` pass
+- [x] T016 [US1] Register `home-assistant.configure` command (normalize address, reject empty, persist storage, update connection entity, run check) in `plugins/home-assistant/src/index.ts` per `specs/002-home-assistant/contracts/plugin-surface.md`
+- [x] T017 [US1] On setup when credentials exist, restore connection entity and run check (soft-fail) in `plugins/home-assistant/src/index.ts`
+- [x] T018 [US1] Implement configure form UI (address + token `TextInput`, save → `home-assistant.configure`, show `connection.error`) in `plugins/home-assistant/src/widgets.tsx`
+- [x] T019 [US1] Register widget type `home-assistant.scenes` (entities connection + scenes) and wire render from `plugins/home-assistant/src/index.ts`
 
 **Checkpoint**: Unconfigured → form → configure → connected/error; restart restores credentials; US1 independent test passes
 
@@ -85,18 +85,18 @@ Plugin package at `plugins/home-assistant/` (mirrors `plugins/weather` / `plugin
 
 ### Tests for User Story 2
 
-- [X] T020 [P] [US2] Write failing Vitest cases for filtering/mapping HA states → sorted `Scene[]` (drop non-scenes, friendly_name fallback) in `plugins/home-assistant/src/scenes.test.ts`
-- [X] T021 [P] [US2] Extend `plugins/home-assistant/src/client.test.ts` with failing cases for `listScenes` and `activateScene` (Bearer header, path, body `entity_id`, non-OK soft error)
+- [x] T020 [P] [US2] Write failing Vitest cases for filtering/mapping HA states → sorted `Scene[]` (drop non-scenes, friendly_name fallback) in `plugins/home-assistant/src/scenes.test.ts`
+- [x] T021 [P] [US2] Extend `plugins/home-assistant/src/client.test.ts` with failing cases for `listScenes` and `activateScene` (Bearer header, path, body `entity_id`, non-OK soft error)
 
 ### Implementation for User Story 2
 
-- [X] T022 [US2] Implement `scenesFromStates` (filter `scene.*`, map name/state, sort) in `plugins/home-assistant/src/scenes.ts` until `scenes.test.ts` passes
-- [X] T023 [US2] Implement `listScenes` / `activateScene` in `plugins/home-assistant/src/client.ts` until client tests pass
-- [X] T024 [US2] Register `home-assistant.refresh` and `home-assistant.activate-scene` commands with write-through scenes entity + soft notify/log on failure in `plugins/home-assistant/src/index.ts`
-- [X] T025 [US2] After successful configure/check, auto-refresh scenes in `plugins/home-assistant/src/index.ts`
-- [X] T026 [US2] Extend `plugins/home-assistant/src/widgets.tsx` with connected scene list, empty state, refresh action, and per-scene activate buttons (respect `activatingId` / loading)
-- [X] T027 [P] [US2] Add widget smoke/coverage in `plugins/home-assistant/src/widgets.test.tsx` (unconfigured form vs connected list; or layout helpers if split)
-- [X] T028 [US2] Extend `plugins/home-assistant/src/index.test.ts` to assert refresh/activate-scene register and mocked activate hits `scene.turn_on`
+- [x] T022 [US2] Implement `scenesFromStates` (filter `scene.*`, map name/state, sort) in `plugins/home-assistant/src/scenes.ts` until `scenes.test.ts` passes
+- [x] T023 [US2] Implement `listScenes` / `activateScene` in `plugins/home-assistant/src/client.ts` until client tests pass
+- [x] T024 [US2] Register `home-assistant.refresh` and `home-assistant.activate-scene` commands with write-through scenes entity + soft notify/log on failure in `plugins/home-assistant/src/index.ts`
+- [x] T025 [US2] After successful configure/check, auto-refresh scenes in `plugins/home-assistant/src/index.ts`
+- [x] T026 [US2] Extend `plugins/home-assistant/src/widgets.tsx` with connected scene list, empty state, refresh action, and per-scene activate buttons (respect `activatingId` / loading)
+- [x] T027 [P] [US2] Add widget smoke/coverage in `plugins/home-assistant/src/widgets.test.tsx` (unconfigured form vs connected list; or layout helpers if split)
+- [x] T028 [US2] Extend `plugins/home-assistant/src/index.test.ts` to assert refresh/activate-scene register and mocked activate hits `scene.turn_on`
 
 **Checkpoint**: List + activate works against mock fetch; empty/error paths recoverable; US2 independent test passes
 
@@ -110,12 +110,12 @@ Plugin package at `plugins/home-assistant/` (mirrors `plugins/weather` / `plugin
 
 ### Tests for User Story 3
 
-- [X] T029 [P] [US3] Write failing Vitest cases in `plugins/home-assistant/src/index.test.ts` for activate-scene with missing/invalid `entity_id` (soft no-op) and fetch failure (does not throw from command handler)
+- [x] T029 [P] [US3] Write failing Vitest cases in `plugins/home-assistant/src/index.test.ts` for activate-scene with missing/invalid `entity_id` (soft no-op) and fetch failure (does not throw from command handler)
 
 ### Implementation for User Story 3
 
-- [X] T030 [US3] Harden `home-assistant.activate-scene` in `plugins/home-assistant/src/index.ts` to catch all errors, `context.log`/`notify`, never rethrow (including unconfigured)
-- [X] T031 [P] [US3] Add example vibe YAML snippet documenting `onActivate` → `home-assistant.activate-scene` in `specs/002-home-assistant/quickstart.md` (and/or a sample under existing vibes docs path if the repo already patterns sample vibes)
+- [x] T030 [US3] Harden `home-assistant.activate-scene` in `plugins/home-assistant/src/index.ts` to catch all errors, `context.log`/`notify`, never rethrow (including unconfigured)
+- [x] T031 [P] [US3] Add example vibe YAML snippet documenting `onActivate` → `home-assistant.activate-scene` in `specs/002-home-assistant/quickstart.md` (and/or a sample under existing vibes docs path if the repo already patterns sample vibes)
 
 **Checkpoint**: Command is vibe-safe; US3 independent test passes against fake context
 
@@ -129,12 +129,12 @@ Plugin package at `plugins/home-assistant/` (mirrors `plugins/weather` / `plugin
 
 ### Tests for User Story 4
 
-- [X] T032 [P] [US4] Write failing Vitest cases in `plugins/home-assistant/src/index.test.ts` for `home-assistant.clear` resetting entities/storage and re-configure replacing token used by next activate
+- [x] T032 [P] [US4] Write failing Vitest cases in `plugins/home-assistant/src/index.test.ts` for `home-assistant.clear` resetting entities/storage and re-configure replacing token used by next activate
 
 ### Implementation for User Story 4
 
-- [X] T033 [US4] Register `home-assistant.clear` command (delete storage credentials, reset connection + scenes entities) in `plugins/home-assistant/src/index.ts`
-- [X] T034 [US4] Add clear / â€œedit connectionâ€ controls on connected widget state in `plugins/home-assistant/src/widgets.tsx` that return to the configure form or call clear/configure
+- [x] T033 [US4] Register `home-assistant.clear` command (delete storage credentials, reset connection + scenes entities) in `plugins/home-assistant/src/index.ts`
+- [x] T034 [US4] Add clear / â€œedit connectionâ€ controls on connected widget state in `plugins/home-assistant/src/widgets.tsx` that return to the configure form or call clear/configure
 
 **Checkpoint**: Clear and reconfigure work; US4 independent test passes
 
@@ -144,12 +144,12 @@ Plugin package at `plugins/home-assistant/` (mirrors `plugins/weather` / `plugin
 
 **Purpose**: Bundle with CLI, defaults/migration, quality gates, validation
 
-- [X] T035 Add `@nightshift/plugin-home-assistant` workspace dependency in `apps/cli/package.json`
-- [X] T036 Append `@nightshift/plugin-home-assistant` to `DEFAULT_CONFIG.plugins`, grant `pluginPermissions['home-assistant']` includes `network`, and bump `CONFIG_VERSION` with migration in `packages/services/src/config.ts`
-- [X] T037 [P] Add `home-assistant.scenes` widget to the default/sample home dashboard YAML used by the CLI (same place other bundled widgets are listed)
-- [X] T038 [P] Add a changeset for the user-visible plugin + host fetch policy (`pnpm changeset`) covering `@nightshift/plugin-home-assistant`, `@nightshift/services`, `@nightshift/sdk` as needed
-- [X] T039 Run `pnpm --filter @nightshift/plugin-home-assistant lint && pnpm --filter @nightshift/plugin-home-assistant typecheck && pnpm --filter @nightshift/plugin-home-assistant test` and `pnpm --filter @nightshift/services test`; fix failures
-- [X] T040 Manually walk `specs/002-home-assistant/quickstart.md` automated section (and optional live HA section if available)
+- [x] T035 Add `@nightshift/plugin-home-assistant` workspace dependency in `apps/cli/package.json`
+- [x] T036 Append `@nightshift/plugin-home-assistant` to `DEFAULT_CONFIG.plugins`, grant `pluginPermissions['home-assistant']` includes `network`, and bump `CONFIG_VERSION` with migration in `packages/services/src/config.ts`
+- [x] T037 [P] Add `home-assistant.scenes` widget to the default/sample home dashboard YAML used by the CLI (same place other bundled widgets are listed)
+- [x] T038 [P] Add a changeset for the user-visible plugin + host fetch policy (`pnpm changeset`) covering `@nightshift/plugin-home-assistant`, `@nightshift/services`, `@nightshift/sdk` as needed
+- [x] T039 Run `pnpm --filter @nightshift/plugin-home-assistant lint && pnpm --filter @nightshift/plugin-home-assistant typecheck && pnpm --filter @nightshift/plugin-home-assistant test` and `pnpm --filter @nightshift/services test`; fix failures
+- [x] T040 Manually walk `specs/002-home-assistant/quickstart.md` automated section (and optional live HA section if available)
 
 ---
 
@@ -256,4 +256,3 @@ Task: "Implement listScenes/activateScene in plugins/home-assistant/src/client.t
 - Commit after each task or logical group
 - Stop at checkpoints to validate independently
 - Avoid: WebSocket HA API, non-scene entity control, in-widget vibe→scene mapper (out of v1 scope)
-

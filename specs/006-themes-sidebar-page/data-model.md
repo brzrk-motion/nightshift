@@ -10,45 +10,45 @@ Canonical durable model is `ThemeSpec` on disk (aligned with `Theme` in `@nights
 
 ### ThemeSpec (file + engine) — aligned with `Theme`
 
-| Field | Type | Rules |
-|-------|------|--------|
-| `name` | string | Non-empty kebab-case; filename stem `<name>.yaml` |
-| `appearance` | `'dark' \| 'light'` | Required |
-| `colors` | `ThemeColors` | All 11 keys required on save; each value `#rrggbb` lowercase hex |
+| Field        | Type                | Rules                                                            |
+| ------------ | ------------------- | ---------------------------------------------------------------- |
+| `name`       | string              | Non-empty kebab-case; filename stem `<name>.yaml`                |
+| `appearance` | `'dark' \| 'light'` | Required                                                         |
+| `colors`     | `ThemeColors`       | All 11 keys required on save; each value `#rrggbb` lowercase hex |
 
 #### ThemeColors keys (fixed set)
 
-| Key | Role |
-|-----|------|
-| `background` | App canvas |
-| `surface` | Panels, cards |
-| `border` | Primary borders |
-| `borderMuted` | Dividers, inactive chrome |
-| `text` | Primary text |
-| `muted` | Secondary text |
-| `accent` | Active/selected |
-| `accentSecondary` | Brand chrome |
-| `success` | Positive status |
-| `warning` | Caution status |
-| `danger` | Error/destructive |
+| Key               | Role                      |
+| ----------------- | ------------------------- |
+| `background`      | App canvas                |
+| `surface`         | Panels, cards             |
+| `border`          | Primary borders           |
+| `borderMuted`     | Dividers, inactive chrome |
+| `text`            | Primary text              |
+| `muted`           | Secondary text            |
+| `accent`          | Active/selected           |
+| `accentSecondary` | Brand chrome              |
+| `success`         | Positive status           |
+| `warning`         | Caution status            |
+| `danger`          | Error/destructive         |
 
 ### ThemeCatalogRow (`nightshift.themes.themes[]`) — new
 
-| Field | Type | Rules |
-|-------|------|--------|
-| `name` | string | Unique in merged catalog |
-| `source` | `'built-in' \| 'user'` | `user` if file exists in themes dir for name |
-| `active` | boolean | `name === app.themes.current.name` |
-| `appearance` | `'dark' \| 'light'` | |
-| `colors` | `ThemeColors` | Full palette for edit round-trip |
+| Field        | Type                   | Rules                                        |
+| ------------ | ---------------------- | -------------------------------------------- |
+| `name`       | string                 | Unique in merged catalog                     |
+| `source`     | `'built-in' \| 'user'` | `user` if file exists in themes dir for name |
+| `active`     | boolean                | `name === app.themes.current.name`           |
+| `appearance` | `'dark' \| 'light'`    |                                              |
+| `colors`     | `ThemeColors`          | Full palette for edit round-trip             |
 
 ### ThemeDraft (UI-only)
 
-| Field | Type | Rules |
-|-------|------|--------|
-| `name` | string | Editable only on create; `/^[a-z][a-z0-9-]*$/` |
-| `appearance` | `'dark' \| 'light'` | SelectField |
-| `colors` | `Record<ThemeColorKey, string>` | Each value validated as hex on save; editor shows live swatch |
+| Field        | Type                            | Rules                                                         |
+| ------------ | ------------------------------- | ------------------------------------------------------------- |
+| `name`       | string                          | Editable only on create; `/^[a-z][a-z0-9-]*$/`                |
+| `appearance` | `'dark' \| 'light'`             | SelectField                                                   |
+| `colors`     | `Record<ThemeColorKey, string>` | Each value validated as hex on save; editor shows live swatch |
 
 ### Active snapshot
 
@@ -75,13 +75,13 @@ Active theme is derived from `app.themes.current` and mirrored in catalog `activ
 
 ## Persistence mapping
 
-| Layer | Location | Contents |
-|-------|----------|----------|
-| File | `themes/<name>.yaml` | Serialized ThemeSpec |
-| Memory | `app.themes` registry | Merged built-in + user themes |
-| Entity | `nightshift.themes` | Catalog rows |
-| Config | `config.json` `theme` | Last activated theme name |
-| Commands | `theme.save`, `theme.delete`, `theme.activate.*` | Mutations / activation |
+| Layer    | Location                                         | Contents                      |
+| -------- | ------------------------------------------------ | ----------------------------- |
+| File     | `themes/<name>.yaml`                             | Serialized ThemeSpec          |
+| Memory   | `app.themes` registry                            | Merged built-in + user themes |
+| Entity   | `nightshift.themes`                              | Catalog rows                  |
+| Config   | `config.json` `theme`                            | Last activated theme name     |
+| Commands | `theme.save`, `theme.delete`, `theme.activate.*` | Mutations / activation        |
 
 ## Integration with pickers
 

@@ -8,7 +8,7 @@
 
 **Input**: User description: "Our next app for nightshift will be a simple habit tracker, we should be able to add habits, and click boxes or check boxes for each day of the week we performed this habit, it should be a rolling 7 day window that we display for this interface, and we should program some basic streaks, etc. It needs to be simple, but intuitive, and the interface should be fully responsive and scalable."
 
-## User Scenarios & Testing *(mandatory)*
+## User Scenarios & Testing _(mandatory)_
 
 ### User Story 1 - Track habits across a rolling week (Priority: P1)
 
@@ -82,7 +82,7 @@ In narrow dashboard slots the tracker remains usable (habit name + day cells rea
 - Corrupted or partial persisted data loads as a safe empty/partial list without crashing Nightshift or other plugins.
 - Zero habits shows an empty state with a clear affordance to add the first habit.
 
-## Requirements *(mandatory)*
+## Requirements _(mandatory)_
 
 ### Functional Requirements
 
@@ -105,7 +105,7 @@ In narrow dashboard slots the tracker remains usable (habit name + day cells rea
 - **Rolling window**: The set of seven local dates `[today-6 … today]` used for display and toggling.
 - **Streak summary**: Derived view of current and longest consecutive completion runs for a habit.
 
-## Success Criteria *(mandatory)*
+## Success Criteria _(mandatory)_
 
 ### Measurable Outcomes
 

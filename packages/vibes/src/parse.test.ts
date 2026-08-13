@@ -3,7 +3,14 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { isNightshiftError } from '@nightshift/core';
-import { loadVibeFile, loadVibes, parseVibe, deleteVibe, saveVibe, serializeVibe } from './parse.js';
+import {
+  loadVibeFile,
+  loadVibes,
+  parseVibe,
+  deleteVibe,
+  saveVibe,
+  serializeVibe,
+} from './parse.js';
 
 const LOCKED_IN = `
 name: locked-in

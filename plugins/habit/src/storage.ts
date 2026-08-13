@@ -27,10 +27,7 @@ function parseHabit(value: unknown): Habit | undefined {
   return { id, name: name.trim(), createdAt };
 }
 
-function parseCompletions(
-  value: unknown,
-  habitIds: ReadonlySet<string>,
-): Record<string, string[]> {
+function parseCompletions(value: unknown, habitIds: ReadonlySet<string>): Record<string, string[]> {
   if (!isRecord(value)) return {};
   const out: Record<string, string[]> = {};
   for (const [habitId, dates] of Object.entries(value)) {

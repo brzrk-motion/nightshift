@@ -13,10 +13,7 @@ export function filterCommands(
   return visible
     .map((command) => ({ command, score: scoreCommand(command, trimmed) }))
     .filter((entry) => entry.score > 0 || commandIdMatches(entry.command.id, trimmed))
-    .sort(
-      (a, b) =>
-        b.score - a.score || a.command.id.localeCompare(b.command.id),
-    )
+    .sort((a, b) => b.score - a.score || a.command.id.localeCompare(b.command.id))
     .slice(0, limit)
     .map((entry) => entry.command);
 }

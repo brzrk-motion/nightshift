@@ -92,7 +92,9 @@ export function ThemesList({
         />
       </ActionBar>
 
-      <box style={{ flexDirection: 'column', gap: 1, flexGrow: 1, paddingLeft: 1, paddingRight: 1 }}>
+      <box
+        style={{ flexDirection: 'column', gap: 1, flexGrow: 1, paddingLeft: 1, paddingRight: 1 }}
+      >
         {themes.length === 0 ? (
           <EmptyState message="No themes available." hint="Press Add theme to create one." />
         ) : (

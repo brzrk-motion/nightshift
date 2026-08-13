@@ -20,9 +20,7 @@ interface ThemesCatalogState {
 }
 
 type View =
-  | { kind: 'list' }
-  | { kind: 'create'; draft: ThemeDraft }
-  | { kind: 'edit'; draft: ThemeDraft };
+  { kind: 'list' } | { kind: 'create'; draft: ThemeDraft } | { kind: 'edit'; draft: ThemeDraft };
 
 /**
  * Themes catalog and in-screen editor. Reads `nightshift.themes` for the list
