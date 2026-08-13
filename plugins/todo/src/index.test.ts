@@ -38,7 +38,7 @@ const { default: plugin } = await import('./index.js');
 /**
  * A minimal, in-memory `PluginContext` — enough to exercise `setup()` exactly
  * as the real plugin host would call it, mirroring the one in
- * `plugins/focus/src/index.test.ts`.
+ * `plugins/pomodoro/src/index.test.ts`.
  */
 function fakeContext() {
   const entities = new Map<string, Json>();

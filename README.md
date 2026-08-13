@@ -252,7 +252,7 @@ a built-in vibe of the same name:
 title: Locked In
 description: Deep work. Timer running, nothing else asking for attention.
 theme: midnight
-dashboard: home
+dashboard: nightshift
 entities:
   pomodoro.session:
     completedPomodorosToday: 0 # merged in, not replaced — only the keys listed change

@@ -166,6 +166,7 @@ describe('migrateConfig', () => {
     expect(result.config.plugins).toContain('@nightshift/plugin-habit');
     expect(result.config.pluginPermissions['spotify']).toEqual(['network']);
     expect(result.config.pluginPermissions['clock']).toEqual(['network']);
+    expect(result.config.plugins).not.toContain('@nightshift/plugin-focus');
   });
 
   it('adds the spotify plugin and network grant when upgrading from v3', () => {
@@ -191,6 +192,7 @@ describe('migrateConfig', () => {
     expect(result.config.plugins).toContain('@nightshift/plugin-habit');
     expect(result.config.pluginPermissions['spotify']).toEqual(['network']);
     expect(result.config.pluginPermissions['clock']).toEqual(['network']);
+    expect(result.config.plugins).not.toContain('@nightshift/plugin-focus');
   });
 
   it('adds the clock network grant when upgrading from v4', () => {
@@ -215,6 +217,7 @@ describe('migrateConfig', () => {
     expect(result.config.version).toBe(11);
     expect(result.config.pluginPermissions['clock']).toEqual(['network']);
     expect(result.config.plugins).toContain('@nightshift/plugin-habit');
+    expect(result.config.plugins).not.toContain('@nightshift/plugin-focus');
   });
 
   it('adds the pomodoro plugin when upgrading from v5', () => {
@@ -243,6 +246,7 @@ describe('migrateConfig', () => {
     expect(result.config.pluginPermissions['home-assistant']).toEqual(
       expect.arrayContaining(['network']),
     );
+    expect(result.config.plugins).not.toContain('@nightshift/plugin-focus');
   });
 
   it('adds the habit plugin when upgrading from v6', () => {
@@ -267,6 +271,7 @@ describe('migrateConfig', () => {
     expect(result.migrated).toBe(true);
     expect(result.config.version).toBe(11);
     expect(result.config.plugins).toContain('@nightshift/plugin-habit');
+    expect(result.config.plugins).not.toContain('@nightshift/plugin-focus');
   });
 
   it('adds the home-assistant plugin when upgrading from v7', () => {
@@ -293,6 +298,7 @@ describe('migrateConfig', () => {
     expect(result.config.version).toBe(11);
     expect(result.config.plugins).toContain('@nightshift/plugin-home-assistant');
     expect(result.config.pluginPermissions['home-assistant']).toEqual(['network']);
+    expect(result.config.plugins).not.toContain('@nightshift/plugin-focus');
   });
 
   it('adds the system-monitor plugin when upgrading from v8', () => {
@@ -324,6 +330,7 @@ describe('migrateConfig', () => {
     expect(result.migrated).toBe(true);
     expect(result.config.version).toBe(11);
     expect(result.config.plugins).toContain('@nightshift/plugin-system-monitor');
+    expect(result.config.plugins).not.toContain('@nightshift/plugin-focus');
   });
 
   it('adds the ambient-noise plugin when upgrading from v9', () => {
@@ -357,6 +364,7 @@ describe('migrateConfig', () => {
     expect(result.config.version).toBe(11);
     expect(result.config.plugins).toContain('@nightshift/plugin-ambient-noise');
     expect(result.config.pluginPermissions['ambient-noise']).toBeUndefined();
+    expect(result.config.plugins).not.toContain('@nightshift/plugin-focus');
   });
 
   it('removes the focus plugin when upgrading from v10', () => {
@@ -391,6 +399,38 @@ describe('migrateConfig', () => {
     expect(result.config.version).toBe(11);
     expect(result.config.plugins).not.toContain('@nightshift/plugin-focus');
     expect(result.config.plugins).toContain('@nightshift/plugin-pomodoro');
+  });
+
+  it('still bumps v10 to v11 when the focus plugin is already absent', () => {
+    const result = migrateConfig({
+      version: 10,
+      defaultDashboard: 'home',
+      defaultVibe: null,
+      theme: 'midnight',
+      logLevel: 'info',
+      plugins: [
+        '@nightshift/plugin-clock',
+        '@nightshift/plugin-habit',
+        '@nightshift/plugin-home-assistant',
+        '@nightshift/plugin-pomodoro',
+        '@nightshift/plugin-spotify',
+        '@nightshift/plugin-todo',
+        '@nightshift/plugin-weather',
+        '@nightshift/plugin-system-monitor',
+        '@nightshift/plugin-ambient-noise',
+      ],
+      pluginPermissions: {
+        weather: ['network'],
+        spotify: ['network'],
+        clock: ['network'],
+        'home-assistant': ['network'],
+      },
+      onboarded: true,
+    });
+
+    expect(result.migrated).toBe(true);
+    expect(result.config.version).toBe(11);
+    expect(result.config.plugins).not.toContain('@nightshift/plugin-focus');
   });
 
   it('is a no-op once the config is current', () => {

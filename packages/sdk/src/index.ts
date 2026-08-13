@@ -35,7 +35,7 @@ export function isCapability(value: unknown): value is Capability {
 }
 
 export interface PluginManifest {
-  /** Unique, kebab-case plugin id, e.g. `focus`. */
+  /** Unique, kebab-case plugin id, e.g. `pomodoro`. */
   id: string;
   /** Name shown in the UI. */
   name: string;

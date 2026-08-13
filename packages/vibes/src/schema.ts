@@ -54,7 +54,7 @@ export const BUILT_IN_VIBES: readonly VibeSpec[] = [
   {
     name: 'night-shift',
     title: 'Night Shift',
-    description: 'Late hours. Dimmed, quiet, long sessions.',
+    description: 'Late hours. Dimmed, quiet, pomodoro running.',
     theme: 'midnight',
     dashboard: 'home',
     onActivate: [{ command: 'pomodoro.start' }],

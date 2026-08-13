@@ -61,7 +61,7 @@ plugins/<id>/
   src/
     index.ts            # definePlugin
     entity.ts           # optional: state types, initial state, hydration guards (weather/habit/todo)
-    <domain>.ts         # pure reducers / formatting / client; colocate entity id here when that's all you need (focus/pomodoro)
+    <domain>.ts         # pure reducers / formatting / client; colocate entity id here when that's all you need (pomodoro)
     widgets.tsx         # render functions
     scale.ts            # only if the widget has a hero that must shrink
     *.test.ts(x)        # co-located
