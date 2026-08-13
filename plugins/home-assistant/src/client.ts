@@ -1,8 +1,6 @@
-import type { PluginFetchInit } from '@nightshift/sdk';
+import type { PluginFetch } from '@nightshift/sdk';
 import type { Scene } from './entity.js';
 import { scenesFromStates, type HaStateRow } from './scenes.js';
-
-export type HaFetch = (url: string, init?: PluginFetchInit) => Promise<Response>;
 
 export class HomeAssistantApiError extends Error {
   readonly status: number;
@@ -33,7 +31,7 @@ async function readErrorMessage(response: Response): Promise<string> {
 
 /** Lightweight reachability + auth check: GET /api/ */
 export async function checkConnection(
-  fetchFn: HaFetch,
+  fetchFn: PluginFetch,
   baseUrl: string,
   token: string,
 ): Promise<void> {
@@ -47,7 +45,7 @@ export async function checkConnection(
 
 /** GET /api/states → scene.* only */
 export async function listScenes(
-  fetchFn: HaFetch,
+  fetchFn: PluginFetch,
   baseUrl: string,
   token: string,
 ): Promise<Scene[]> {
@@ -69,7 +67,7 @@ export async function listScenes(
 
 /** POST /api/services/scene/turn_on */
 export async function activateScene(
-  fetchFn: HaFetch,
+  fetchFn: PluginFetch,
   baseUrl: string,
   token: string,
   entityId: string,

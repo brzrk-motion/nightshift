@@ -1,8 +1,6 @@
-import type { PluginFetchInit } from '@nightshift/sdk';
+import type { PluginFetch } from '@nightshift/sdk';
 import { weatherCodeInfo } from './codes.js';
 import type { WeatherDay, WeatherHour, WeatherUnits } from './entity.js';
-
-export type WeatherFetch = (url: string, init?: PluginFetchInit) => Promise<Response>;
 
 export interface GeocodedPlace {
   name: string;
@@ -43,7 +41,7 @@ export function parseCoordinates(
 }
 
 export async function geocode(
-  fetchFn: WeatherFetch,
+  fetchFn: PluginFetch,
   query: string,
 ): Promise<GeocodedPlace | undefined> {
   const coords = parseCoordinates(query);
@@ -88,7 +86,7 @@ function unitParams(units: WeatherUnits): string {
 }
 
 export async function fetchForecast(
-  fetchFn: WeatherFetch,
+  fetchFn: PluginFetch,
   latitude: number,
   longitude: number,
   units: WeatherUnits,
