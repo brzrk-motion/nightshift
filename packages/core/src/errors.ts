@@ -35,13 +35,6 @@ export class NightshiftError extends Error {
   }
 }
 
-/** Marks a surface that is scaffolded but lands in a later phase. */
-export function notImplemented(feature: string, phase: string): never {
-  throw new NightshiftError('NOT_IMPLEMENTED', `${feature} is not implemented yet.`, {
-    hint: `Scheduled for ${phase} of the Nightshift roadmap.`,
-  });
-}
-
 export function isNightshiftError(value: unknown): value is NightshiftError {
   return value instanceof NightshiftError;
 }

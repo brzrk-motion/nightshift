@@ -8,6 +8,3 @@ export type Unsubscribe = () => void;
 export interface Disposable {
   dispose(): void | Promise<void>;
 }
-
-/** Recursively marks every property optional — used for partial config merges. */
-export type DeepPartial<T> = T extends object ? { [K in keyof T]?: DeepPartial<T[K]> } : T;
