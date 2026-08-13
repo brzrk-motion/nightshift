@@ -46,7 +46,7 @@ export function emptyDraft(): VibeDraft {
   };
 }
 
-const VIBE_NAME = /^[a-z][a-z0-9-]*$/;
+export const VIBE_NAME = /^[a-z][a-z0-9-]*$/;
 
 /** Prefill a create draft from an existing catalog row (duplicate flow). */
 export function duplicateDraft(row: VibeCatalogRow): VibeDraft {
