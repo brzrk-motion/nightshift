@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { TextInput } from './controls.js';
 import { useTheme } from '../app/context.js';
-import { isValidHex } from '../theme/validate.js';
+import { HEX_COLOR } from '../theme.js';
 
 export interface ColorFieldProps {
   label: string;
@@ -22,7 +22,7 @@ export function ColorField({
   disabled = false,
 }: ColorFieldProps): ReactNode {
   const theme = useTheme();
-  const swatchColor = isValidHex(value) ? value.trim() : theme.colors.border;
+  const swatchColor = HEX_COLOR.test(value.trim()) ? value.trim() : theme.colors.border;
 
   return (
     <box

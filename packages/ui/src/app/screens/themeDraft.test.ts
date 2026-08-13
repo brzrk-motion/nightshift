@@ -1,11 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { EMBER_THEME } from '../../theme.js';
+import { EMBER_THEME, HEX_COLOR } from '../../theme.js';
 import {
   draftFromCatalog,
   draftToSaveArgs,
   duplicateDraft,
   emptyDraft,
-  isValidHex,
   mapCatalogActive,
   SAMPLE_CATALOG_ROW,
   type ThemeCatalogRow,
@@ -76,8 +75,8 @@ describe('themeDraft', () => {
   });
 
   it('validates hex strings', () => {
-    expect(isValidHex('#7aa2ff')).toBe(true);
-    expect(isValidHex('#GGGGGG')).toBe(false);
-    expect(isValidHex('7aa2ff')).toBe(false);
+    expect(HEX_COLOR.test('#7aa2ff')).toBe(true);
+    expect(HEX_COLOR.test('#GGGGGG')).toBe(false);
+    expect(HEX_COLOR.test('7aa2ff')).toBe(false);
   });
 });
