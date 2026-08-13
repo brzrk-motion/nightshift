@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
+  AutomationSpec,
   Disposable,
   Entity,
   EntityId,
@@ -15,6 +16,7 @@ function fakeContext() {
   const entities = new Map<string, Json>();
   const commands = new Map<string, PluginCommand>();
   const widgets: PluginWidget[] = [];
+  const automations: AutomationSpec[] = [];
   const storageData = new Map<string, Json>();
   const disposers: (() => void)[] = [];
   const notify = vi.fn();
@@ -67,7 +69,7 @@ function fakeContext() {
     },
     registerCommand: (command) => void commands.set(command.id, command),
     registerWidget: (widget) => void widgets.push(widget),
-    registerAutomation: () => {},
+    registerAutomation: (automation) => void automations.push(automation),
     registerEntity: (id, state) => void entities.set(id, state),
     own: (disposable: Disposable | (() => void)) =>
       void disposers.push(
@@ -75,7 +77,7 @@ function fakeContext() {
       ),
   };
 
-  return { context, entities, commands, widgets, storageData, disposers, notify };
+  return { context, entities, commands, widgets, automations, storageData, disposers, notify };
 }
 
 function player(entities: Map<string, Json>): PlayerState {
@@ -91,6 +93,10 @@ afterEach(() => {
 });
 
 describe('ambient-noise plugin', () => {
+  it('declares automations among its capabilities', () => {
+    expect(plugin.manifest.capabilities).toContain('automations:register');
+  });
+
   it('registers the player entity, commands, and widget without auto-playing', async () => {
     const { context, entities, commands, widgets, disposers } = fakeContext();
     await plugin.setup(context);
@@ -106,6 +112,21 @@ describe('ambient-noise plugin', () => {
     expect(commands.has('ambient-noise.next')).toBe(true);
     expect(commands.has('ambient-noise.previous')).toBe(true);
     expect(widgets.some((widget) => widget.type === 'ambient-noise.player')).toBe(true);
+
+    for (const dispose of disposers) dispose();
+  });
+
+  it('pauses Spotify when ambient playback starts', async () => {
+    const { context, automations, disposers } = fakeContext();
+    await plugin.setup(context);
+
+    expect(automations).toHaveLength(1);
+    expect(automations[0]).toMatchObject({
+      name: 'ambient-noise.pause-spotify',
+      when: { type: 'entity', entity: PLAYER_ENTITY, key: 'status' },
+      and: [{ type: 'equals', entity: PLAYER_ENTITY, key: 'status', value: 'playing' }],
+      then: [{ command: 'spotify.pause' }],
+    });
 
     for (const dispose of disposers) dispose();
   });

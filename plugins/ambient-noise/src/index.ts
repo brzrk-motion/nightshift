@@ -46,6 +46,7 @@ export default definePlugin({
     'entities:write',
     'widgets:register',
     'commands:register',
+    'automations:register',
     'storage',
   ],
 
@@ -271,6 +272,16 @@ export default definePlugin({
       entities: [PLAYER_ENTITY],
       description: 'Named ambient clips with play, pause, and crossfade skip.',
       render: PlayerWidget,
+    });
+
+    // Widgets cannot call each other; exclusive playback goes through the
+    // shared command registry. Pausing Spotify does not set ambient to
+    // playing, so the reverse automation does not loop.
+    context.registerAutomation({
+      name: 'ambient-noise.pause-spotify',
+      when: { type: 'entity', entity: PLAYER_ENTITY, key: 'status' },
+      and: [{ type: 'equals', entity: PLAYER_ENTITY, key: 'status', value: 'playing' }],
+      then: [{ command: 'spotify.pause' }],
     });
 
     context.own(() => {
