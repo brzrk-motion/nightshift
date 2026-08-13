@@ -56,4 +56,11 @@ describe('loadCatalog', () => {
     expect(clips[0]?.name).toBe('Second');
     expect(clips[0]?.file).toBe('b.wav');
   });
+
+  it('lists the bundled MP3 beds', async () => {
+    const clips = await loadCatalog();
+    expect(clips.map((clip) => clip.id)).toEqual(['rainy-day', 'soft-static', 'ambient-noise']);
+    expect(clips.map((clip) => clip.name)).toEqual(['Rainy Day', 'Soft Static', 'Ambient Noise']);
+    expect(clips.every((clip) => clip.status === 'ok' && clip.file.endsWith('.mp3'))).toBe(true);
+  });
 });

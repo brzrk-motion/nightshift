@@ -1,4 +1,17 @@
 [
-  { "id": "rainy-day", "name": "Rainy Day", "file": "rainy-day.wav" },
-  { "id": "white-noise", "name": "White Noise", "file": "white-noise.wav" }
+  {
+    "id": "rainy-day",
+    "name": "Rainy Day",
+    "file": "whitenoisesleepers-rainy-day-in-town-with-birds-singing-194011.mp3"
+  },
+  {
+    "id": "soft-static",
+    "name": "Soft Static",
+    "file": "freesound_community-soft-static-noise-5934.mp3"
+  },
+  {
+    "id": "ambient-noise",
+    "name": "Ambient Noise",
+    "file": "soul_serenity_sounds-ambient-noise-236388.mp3"
+  }
 ]

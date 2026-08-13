@@ -24,16 +24,17 @@
 - Drive two OS players (`aplay` × 2) and hope volumes cross — needs `shell` (not on `PluginContext`), hard to sync, poor fade control.
 - Web Audio API — not available in the OpenTUI/Node process.
 
-## Decision: Decode bundled files as WAV PCM in TypeScript
+## Decision: Decode bundled WAV in TypeScript; MP3 via WASM mpg123
 
 **Rationale**: Ambient beds are short-to-medium loops. WAV PCM 16-bit is trivial to parse (RIFF header + `fmt ` + `data`) with no native decoder. Resample/channel-upmix in TS to a mixer master format (44.1 kHz, stereo, s16). Catalog + files live in `plugins/ambient-noise/test-audio/`.
 
-If files in `test-audio/` are not WAV at implementation time, convert them once (commit WAV) rather than adding mpg123/lame/ffmpeg as a runtime dependency.
+The bundled beds are MP3 (a ~10 minute rain recording would be ~100MB as 44.1 kHz stereo WAV — over GitHub's file limit). Decode MP3 at play with `mpg123-decoder` (WASM, no native addon) into the same mixer PCM. Tiny WAV fixtures under `test-audio/fixtures/` keep unit tests off the large files.
 
 **Alternatives considered**:
 
-- MP3 via `lame` / `mpg123` — extra native decoder; YAGNI if we control the bundled assets.
+- Convert MP3 → WAV and commit WAV — rain bed exceeds GitHub's 100MB file cap at mixer format.
 - Decode with FFmpeg child process — `shell` is declare-only on the SDK; also a capability bypass if spawned via `node:child_process`.
+- Native `lame` / `mpg123` addons — extra node-gyp; WASM avoids that.
 
 ## Decision: Output via `@audio/speaker` behind the sink, with silent fallback
 
@@ -72,8 +73,21 @@ Paused skip: change `currentClipId` only; do not open the device.
 
 ```json
 [
-  { "id": "rainy-day", "name": "Rainy Day", "file": "rainy-day.wav" },
-  { "id": "white-noise", "name": "White Noise", "file": "white-noise.wav" }
+  {
+    "id": "rainy-day",
+    "name": "Rainy Day",
+    "file": "whitenoisesleepers-rainy-day-in-town-with-birds-singing-194011.mp3"
+  },
+  {
+    "id": "soft-static",
+    "name": "Soft Static",
+    "file": "freesound_community-soft-static-noise-5934.mp3"
+  },
+  {
+    "id": "ambient-noise",
+    "name": "Ambient Noise",
+    "file": "soul_serenity_sounds-ambient-noise-236388.mp3"
+  }
 ]
 ```
 

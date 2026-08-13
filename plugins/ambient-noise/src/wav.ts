@@ -33,7 +33,7 @@ function sampleAt(mono: Float32Array, frame: number): number {
   return a + (b - a) * frac;
 }
 
-function toStereoS16(channels: Float32Array[], sampleRate: number): PcmBuffer {
+export function pcmFromChannels(channels: Float32Array[], sampleRate: number): PcmBuffer {
   const frameCountIn = channels[0]?.length ?? 0;
   const ratio = MIXER_SAMPLE_RATE / sampleRate;
   const frameCount = Math.max(1, Math.round(frameCountIn * ratio));
@@ -119,7 +119,7 @@ export function loadWav(bytes: Uint8Array): PcmBuffer {
     }
   }
 
-  return toStereoS16(decoded, sampleRate);
+  return pcmFromChannels(decoded, sampleRate);
 }
 
 export function encodePcm16Wav(

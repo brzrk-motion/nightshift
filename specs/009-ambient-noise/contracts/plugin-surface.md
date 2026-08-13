@@ -77,8 +77,21 @@ Path: `plugins/ambient-noise/test-audio/clips.json` (shipped with the package; r
 
 ```json
 [
-  { "id": "rainy-day", "name": "Rainy Day", "file": "rainy-day.wav" },
-  { "id": "white-noise", "name": "White Noise", "file": "white-noise.wav" }
+  {
+    "id": "rainy-day",
+    "name": "Rainy Day",
+    "file": "whitenoisesleepers-rainy-day-in-town-with-birds-singing-194011.mp3"
+  },
+  {
+    "id": "soft-static",
+    "name": "Soft Static",
+    "file": "freesound_community-soft-static-noise-5934.mp3"
+  },
+  {
+    "id": "ambient-noise",
+    "name": "Ambient Noise",
+    "file": "soul_serenity_sounds-ambient-noise-236388.mp3"
+  }
 ]
 ```
 
@@ -90,7 +103,7 @@ Path: `plugins/ambient-noise/test-audio/clips.json` (shipped with the package; r
 
 Unknown JSON keys ignored (forward-compatible). Duplicate ids: last wins or first wins — pick one in implementation tests and keep it.
 
-WAV v1: PCM, 16-bit preferred; other bit depths converted or rejected as `unavailable`.
+WAV v1: PCM, 16-bit preferred; bundled beds may also be MP3 (decoded at play). Other bit depths converted or rejected as `unavailable`.
 
 ## Audio sink contract (internal, test-facing)
 

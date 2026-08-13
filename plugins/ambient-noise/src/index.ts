@@ -1,6 +1,8 @@
 import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import { definePlugin, type Json, type PluginContext } from '@nightshift/sdk';
-import { loadCatalog, toPublicClips, type CatalogEntry } from './catalog.js';
+import { defaultCatalogDir, loadCatalog, toPublicClips, type CatalogEntry } from './catalog.js';
+import { loadClip } from './decode.js';
 import {
   CHUNK_FRAMES,
   CROSSFADE_MS,
@@ -17,7 +19,6 @@ import {
 } from './entity.js';
 import { Mixer } from './mixer.js';
 import { createDeviceSink, NullSink, type AudioSink } from './sink.js';
-import { loadWav } from './wav.js';
 import { PlayerWidget } from './widgets.js';
 
 function stringArg(args: Record<string, Json> | undefined, key: string): string | undefined {
@@ -36,6 +37,10 @@ async function defaultSink(): Promise<AudioSink> {
   return createDeviceSink();
 }
 
+function runtimeCatalogDir(): string {
+  return process.env['VITEST'] ? join(defaultCatalogDir(), 'fixtures') : defaultCatalogDir();
+}
+
 export default definePlugin({
   id: 'ambient-noise',
   name: 'Ambient Noise',
@@ -51,7 +56,7 @@ export default definePlugin({
   ],
 
   async setup(context: PluginContext) {
-    const entries = await loadCatalog();
+    const entries = await loadCatalog(runtimeCatalogDir());
     const mixer = new Mixer(new NullSink());
     let output: OutputKind = 'silent';
     let outputError: string | null = null;
@@ -60,28 +65,9 @@ export default definePlugin({
     let timer: ReturnType<typeof setInterval> | undefined;
     let levelsTick = 0;
 
-    for (const entry of entries) {
-      if (entry.status !== 'ok') continue;
-      try {
-        const bytes = await readFile(entry.path);
-        mixer.load(entry.id, loadWav(bytes));
-      } catch (error: unknown) {
-        entry.status = 'unavailable';
-        context.log.warn('Could not decode ambient clip', { id: entry.id, error: `${error}` });
-      }
-    }
-
     const clips: ClipPublic[] = toPublicClips(entries);
     const stored = hydrateSettings(await context.storage.get(SETTINGS_STORAGE_KEY));
     let state = initialPlayerState(clips, stored.currentClipId);
-    const selected = selectClip(clips, state.currentClipId);
-    if (selected?.status === 'ok') {
-      mixer.skipTo(selected.id, { fade: false });
-      state = {
-        ...state,
-        durationMs: mixer.durationMs(selected.id),
-      };
-    }
 
     context.registerEntity(PLAYER_ENTITY, state, {
       title: 'Ambient noise',
@@ -165,8 +151,28 @@ export default definePlugin({
       }
     };
 
-    const okEntries = (): CatalogEntry[] =>
-      entries.filter((entry) => entry.status === 'ok' && mixer.has(entry.id));
+    const okEntries = (): CatalogEntry[] => entries.filter((entry) => entry.status === 'ok');
+
+    const refreshClips = (): ClipPublic[] => {
+      const next = toPublicClips(entries);
+      clips.splice(0, clips.length, ...next);
+      return next;
+    };
+
+    const ensureLoaded = async (clipId: string): Promise<boolean> => {
+      if (mixer.has(clipId)) return true;
+      const entry = entries.find((item) => item.id === clipId);
+      if (!entry || entry.status !== 'ok') return false;
+      try {
+        mixer.load(clipId, await loadClip(await readFile(entry.path)));
+        return true;
+      } catch (error: unknown) {
+        entry.status = 'unavailable';
+        refreshClips();
+        context.log.warn('Could not decode ambient clip', { id: entry.id, error: `${error}` });
+        return false;
+      }
+    };
 
     const cycleId = (delta: number): string | null => {
       const ok = okEntries();
@@ -180,12 +186,26 @@ export default definePlugin({
       return next?.id ?? null;
     };
 
-    const selectClipId = (clipId: string, fade: boolean): void => {
-      if (!mixer.has(clipId)) return;
-      const playing = read().status === 'playing' || read().status === 'fading';
-      mixer.skipTo(clipId, { fade: fade && playing });
+    const selectClipId = async (clipId: string, fade: boolean): Promise<void> => {
+      const clip = clips.find((item) => item.id === clipId);
+      if (!clip || clip.status !== 'ok') return;
       persist(clipId);
-      write(snapshot(playing ? (mixer.fading() ? 'fading' : 'playing') : 'paused'));
+      const playing = read().status === 'playing' || read().status === 'fading';
+      if (playing) {
+        if (!(await ensureLoaded(clipId))) {
+          write({ ...read(), clips, status: 'unavailable', error: 'No playable clip.' });
+          return;
+        }
+        mixer.skipTo(clipId, { fade });
+        write(snapshot(mixer.fading() ? 'fading' : 'playing'));
+        return;
+      }
+      write({
+        ...snapshot('paused'),
+        currentClipId: clip.id,
+        currentName: clip.name,
+        durationMs: mixer.durationMs(clip.id),
+      });
     };
 
     context.registerCommand({
@@ -195,8 +215,12 @@ export default definePlugin({
         const current = read();
         if (current.status === 'empty') return;
         const clip = selectClip(clips, current.currentClipId);
-        if (!clip || clip.status !== 'ok' || !mixer.has(clip.id)) {
+        if (!clip || clip.status !== 'ok') {
           write({ ...current, status: 'unavailable', error: 'No playable clip.' });
+          return;
+        }
+        if (!(await ensureLoaded(clip.id))) {
+          write({ ...read(), clips, status: 'unavailable', error: 'No playable clip.' });
           return;
         }
         await ensureSink();
@@ -230,7 +254,8 @@ export default definePlugin({
           return;
         }
         const clip = selectClip(clips, current.currentClipId);
-        if (!clip || clip.status !== 'ok' || !mixer.has(clip.id)) return;
+        if (!clip || clip.status !== 'ok') return;
+        if (!(await ensureLoaded(clip.id))) return;
         await ensureSink();
         mixer.play(clip.id);
         startTicks();
@@ -241,28 +266,28 @@ export default definePlugin({
     context.registerCommand({
       id: 'ambient-noise.next',
       title: 'Next ambient clip',
-      run: () => {
+      run: async () => {
         const id = cycleId(1);
-        if (id) selectClipId(id, true);
+        if (id) await selectClipId(id, true);
       },
     });
 
     context.registerCommand({
       id: 'ambient-noise.previous',
       title: 'Previous ambient clip',
-      run: () => {
+      run: async () => {
         const id = cycleId(-1);
-        if (id) selectClipId(id, true);
+        if (id) await selectClipId(id, true);
       },
     });
 
     context.registerCommand({
       id: 'ambient-noise.select',
       title: 'Select ambient clip',
-      run: (args) => {
+      run: async (args) => {
         const id = stringArg(args, 'id');
-        if (!id || !mixer.has(id)) return;
-        selectClipId(id, true);
+        if (!id) return;
+        await selectClipId(id, true);
       },
     });
 
