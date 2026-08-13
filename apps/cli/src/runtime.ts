@@ -421,6 +421,9 @@ export async function createNightshiftRuntime(
         (dashboard) => dashboard.name === (typeof args?.['name'] === 'string' ? args['name'] : ''),
       );
       const name = typeof args?.['name'] === 'string' ? args['name'] : '';
+      if (args?.['rows'] !== undefined && !Array.isArray(args['rows'])) {
+        throw new NightshiftError('CONFIG_INVALID', 'dashboard.save rows must be a list.');
+      }
       const rows =
         args?.['rows'] !== undefined
           ? (args['rows'] as unknown as RowSpec[])
@@ -506,7 +509,10 @@ export async function createNightshiftRuntime(
     category: 'Vibes',
     hidden: true,
     run: async (args) => {
-      const spec = parseVibe(serializeVibe(args as unknown as VibeSpec), { source: 'vibe.save' });
+      // Normalize so serialize never throws on undefined args; parse owns validation.
+      const spec = parseVibe(serializeVibe({ name: '', ...(args ?? {}) } as VibeSpec), {
+        source: 'vibe.save',
+      });
       await saveVibe(context.paths.vibesDir, spec);
       installVibe(spec);
       userVibeNames.add(spec.name);
@@ -553,9 +559,15 @@ export async function createNightshiftRuntime(
     category: 'Theme',
     hidden: true,
     run: async (args) => {
-      const spec = parseTheme(serializeTheme(args as unknown as ThemeSpec), {
-        source: 'theme.save',
-      });
+      // Normalize so serialize never throws on undefined/partial args; parse owns validation.
+      const spec = parseTheme(
+        serializeTheme({
+          name: typeof args?.['name'] === 'string' ? args['name'] : '',
+          appearance: args?.['appearance'] as ThemeSpec['appearance'],
+          colors: (args?.['colors'] ?? {}) as unknown as ThemeSpec['colors'],
+        }),
+        { source: 'theme.save' },
+      );
       await saveTheme(context.paths.themesDir, spec);
       app.themes.register(spec);
       userThemeNames.add(spec.name);

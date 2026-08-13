@@ -404,6 +404,56 @@ describe('createNightshiftRuntime', () => {
     }
   });
 
+  it('saves a user dashboard via dashboard.save', async () => {
+    const runtime = await createNightshiftRuntime(contextFor());
+
+    try {
+      await runtime.app.commands.run('dashboard.save', {
+        name: 'work-board',
+        title: 'Work',
+        refresh: 30,
+      });
+      const saved = runtime.dashboards.find((dashboard) => dashboard.name === 'work-board');
+      expect(saved).toMatchObject({ name: 'work-board', title: 'Work', refresh: 30 });
+    } finally {
+      await runtime.dispose();
+    }
+  });
+
+  it('saves a user vibe via vibe.save', async () => {
+    const runtime = await createNightshiftRuntime(contextFor());
+
+    try {
+      await runtime.app.commands.run('vibe.save', {
+        name: 'deep-work',
+        title: 'Deep work',
+        theme: 'ember',
+      });
+      expect(runtime.vibes.list().some((vibe) => vibe.name === 'deep-work')).toBe(true);
+      expect(runtime.app.commands.get('vibe.activate.deep-work')).toBeTruthy();
+    } finally {
+      await runtime.dispose();
+    }
+  });
+
+  it('rejects malformed save payloads with NightshiftError, not TypeError', async () => {
+    const runtime = await createNightshiftRuntime(contextFor());
+
+    try {
+      await expect(runtime.app.commands.run('vibe.save')).rejects.toMatchObject({
+        code: 'CONFIG_INVALID',
+      });
+      await expect(
+        runtime.app.commands.run('theme.save', { name: 'broken', appearance: 'dark' }),
+      ).rejects.toMatchObject({ code: 'CONFIG_INVALID' });
+      await expect(
+        runtime.app.commands.run('dashboard.save', { name: 'work', rows: 'nope' }),
+      ).rejects.toMatchObject({ code: 'CONFIG_INVALID' });
+    } finally {
+      await runtime.dispose();
+    }
+  });
+
   it('deletes a user theme and falls back when deleting the active theme', async () => {
     const forest = { ...MIDNIGHT_THEME, name: 'forest' };
     await writeFile(join(dir, 'themes', 'forest.yaml'), serializeTheme(forest));
