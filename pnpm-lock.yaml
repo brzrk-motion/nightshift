@@ -56,6 +56,9 @@ importers:
       '@nightshift/entities':
         specifier: workspace:*
         version: link:../../packages/entities
+      '@nightshift/plugin-ambient-noise':
+        specifier: workspace:*
+        version: link:../../plugins/ambient-noise
       '@nightshift/plugin-clock':
         specifier: workspace:*
         version: link:../../plugins/clock
@@ -245,6 +248,31 @@ importers:
       yaml:
         specifier: ^2.9.0
         version: 2.9.0
+
+  plugins/ambient-noise:
+    dependencies:
+      '@audio/speaker':
+        specifier: ^2.3.3
+        version: 2.3.3
+      '@nightshift/sdk':
+        specifier: workspace:*
+        version: link:../../packages/sdk
+      '@opentui/react':
+        specifier: ^0.5.1
+        version: 0.5.1(react-devtools-core@7.0.1)(react@19.2.8)(typescript@5.9.3)(web-tree-sitter@0.25.10)(ws@8.21.3)
+      react:
+        specifier: ^19.2.8
+        version: 19.2.8
+    devDependencies:
+      '@nightshift/entities':
+        specifier: workspace:*
+        version: link:../../packages/entities
+      '@nightshift/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
+      '@types/react':
+        specifier: ^19.2.18
+        version: 19.2.18
 
   plugins/clock:
     dependencies:
@@ -445,6 +473,40 @@ importers:
         version: 19.2.18
 
 packages:
+
+  '@audio/speaker-darwin-arm64@2.3.3':
+    resolution: {integrity: sha512-0uTpyhB1K1Z9ecf1s58IjgiMZgDZ99nmIaayPHQ0hXoKJeFsb4CIr5M8O/ZH9+sg70folxdhmyryXxxmsQvwtg==}
+    engines: {node: '>=18'}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@audio/speaker-darwin-x64@2.3.3':
+    resolution: {integrity: sha512-q3WgBvvxiqjvAK1gCTJXWY6FTk1og38H809I6JTFMdBvDvvjw9Cc2AVNraktY5+40ZexmN7oYaMZ2n2pgvC7cw==}
+    engines: {node: '>=18'}
+    cpu: [x64]
+    os: [darwin]
+
+  '@audio/speaker-linux-arm64@2.3.3':
+    resolution: {integrity: sha512-VTvmK92KatC0KOzAEj96rLb6MfXzNOKK4sRDEveXmtS1mlPbXzAK9XoZgOc0UDN4IwU9agIxDFBIcDmbrL1GCg==}
+    engines: {node: '>=18'}
+    cpu: [arm64]
+    os: [linux]
+
+  '@audio/speaker-linux-x64@2.3.3':
+    resolution: {integrity: sha512-UqKtHm+EvgGuruA57/1O8ZhU6xgN6C0yFOfVBXFbBb4kkqBa1yiX65bNwKxONpjt24nL/Yv03rUaWaDp2XX00w==}
+    engines: {node: '>=18'}
+    cpu: [x64]
+    os: [linux]
+
+  '@audio/speaker-win32-x64@2.3.3':
+    resolution: {integrity: sha512-fD7E3otk2kZjaCC1d5iBOcqvnS6xTrdQRYm0J7FyGnByVFZzol2oG+RSSxUYT2rolMCQvBMWif7vJAyLBcXX9w==}
+    engines: {node: '>=18'}
+    cpu: [x64]
+    os: [win32]
+
+  '@audio/speaker@2.3.3':
+    resolution: {integrity: sha512-+NcuJjKig+2tluEtxiP5keSEmqf/dtVWjdqlBy585GKxhZLAj2jrTgrWBUUtk9OFt4uD6A0qlmzMwJVhF7NgCQ==}
+    engines: {node: '>=18'}
 
   '@babel/runtime@7.29.7':
     resolution: {integrity: sha512-Nq8OhGWiZIZGV6hLHoyAKLLcJihP/xFeBMGJoUrxTX2psI8dCifzLhZISFb+VWS3wFMRDmCGw5R+dOySCqPLhw==}
@@ -1987,6 +2049,29 @@ packages:
     resolution: {integrity: sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ==}
 
 snapshots:
+
+  '@audio/speaker-darwin-arm64@2.3.3':
+    optional: true
+
+  '@audio/speaker-darwin-x64@2.3.3':
+    optional: true
+
+  '@audio/speaker-linux-arm64@2.3.3':
+    optional: true
+
+  '@audio/speaker-linux-x64@2.3.3':
+    optional: true
+
+  '@audio/speaker-win32-x64@2.3.3':
+    optional: true
+
+  '@audio/speaker@2.3.3':
+    optionalDependencies:
+      '@audio/speaker-darwin-arm64': 2.3.3
+      '@audio/speaker-darwin-x64': 2.3.3
+      '@audio/speaker-linux-arm64': 2.3.3
+      '@audio/speaker-linux-x64': 2.3.3
+      '@audio/speaker-win32-x64': 2.3.3
 
   '@babel/runtime@7.29.7': {}
 

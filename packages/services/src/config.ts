@@ -37,7 +37,7 @@ export interface NightshiftConfig {
   onboarded: boolean;
 }
 
-export const CONFIG_VERSION = 9;
+export const CONFIG_VERSION = 10;
 
 export const DEFAULT_CONFIG: NightshiftConfig = {
   version: CONFIG_VERSION,
@@ -55,6 +55,7 @@ export const DEFAULT_CONFIG: NightshiftConfig = {
     '@nightshift/plugin-todo',
     '@nightshift/plugin-weather',
     '@nightshift/plugin-system-monitor',
+    '@nightshift/plugin-ambient-noise',
   ],
   pluginPermissions: {
     weather: ['network'],
@@ -85,6 +86,7 @@ const POMODORO_PLUGIN = '@nightshift/plugin-pomodoro';
 const HABIT_PLUGIN = '@nightshift/plugin-habit';
 const HOME_ASSISTANT_PLUGIN = '@nightshift/plugin-home-assistant';
 const SYSTEM_MONITOR_PLUGIN = '@nightshift/plugin-system-monitor';
+const AMBIENT_NOISE_PLUGIN = '@nightshift/plugin-ambient-noise';
 
 /**
  * Brings an older on-disk config forward. v1 → v2 ships the weather plugin and
@@ -92,8 +94,9 @@ const SYSTEM_MONITOR_PLUGIN = '@nightshift/plugin-system-monitor';
  * plugin and its network grant; v4 → v5 grants the clock plugin network access,
  * needed once it can look up a location's timezone; v5 → v6 ships the pomodoro
  * plugin; v6 → v7 ships the habit tracker; v7 → v8 ships Home Assistant scenes
- * and its network grant; v8 → v9 ships the system monitor plugin — so existing
- * installs see the same defaults as a fresh one.
+ * and its network grant; v8 → v9 ships the system monitor plugin; v9 → v10
+ * ships the ambient noise player — so existing installs see the same defaults
+ * as a fresh one.
  */
 export function migrateConfig(config: NightshiftConfig): {
   config: NightshiftConfig;
@@ -225,6 +228,15 @@ export function migrateConfig(config: NightshiftConfig): {
       migrated = true;
     }
     next = { ...next, version: 9 };
+    migrated = true;
+  }
+
+  if (next.version < 10) {
+    if (!next.plugins.includes(AMBIENT_NOISE_PLUGIN)) {
+      next = { ...next, plugins: [...next.plugins, AMBIENT_NOISE_PLUGIN] };
+      migrated = true;
+    }
+    next = { ...next, version: 10 };
     migrated = true;
   }
 

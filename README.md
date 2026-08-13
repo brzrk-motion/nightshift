@@ -354,7 +354,7 @@ export default definePlugin({
 A plugin dropped into `plugins/` is imported as-is, so it has to be an installed
 package with its dependencies alongside it, or a bundle.
 
-Nightshift ships eight bundled plugins:
+Nightshift ships bundled plugins:
 
 - **clock** — the time and date, in the machine's own timezone when it can be
   detected (`Intl.DateTimeFormat().resolvedOptions().timeZone`, no network
@@ -391,6 +391,9 @@ Nightshift ships eight bundled plugins:
   [Spotify apps](https://developer.spotify.com/documentation/web-api/concepts/apps);
   allowlist redirect URI `http://127.0.0.1:43891/callback`. Playback control
   needs Spotify Premium.
+- **ambient-noise** — looping named ambient clips (`ambient-noise.player`)
+  with play/pause and next/previous. Track changes crossfade; the current
+  clip name is shown in the widget. No extra plugin permission.
 
 Defaults grant weather, Spotify, clock, and Home Assistant network access
 (the clock only calls out when you set a location — the machine's own

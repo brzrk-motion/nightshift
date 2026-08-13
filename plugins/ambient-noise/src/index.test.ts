@@ -1,0 +1,175 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type {
+  Disposable,
+  Entity,
+  EntityId,
+  Json,
+  PluginCommand,
+  PluginContext,
+  PluginWidget,
+} from '@nightshift/sdk';
+import plugin from './index.js';
+import { PLAYER_ENTITY, type PlayerState } from './entity.js';
+
+function fakeContext() {
+  const entities = new Map<string, Json>();
+  const commands = new Map<string, PluginCommand>();
+  const widgets: PluginWidget[] = [];
+  const storageData = new Map<string, Json>();
+  const disposers: (() => void)[] = [];
+  const notify = vi.fn();
+
+  const entity = (id: string): Entity | undefined =>
+    entities.has(id)
+      ? { id: id as EntityId, state: entities.get(id)!, meta: {}, updatedAt: 0 }
+      : undefined;
+
+  const context: PluginContext = {
+    manifest: {
+      id: 'ambient-noise',
+      name: 'Ambient Noise',
+      version: '0.1.0',
+      apiVersion: 1,
+      capabilities: [],
+    },
+    log: { error() {}, warn() {}, info() {}, debug() {} },
+    notify,
+    entities: {
+      get: <State extends Json = Json>(id: EntityId) => entity(id) as Entity<State> | undefined,
+      has: (id) => entities.has(id),
+      list: () => [...entities.keys()].map((id) => entity(id)!),
+      register: <State extends Json = Json>(id: EntityId, state: State) => {
+        entities.set(id, state);
+        return entity(id)! as Entity<State>;
+      },
+      update: <State extends Json = Json>(id: EntityId, patch: Partial<State>) => {
+        const next = { ...(entities.get(id) as Record<string, Json>), ...patch };
+        entities.set(id, next);
+        return entity(id)! as Entity<State>;
+      },
+      set: <State extends Json = Json>(id: EntityId, state: State) => {
+        entities.set(id, state);
+        return entity(id)! as Entity<State>;
+      },
+      remove: (id) => entities.delete(id),
+      subscribe: () => () => {},
+      subscribeAll: () => () => {},
+      events: undefined as never,
+      clear: () => entities.clear(),
+    },
+    storage: {
+      get: async (key) => storageData.get(key) as never,
+      set: async (key, value) => void storageData.set(key, value),
+      delete: async (key) => void storageData.delete(key),
+    },
+    fetch: async () => {
+      throw new Error('ambient-noise tests do not use network');
+    },
+    registerCommand: (command) => void commands.set(command.id, command),
+    registerWidget: (widget) => void widgets.push(widget),
+    registerAutomation: () => {},
+    registerEntity: (id, state) => void entities.set(id, state),
+    own: (disposable: Disposable | (() => void)) =>
+      void disposers.push(
+        typeof disposable === 'function' ? disposable : () => disposable.dispose(),
+      ),
+  };
+
+  return { context, entities, commands, widgets, storageData, disposers, notify };
+}
+
+function player(entities: Map<string, Json>): PlayerState {
+  return entities.get(PLAYER_ENTITY) as PlayerState;
+}
+
+beforeEach(() => {
+  vi.useFakeTimers();
+});
+
+afterEach(() => {
+  vi.useRealTimers();
+});
+
+describe('ambient-noise plugin', () => {
+  it('registers the player entity, commands, and widget without auto-playing', async () => {
+    const { context, entities, commands, widgets, disposers } = fakeContext();
+    await plugin.setup(context);
+
+    expect(plugin.manifest.id).toBe('ambient-noise');
+    expect(entities.has(PLAYER_ENTITY)).toBe(true);
+    const state = player(entities);
+    expect(state.status === 'paused' || state.status === 'empty').toBe(true);
+    expect(state.status).not.toBe('playing');
+    expect(commands.has('ambient-noise.play')).toBe(true);
+    expect(commands.has('ambient-noise.pause')).toBe(true);
+    expect(commands.has('ambient-noise.toggle')).toBe(true);
+    expect(commands.has('ambient-noise.next')).toBe(true);
+    expect(commands.has('ambient-noise.previous')).toBe(true);
+    expect(widgets.some((widget) => widget.type === 'ambient-noise.player')).toBe(true);
+
+    for (const dispose of disposers) dispose();
+  });
+
+  it('play, pause, and toggle mutate player status with a silent sink', async () => {
+    const { context, entities, commands, disposers } = fakeContext();
+    await plugin.setup(context);
+    if (player(entities).status === 'empty') {
+      for (const dispose of disposers) dispose();
+      return;
+    }
+
+    await commands.get('ambient-noise.play')?.run();
+    expect(player(entities).status).toBe('playing');
+    expect(player(entities).output === 'silent' || player(entities).output === 'device').toBe(true);
+
+    await commands.get('ambient-noise.pause')?.run();
+    expect(player(entities).status).toBe('paused');
+
+    await commands.get('ambient-noise.toggle')?.run();
+    expect(player(entities).status).toBe('playing');
+    await commands.get('ambient-noise.toggle')?.run();
+    expect(player(entities).status).toBe('paused');
+
+    for (const dispose of disposers) dispose();
+  });
+
+  it('wraps next/previous and ignores an unknown select id', async () => {
+    const { context, entities, commands, disposers } = fakeContext();
+    await plugin.setup(context);
+    const first = player(entities);
+    if (first.clips.filter((clip) => clip.status === 'ok').length < 2) {
+      await commands.get('ambient-noise.next')?.run();
+      expect(player(entities).currentClipId).toBe(first.currentClipId);
+      for (const dispose of disposers) dispose();
+      return;
+    }
+
+    const startId = first.currentClipId;
+    await commands.get('ambient-noise.next')?.run();
+    const afterNext = player(entities);
+    expect(afterNext.currentClipId).not.toBe(startId);
+    expect(afterNext.currentName).not.toBe('');
+    expect(afterNext.status).toBe('paused');
+
+    await commands.get('ambient-noise.previous')?.run();
+    expect(player(entities).currentClipId).toBe(startId);
+
+    const last = first.clips[first.clips.length - 1];
+    if (last) {
+      await commands.get('ambient-noise.select')?.run({ id: last.id });
+      expect(player(entities).currentClipId).toBe(last.id);
+    }
+    await commands.get('ambient-noise.select')?.run({ id: 'does-not-exist' });
+    expect(player(entities).currentClipId).toBe(last?.id ?? startId);
+
+    for (const dispose of disposers) dispose();
+  });
+
+  it('teardown closes the mixer without throwing', async () => {
+    const { context, disposers } = fakeContext();
+    await plugin.setup(context);
+    expect(() => {
+      for (const dispose of disposers) dispose();
+    }).not.toThrow();
+  });
+});

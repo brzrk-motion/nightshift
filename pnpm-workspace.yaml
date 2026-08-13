@@ -5,4 +5,5 @@ packages:
   - 'plugins/*'
 # esbuild ships prebuilt binaries and needs its install script to select one.
 allowBuilds:
+  '@audio/speaker': false
   esbuild: true

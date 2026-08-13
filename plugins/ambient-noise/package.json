@@ -1,0 +1,38 @@
+{
+  "name": "@nightshift/plugin-ambient-noise",
+  "version": "0.1.0",
+  "description": "Ambient noise player — looping named clips with play/pause and crossfade skip.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "test-audio"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.typecheck.json",
+    "lint": "eslint src",
+    "test": "vitest run --passWithNoTests",
+    "clean": "rm -rf dist *.tsbuildinfo"
+  },
+  "dependencies": {
+    "@audio/speaker": "^2.3.3",
+    "@nightshift/sdk": "workspace:*",
+    "@opentui/react": "^0.5.1",
+    "react": "^19.2.8"
+  },
+  "devDependencies": {
+    "@nightshift/entities": "workspace:*",
+    "@nightshift/ui": "workspace:*",
+    "@types/react": "^19.2.18"
+  }
+}

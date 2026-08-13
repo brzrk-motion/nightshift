@@ -30,10 +30,10 @@ description: "Task list for Ambient Noise plugin"
 
 **Purpose**: Scaffold the plugin workspace package and clip asset folder
 
-- [ ] T001 Create `plugins/ambient-noise/` with `package.json`, `tsconfig.json`, `tsconfig.typecheck.json`, and `vitest.config.ts` mirroring `plugins/weather/` (`@nightshift/plugin-ambient-noise`; runtime deps `@nightshift/sdk`, `@opentui/react`, `react`, and `@audio/speaker`; `files` includes `dist` and `test-audio`)
-- [ ] T002 [P] Add `.changeset/ambient-noise-plugin.md` describing the bundled ambient player widget (minor on `@nightshift/cli` and `@nightshift/plugin-ambient-noise`, patch on `@nightshift/services`)
-- [ ] T003 [P] Create `plugins/ambient-noise/test-audio/` with `clips.json` mapping kebab-case ids to display names like "Rainy Day" and "White Noise" plus WAV PCM files (use existing samples if present; otherwise generate short fixture WAVs for tests per `specs/009-ambient-noise/research.md`)
-- [ ] T004 Run `pnpm install` from repo root so `@nightshift/plugin-ambient-noise` is linked in the workspace
+- [x] T001 Create `plugins/ambient-noise/` with `package.json`, `tsconfig.json`, `tsconfig.typecheck.json`, and `vitest.config.ts` mirroring `plugins/weather/` (`@nightshift/plugin-ambient-noise`; runtime deps `@nightshift/sdk`, `@opentui/react`, `react`, and `@audio/speaker`; `files` includes `dist` and `test-audio`)
+- [x] T002 [P] Add `.changeset/ambient-noise-plugin.md` describing the bundled ambient player widget (minor on `@nightshift/cli` and `@nightshift/plugin-ambient-noise`, patch on `@nightshift/services`)
+- [x] T003 [P] Create `plugins/ambient-noise/test-audio/` with `clips.json` mapping kebab-case ids to display names like "Rainy Day" and "White Noise" plus WAV PCM files (use existing samples if present; otherwise generate short fixture WAVs for tests per `specs/009-ambient-noise/research.md`)
+- [x] T004 Run `pnpm install` from repo root so `@nightshift/plugin-ambient-noise` is linked in the workspace
 
 ---
 
@@ -47,20 +47,20 @@ description: "Task list for Ambient Noise plugin"
 
 > Write these tests FIRST; they must fail until the matching modules exist
 
-- [ ] T005 [P] Add `plugins/ambient-noise/src/wav.test.ts` covering valid PCM16 WAV → frames, truncated/non-PCM → error (no process crash)
-- [ ] T006 [P] Add `plugins/ambient-noise/src/catalog.test.ts` covering `clips.json` load, missing file → `unavailable`, empty dir → empty list, `..` path rejected
-- [ ] T007 [P] Add `plugins/ambient-noise/src/sink.test.ts` covering `NullSink` write/close and `backend: 'silent'` (never opens a device)
-- [ ] T008 Add `plugins/ambient-noise/src/mixer.test.ts` covering play, pause (subsequent ticks silent), loop wrap of playhead, and tick producing interleaved s16 of requested frame count (inject mock sink; no sleeps)
+- [x] T005 [P] Add `plugins/ambient-noise/src/wav.test.ts` covering valid PCM16 WAV → frames, truncated/non-PCM → error (no process crash)
+- [x] T006 [P] Add `plugins/ambient-noise/src/catalog.test.ts` covering `clips.json` load, missing file → `unavailable`, empty dir → empty list, `..` path rejected
+- [x] T007 [P] Add `plugins/ambient-noise/src/sink.test.ts` covering `NullSink` write/close and `backend: 'silent'` (never opens a device)
+- [x] T008 Add `plugins/ambient-noise/src/mixer.test.ts` covering play, pause (subsequent ticks silent), loop wrap of playhead, and tick producing interleaved s16 of requested frame count (inject mock sink; no sleeps)
 
 ### Implementation for Foundational
 
-- [ ] T009 Implement entity id `ambient-noise.player`, `ClipPublic`, `PlayerState`, `StoredSettings`, `initialPlayerState`, and hydrate helpers in `plugins/ambient-noise/src/entity.ts` per `specs/009-ambient-noise/data-model.md`
-- [ ] T010 [P] Implement RIFF PCM parser / stereo s16 @ 44100 upmix in `plugins/ambient-noise/src/wav.ts`
-- [ ] T011 [P] Implement catalog loader in `plugins/ambient-noise/src/catalog.ts` resolving `test-audio/clips.json` via `import.meta.url` / package root (not `cwd`)
-- [ ] T012 Implement `AudioSink` interface, `NullSink`, and dynamic-import `@audio/speaker` device factory with silent fallback in `plugins/ambient-noise/src/sink.ts` (open failure must not throw to setup)
-- [ ] T013 Implement mixer `tick` / `play` / `pause` / loop wrap / optional short loop-seam fade in `plugins/ambient-noise/src/mixer.ts` with injectable sink (crossfade `skipTo` stub allowed until US2)
-- [ ] T014 Implement `definePlugin` in `plugins/ambient-noise/src/index.ts`: load catalog, hydrate `currentClipId` from storage, register `ambient-noise.player`, construct mixer, `context.own()` cleanup of timer/sink; never auto-play
-- [ ] T015 Add `plugins/ambient-noise/src/index.test.ts` fake-context test asserting entity registration, empty/paused initial status, teardown closes sink, and setup does not throw on missing device per `specs/009-ambient-noise/contracts/plugin-surface.md`
+- [x] T009 Implement entity id `ambient-noise.player`, `ClipPublic`, `PlayerState`, `StoredSettings`, `initialPlayerState`, and hydrate helpers in `plugins/ambient-noise/src/entity.ts` per `specs/009-ambient-noise/data-model.md`
+- [x] T010 [P] Implement RIFF PCM parser / stereo s16 @ 44100 upmix in `plugins/ambient-noise/src/wav.ts`
+- [x] T011 [P] Implement catalog loader in `plugins/ambient-noise/src/catalog.ts` resolving `test-audio/clips.json` via `import.meta.url` / package root (not `cwd`)
+- [x] T012 Implement `AudioSink` interface, `NullSink`, and dynamic-import `@audio/speaker` device factory with silent fallback in `plugins/ambient-noise/src/sink.ts` (open failure must not throw to setup)
+- [x] T013 Implement mixer `tick` / `play` / `pause` / loop wrap / optional short loop-seam fade in `plugins/ambient-noise/src/mixer.ts` with injectable sink (crossfade `skipTo` stub allowed until US2)
+- [x] T014 Implement `definePlugin` in `plugins/ambient-noise/src/index.ts`: load catalog, hydrate `currentClipId` from storage, register `ambient-noise.player`, construct mixer, `context.own()` cleanup of timer/sink; never auto-play
+- [x] T015 Add `plugins/ambient-noise/src/index.test.ts` fake-context test asserting entity registration, empty/paused initial status, teardown closes sink, and setup does not throw on missing device per `specs/009-ambient-noise/contracts/plugin-surface.md`
 
 **Checkpoint**: `pnpm --filter @nightshift/plugin-ambient-noise test` green for wav, catalog, sink, mixer loop, and index setup; entity shows a named clip (or empty) and `playing` is false
 
@@ -74,16 +74,16 @@ description: "Task list for Ambient Noise plugin"
 
 ### Tests for User Story 1
 
-- [ ] T016 [P] [US1] Extend `plugins/ambient-noise/src/index.test.ts` so `ambient-noise.play` / `ambient-noise.pause` / `ambient-noise.toggle` mutate `ambient-noise.player` status with a mock sink and do not auto-start
-- [ ] T017 [P] [US1] Add `plugins/ambient-noise/src/widgets.test.tsx` (FFI `describe.skipIf(!detectRuntime().ffi)` like weather) asserting the current clip **display name** and a play control render from mocked entity state
+- [x] T016 [P] [US1] Extend `plugins/ambient-noise/src/index.test.ts` so `ambient-noise.play` / `ambient-noise.pause` / `ambient-noise.toggle` mutate `ambient-noise.player` status with a mock sink and do not auto-start
+- [x] T017 [P] [US1] Add `plugins/ambient-noise/src/widgets.test.tsx` (FFI `describe.skipIf(!detectRuntime().ffi)` like weather) asserting the current clip **display name** and a play control render from mocked entity state
 
 ### Implementation for User Story 1
 
-- [ ] T018 [US1] Implement `ambient-noise.play`, `ambient-noise.pause`, and `ambient-noise.toggle` in `plugins/ambient-noise/src/index.ts` — lazy-open sink, start/stop mixer ticks (`unref()` + `context.own()`), persist `currentClipId` only (not `playing`)
-- [ ] T019 [US1] Map mixer/sink health onto entity `output` (`device` \| `silent` \| `error`) and `outputMessage` in `plugins/ambient-noise/src/index.ts`; toast device errors once with `key: 'output'`
-- [ ] T020 [US1] Implement `PlayerWidget` in `plugins/ambient-noise/src/widgets.tsx` showing `currentName` (never a raw `.wav` basename) plus play/pause using Spotify-style glyphs (`▶` / `▮`) via SDK `Toolbar`/`Button`, `useEntity`, `useCommands`, `useTheme`
-- [ ] T021 [US1] Add `EmptyState` / `ErrorState` / silent-output hint in `plugins/ambient-noise/src/widgets.tsx` for `empty`, `unavailable`, and `output !== 'device'`
-- [ ] T022 [US1] Register widget type `ambient-noise.player` in `plugins/ambient-noise/src/index.ts` with `entities: ['ambient-noise.player']` and `PlayerWidget` render
+- [x] T018 [US1] Implement `ambient-noise.play`, `ambient-noise.pause`, and `ambient-noise.toggle` in `plugins/ambient-noise/src/index.ts` — lazy-open sink, start/stop mixer ticks (`unref()` + `context.own()`), persist `currentClipId` only (not `playing`)
+- [x] T019 [US1] Map mixer/sink health onto entity `output` (`device` \| `silent` \| `error`) and `outputMessage` in `plugins/ambient-noise/src/index.ts`; toast device errors once with `key: 'output'`
+- [x] T020 [US1] Implement `PlayerWidget` in `plugins/ambient-noise/src/widgets.tsx` showing `currentName` (never a raw `.wav` basename) plus play/pause using Spotify-style glyphs (`▶` / `▮`) via SDK `Toolbar`/`Button`, `useEntity`, `useCommands`, `useTheme`
+- [x] T021 [US1] Add `EmptyState` / `ErrorState` / silent-output hint in `plugins/ambient-noise/src/widgets.tsx` for `empty`, `unavailable`, and `output !== 'device'`
+- [x] T022 [US1] Register widget type `ambient-noise.player` in `plugins/ambient-noise/src/index.ts` with `entities: ['ambient-noise.player']` and `PlayerWidget` render
 
 **Checkpoint**: Named clip visible; play loops via mock sink in tests; pause stops ticks; missing device does not break Nightshift (SC-001, SC-003, SC-005)
 
@@ -97,15 +97,15 @@ description: "Task list for Ambient Noise plugin"
 
 ### Tests for User Story 2
 
-- [ ] T023 [P] [US2] Extend `plugins/ambient-noise/src/mixer.test.ts` with equal-power crossfade: during fade, mixed samples are not a hard cut to B; fade duration clamped for clips shorter than `CROSSFADE_MS`; rapid `skipTo` replaces in-progress fade (max two sources)
-- [ ] T024 [P] [US2] Extend `plugins/ambient-noise/src/index.test.ts` for `ambient-noise.next` / `ambient-noise.previous` wrap, paused skip emits no sink audio, and optional `ambient-noise.select` with unknown id no-ops
+- [x] T023 [P] [US2] Extend `plugins/ambient-noise/src/mixer.test.ts` with equal-power crossfade: during fade, mixed samples are not a hard cut to B; fade duration clamped for clips shorter than `CROSSFADE_MS`; rapid `skipTo` replaces in-progress fade (max two sources)
+- [x] T024 [P] [US2] Extend `plugins/ambient-noise/src/index.test.ts` for `ambient-noise.next` / `ambient-noise.previous` wrap, paused skip emits no sink audio, and optional `ambient-noise.select` with unknown id no-ops
 
 ### Implementation for User Story 2
 
-- [ ] T025 [US2] Implement `skipTo(clipId, { fade })` equal-power crossfade (`cos`/`sin` over default 1500 ms, clamped to clip durations) in `plugins/ambient-noise/src/mixer.ts`
-- [ ] T026 [US2] Implement `ambient-noise.next`, `ambient-noise.previous`, and `ambient-noise.select` in `plugins/ambient-noise/src/index.ts` per `specs/009-ambient-noise/contracts/plugin-surface.md` — wrap catalog; fade only when `status` is `playing` or `fading`; persist `currentClipId`
-- [ ] T027 [US2] Add previous/next buttons (`◀◀` / `▶▶`) to `plugins/ambient-noise/src/widgets.tsx` calling `ambient-noise.previous` / `ambient-noise.next`
-- [ ] T028 [US2] Set entity `status: 'fading'` during track-change mix and restore `playing` when fade completes in `plugins/ambient-noise/src/index.ts`
+- [x] T025 [US2] Implement `skipTo(clipId, { fade })` equal-power crossfade (`cos`/`sin` over default 1500 ms, clamped to clip durations) in `plugins/ambient-noise/src/mixer.ts`
+- [x] T026 [US2] Implement `ambient-noise.next`, `ambient-noise.previous`, and `ambient-noise.select` in `plugins/ambient-noise/src/index.ts` per `specs/009-ambient-noise/contracts/plugin-surface.md` — wrap catalog; fade only when `status` is `playing` or `fading`; persist `currentClipId`
+- [x] T027 [US2] Add previous/next buttons (`◀◀` / `▶▶`) to `plugins/ambient-noise/src/widgets.tsx` calling `ambient-noise.previous` / `ambient-noise.next`
+- [x] T028 [US2] Set entity `status: 'fading'` during track-change mix and restore `playing` when fade completes in `plugins/ambient-noise/src/index.ts`
 
 **Checkpoint**: Next/previous update `currentName` immediately; playing skip crossfades; wrap works; one-clip catalog does not error (SC-002)
 
@@ -119,14 +119,14 @@ description: "Task list for Ambient Noise plugin"
 
 ### Tests for User Story 3
 
-- [ ] T029 [P] [US3] Add `plugins/ambient-noise/src/scale.test.ts` covering `compact` / `regular` / `wide` breakpoints from `WidgetProps` width/height
-- [ ] T030 [P] [US3] Extend `plugins/ambient-noise/src/widgets.test.tsx` to render at two sizes and assert compact drops prev/next glyphs while keeping the clip name and play/pause
+- [x] T029 [P] [US3] Add `plugins/ambient-noise/src/scale.test.ts` covering `compact` / `regular` / `wide` breakpoints from `WidgetProps` width/height
+- [x] T030 [P] [US3] Extend `plugins/ambient-noise/src/widgets.test.tsx` to render at two sizes and assert compact drops prev/next glyphs while keeping the clip name and play/pause
 
 ### Implementation for User Story 3
 
-- [ ] T031 [US3] Implement `resolveLayout(width, height)` in `plugins/ambient-noise/src/scale.ts` (`compact` \| `regular` \| `wide`) — no `width < n` checks scattered in JSX
-- [ ] T032 [US3] Apply layout in `plugins/ambient-noise/src/widgets.tsx`: compact = name + play/pause; regular+ = name + prev/play/next; wrap in `overflow: 'hidden'` flex box so content does not spill the panel
-- [ ] T033 [US3] Use compact glyphs `«` / `»` when width is tight but still `regular` enough for skip controls in `plugins/ambient-noise/src/widgets.tsx` (Spotify compact pattern)
+- [x] T031 [US3] Implement `resolveLayout(width, height)` in `plugins/ambient-noise/src/scale.ts` (`compact` \| `regular` \| `wide`) — no `width < n` checks scattered in JSX
+- [x] T032 [US3] Apply layout in `plugins/ambient-noise/src/widgets.tsx`: compact = name + play/pause; regular+ = name + prev/play/next; wrap in `overflow: 'hidden'` flex box so content does not spill the panel
+- [x] T033 [US3] Use compact glyphs `«` / `»` when width is tight but still `regular` enough for skip controls in `plugins/ambient-noise/src/widgets.tsx` (Spotify compact pattern)
 
 **Checkpoint**: Compact and regular slots remain usable; transport reachable; no panel overflow (US3)
 
@@ -140,13 +140,13 @@ description: "Task list for Ambient Noise plugin"
 
 ### Tests for User Story 4
 
-- [ ] T034 [P] [US4] Extend `plugins/ambient-noise/src/mixer.test.ts` so ticks while playing append 0–1 `levels` (capped length); pause does not require visualization
-- [ ] T035 [P] [US4] Extend `plugins/ambient-noise/src/widgets.test.tsx` asserting `ActivityWaveform` appears in wide+playing mocked state and is absent in compact
+- [x] T034 [P] [US4] Extend `plugins/ambient-noise/src/mixer.test.ts` so ticks while playing append 0–1 `levels` (capped length); pause does not require visualization
+- [x] T035 [P] [US4] Extend `plugins/ambient-noise/src/widgets.test.tsx` asserting `ActivityWaveform` appears in wide+playing mocked state and is absent in compact
 
 ### Implementation for User Story 4
 
-- [ ] T036 [US4] Publish mixer RMS/peak ring buffer onto `ambient-noise.player` `levels` (~10 Hz entity updates, not per-sample) from `plugins/ambient-noise/src/index.ts` / `plugins/ambient-noise/src/mixer.ts`
-- [ ] T037 [US4] Render SDK `ActivityWaveform` from `levels` in `plugins/ambient-noise/src/widgets.tsx` only when layout is `wide` and status is `playing` or `fading`
+- [x] T036 [US4] Publish mixer RMS/peak ring buffer onto `ambient-noise.player` `levels` (~10 Hz entity updates, not per-sample) from `plugins/ambient-noise/src/index.ts` / `plugins/ambient-noise/src/mixer.ts`
+- [x] T037 [US4] Render SDK `ActivityWaveform` from `levels` in `plugins/ambient-noise/src/widgets.tsx` only when layout is `wide` and status is `playing` or `fading`
 
 **Checkpoint**: Visualization is optional; P1 transport still works if this phase is skipped
 
@@ -156,12 +156,12 @@ description: "Task list for Ambient Noise plugin"
 
 **Purpose**: Bundle with CLI, config migration, docs, and full validation
 
-- [ ] T038 [P] Add `@nightshift/plugin-ambient-noise` workspace dependency to `apps/cli/package.json`
-- [ ] T039 Add `@nightshift/plugin-ambient-noise` to `DEFAULT_CONFIG.plugins` and bump `CONFIG_VERSION` from 9 to 10 with v9→v10 migration in `packages/services/src/config.ts` (mirror system-monitor v8→v9)
-- [ ] T040 [P] Add config migration test for ambient-noise in `packages/services/src/config.test.ts` (v9 upgrade adds the plugin; no extra `pluginPermissions`)
-- [ ] T041 [P] Document the plugin in `README.md` bundled-plugin list (and dashboard YAML example `type: ambient-noise.player`)
-- [ ] T042 Confirm `plugins/ambient-noise/package.json` `files` includes `test-audio` so clips ship with the package
-- [ ] T043 Run `pnpm --filter @nightshift/plugin-ambient-noise lint && pnpm --filter @nightshift/plugin-ambient-noise typecheck && pnpm --filter @nightshift/plugin-ambient-noise test && pnpm build` and execute automated checks from `specs/009-ambient-noise/quickstart.md`
+- [x] T038 [P] Add `@nightshift/plugin-ambient-noise` workspace dependency to `apps/cli/package.json`
+- [x] T039 Add `@nightshift/plugin-ambient-noise` to `DEFAULT_CONFIG.plugins` and bump `CONFIG_VERSION` from 9 to 10 with v9→v10 migration in `packages/services/src/config.ts` (mirror system-monitor v8→v9)
+- [x] T040 [P] Add config migration test for ambient-noise in `packages/services/src/config.test.ts` (v9 upgrade adds the plugin; no extra `pluginPermissions`)
+- [x] T041 [P] Document the plugin in `README.md` bundled-plugin list (and dashboard YAML example `type: ambient-noise.player`)
+- [x] T042 Confirm `plugins/ambient-noise/package.json` `files` includes `test-audio` so clips ship with the package
+- [x] T043 Run `pnpm --filter @nightshift/plugin-ambient-noise lint && pnpm --filter @nightshift/plugin-ambient-noise typecheck && pnpm --filter @nightshift/plugin-ambient-noise test && pnpm build` and execute automated checks from `specs/009-ambient-noise/quickstart.md`
 
 ---
 
