@@ -25,6 +25,7 @@ export async function loadTodos(path: string = DEFAULT_TODO_PATH): Promise<TodoI
   }
 }
 
+/** `path` defaults to `DEFAULT_TODO_PATH` and is the second argument (`items` first). */
 export async function saveTodos(
   items: readonly TodoItem[],
   path: string = DEFAULT_TODO_PATH,
