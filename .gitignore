@@ -17,3 +17,6 @@ coverage/
 .env
 .env.*
 !.env.example
+
+# Husky internals created by `pnpm prepare`
+.husky/_

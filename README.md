@@ -522,13 +522,15 @@ pnpm build       # build every package, in dependency order
 pnpm test        # run the test suites
 pnpm lint        # eslint
 pnpm typecheck   # tsc --noEmit, tests included
+pnpm check       # format:check + lint + typecheck + test (also the pre-commit hook)
 pnpm format      # prettier --write
 pnpm mcp:up      # build and run the MCP servers (same as ./mcp-up.sh)
 ```
 
 Turborepo drives the task graph, so `pnpm build` builds dependencies first and
 caches anything that has not changed. Changesets manages versioning; run
-`pnpm changeset` alongside a user-visible change.
+`pnpm changeset` alongside a user-visible change. Husky runs `pnpm check` on
+every commit (`HUSKY=0 git commit` skips it).
 
 ## Design principles
 
