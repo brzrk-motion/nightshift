@@ -1,7 +1,7 @@
 {
   "name": "@nightshift/services",
   "version": "0.1.0",
-  "description": "Host services: configuration directory, settings and logging.",
+  "description": "Host services: configuration directory, logging, and the plugin runtime.",
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",

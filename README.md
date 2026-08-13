@@ -507,7 +507,7 @@ packages/ui            Application shell, component library and themes
 packages/dashboard     Dashboard model, layout parser, widget registry
 packages/vibes         The vibe engine
 packages/automations   Triggers, conditions and actions
-packages/services      Config, logging, settings and the plugin runtime
+packages/services      Config, logging, and the plugin runtime
 mcp/context-mcp        A tree-sitter code index served over MCP, for agents
 plugins/clock          The time and date, with 12/24-hour and date format settings
 plugins/pomodoro       Work intervals with short and long breaks — the reference plugin
