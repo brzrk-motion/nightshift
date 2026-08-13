@@ -1,86 +1,16 @@
-import { describe, expect, it, vi } from 'vitest';
-import type {
-  Disposable,
-  Entity,
-  EntityId,
-  Json,
-  PluginCommand,
-  PluginContext,
-  PluginWidget,
-} from '@nightshift/sdk';
+import { describe, expect, it } from 'vitest';
+import { createPluginTestContext } from '@nightshift/sdk/testing';
+import type { PluginContext } from '@nightshift/sdk';
 import plugin from './index.js';
 import { CLOCK_ENTITY, type ClockSettings } from './entity.js';
 import { detectSystemTimezone } from './location.js';
 
-/**
- * A minimal, in-memory `PluginContext` — enough to exercise `setup()` exactly
- * as the real plugin host would call it, without depending on
- * `@nightshift/services` from a plugin's own test suite.
- */
-function fakeContext(fetchImpl?: PluginContext['fetch']) {
-  const entities = new Map<string, Json>();
-  const commands = new Map<string, PluginCommand>();
-  const widgets: PluginWidget[] = [];
-  const disposers: (() => void)[] = [];
-  const storageData = new Map<string, Json>();
-  const notify = vi.fn();
-
-  const entity = (id: string): Entity | undefined =>
-    entities.has(id)
-      ? { id: id as EntityId, state: entities.get(id)!, meta: {}, updatedAt: 0 }
-      : undefined;
-
-  const context: PluginContext = {
-    manifest: { id: 'clock', name: 'Clock', version: '0.1.0', apiVersion: 1, capabilities: [] },
-    log: { error() {}, warn() {}, info() {}, debug() {} },
-    notify,
-    entities: {
-      get: <State extends Json = Json>(id: EntityId) => entity(id) as Entity<State> | undefined,
-      has: (id) => entities.has(id),
-      list: () => [...entities.keys()].map((id) => entity(id)!),
-      register: <State extends Json = Json>(id: EntityId, state: State) => {
-        entities.set(id, state);
-        return entity(id)! as Entity<State>;
-      },
-      update: <State extends Json = Json>(id: EntityId, patch: Partial<State>) => {
-        const next = { ...(entities.get(id) as Record<string, Json>), ...patch };
-        entities.set(id, next);
-        return entity(id)! as Entity<State>;
-      },
-      set: <State extends Json = Json>(id: EntityId, state: State) => {
-        entities.set(id, state);
-        return entity(id)! as Entity<State>;
-      },
-      remove: (id) => entities.delete(id),
-      subscribe: () => () => {},
-      subscribeAll: () => () => {},
-      // Not exercised by this plugin.
-      events: undefined as never,
-      clear: () => entities.clear(),
-    },
-    storage: {
-      get: async (key) => storageData.get(key) as never,
-      set: async (key, value) => void storageData.set(key, value),
-      delete: async (key) => void storageData.delete(key),
-    },
-    fetch:
-      fetchImpl ??
-      (async () => {
-        throw new Error('unexpected fetch');
-      }),
-    registerCommand: (command) => void commands.set(command.id, command),
-    registerWidget: (widget) => void widgets.push(widget),
-    registerAutomation: () => {
-      throw new Error('clock does not register automations');
-    },
-    registerEntity: (id, state) => void entities.set(id, state),
-    own: (disposable: Disposable | (() => void)) =>
-      void disposers.push(
-        typeof disposable === 'function' ? disposable : () => disposable.dispose(),
-      ),
-  };
-
-  return { context, entities, commands, widgets, storageData };
+function clockTestContext(fetch?: PluginContext['fetch']) {
+  return createPluginTestContext({
+    manifest: plugin.manifest,
+    ...(fetch ? { fetch } : {}),
+    fetchErrorMessage: 'unexpected fetch',
+  });
 }
 
 function jsonResponse(body: unknown, status = 200): Response {
@@ -108,7 +38,7 @@ describe('manifest', () => {
 
 describe('setup', () => {
   it('registers the entity with default settings, timezone detected from the machine', async () => {
-    const { context, entities } = fakeContext();
+    const { context, entities } = clockTestContext();
     await plugin.setup(context);
 
     expect(entities.get(CLOCK_ENTITY)).toEqual({
@@ -125,7 +55,7 @@ describe('setup', () => {
   });
 
   it('restores settings saved to storage, before the timezone feature existed', async () => {
-    const { context, entities, storageData } = fakeContext();
+    const { context, entities, storageData } = clockTestContext();
     storageData.set('settings', { hour12: true, showSeconds: false, dateFormat: 'iso' });
 
     await plugin.setup(context);
@@ -140,7 +70,7 @@ describe('setup', () => {
   });
 
   it('restores a saved location override rather than re-detecting the system zone', async () => {
-    const { context, entities, storageData } = fakeContext();
+    const { context, entities, storageData } = clockTestContext();
     storageData.set('settings', {
       hour12: false,
       showSeconds: true,
@@ -161,7 +91,7 @@ describe('setup', () => {
   });
 
   it('ignores malformed stored settings and falls back to defaults', async () => {
-    const { context, entities, storageData } = fakeContext();
+    const { context, entities, storageData } = clockTestContext();
     storageData.set('settings', { hour12: true });
 
     await plugin.setup(context);
@@ -170,7 +100,7 @@ describe('setup', () => {
   });
 
   it('registers the hour-format, seconds, date-format and timezone commands', async () => {
-    const { context, commands } = fakeContext();
+    const { context, commands } = clockTestContext();
     await plugin.setup(context);
 
     expect([...commands.keys()].sort()).toEqual([
@@ -183,7 +113,7 @@ describe('setup', () => {
   });
 
   it('clock.set-hour-format updates and persists the setting', async () => {
-    const { context, entities, commands, storageData } = fakeContext();
+    const { context, entities, commands, storageData } = clockTestContext();
     await plugin.setup(context);
 
     await commands.get('clock.set-hour-format')?.run({ hour12: true });
@@ -193,7 +123,7 @@ describe('setup', () => {
   });
 
   it('clock.set-hour-format ignores a non-boolean argument', async () => {
-    const { context, entities, commands } = fakeContext();
+    const { context, entities, commands } = clockTestContext();
     await plugin.setup(context);
     const before = entities.get(CLOCK_ENTITY);
 
@@ -203,7 +133,7 @@ describe('setup', () => {
   });
 
   it('clock.set-show-seconds updates the setting', async () => {
-    const { context, entities, commands } = fakeContext();
+    const { context, entities, commands } = clockTestContext();
     await plugin.setup(context);
 
     await commands.get('clock.set-show-seconds')?.run({ showSeconds: false });
@@ -212,7 +142,7 @@ describe('setup', () => {
   });
 
   it('clock.set-date-format updates the setting when given a known preset', async () => {
-    const { context, entities, commands } = fakeContext();
+    const { context, entities, commands } = clockTestContext();
     await plugin.setup(context);
 
     await commands.get('clock.set-date-format')?.run({ format: 'iso' });
@@ -221,7 +151,7 @@ describe('setup', () => {
   });
 
   it('clock.set-date-format ignores an unknown preset', async () => {
-    const { context, entities, commands } = fakeContext();
+    const { context, entities, commands } = clockTestContext();
     await plugin.setup(context);
     const before = entities.get(CLOCK_ENTITY);
 
@@ -245,7 +175,7 @@ describe('setup', () => {
         ],
       });
     }) as PluginContext['fetch'];
-    const { context, entities, commands, storageData } = fakeContext(fetchImpl);
+    const { context, entities, commands, storageData } = clockTestContext(fetchImpl);
     await plugin.setup(context);
 
     await commands.get('clock.configure-location')?.run({ query: 'Austin' });
@@ -260,7 +190,7 @@ describe('setup', () => {
 
   it('clock.configure-location records an error when nothing matches', async () => {
     const fetchImpl = (async () => jsonResponse({ results: [] })) as PluginContext['fetch'];
-    const { context, entities, commands } = fakeContext(fetchImpl);
+    const { context, entities, commands } = clockTestContext(fetchImpl);
     await plugin.setup(context);
 
     await commands.get('clock.configure-location')?.run({ query: 'Nowhere' });
@@ -275,7 +205,7 @@ describe('setup', () => {
     const fetchImpl = (async () => {
       throw new Error('network down');
     }) as PluginContext['fetch'];
-    const { context, entities, commands } = fakeContext(fetchImpl);
+    const { context, entities, commands } = clockTestContext(fetchImpl);
     await plugin.setup(context);
 
     await commands.get('clock.configure-location')?.run({ query: 'Austin' });
@@ -286,7 +216,7 @@ describe('setup', () => {
   });
 
   it('clock.configure-location does nothing without a query', async () => {
-    const { context, entities, commands } = fakeContext();
+    const { context, entities, commands } = clockTestContext();
     await plugin.setup(context);
     const before = entities.get(CLOCK_ENTITY);
 
@@ -300,7 +230,7 @@ describe('setup', () => {
       jsonResponse({
         results: [{ name: 'Tokyo', country: 'Japan', timezone: 'Asia/Tokyo' }],
       })) as PluginContext['fetch'];
-    const { context, entities, commands } = fakeContext(fetchImpl);
+    const { context, entities, commands } = clockTestContext(fetchImpl);
     await plugin.setup(context);
     await commands.get('clock.configure-location')?.run({ query: 'Tokyo' });
     expect((entities.get(CLOCK_ENTITY) as ClockSettings).timezoneSource).toBe('location');
@@ -315,7 +245,7 @@ describe('setup', () => {
   });
 
   it('registers one widget with a real renderer', async () => {
-    const { context, widgets } = fakeContext();
+    const { context, widgets } = clockTestContext();
     await plugin.setup(context);
 
     expect(widgets.map((widget) => widget.type)).toEqual(['clock.now']);

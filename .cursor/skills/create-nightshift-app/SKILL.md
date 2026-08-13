@@ -233,10 +233,11 @@ costs of every SDK component and the OpenTUI clipping traps.
 
 ### 7. Tests
 
-- `index.test.ts` — drive `setup()` against a fake `PluginContext`. Copy `fakeContext`
-  from `plugins/weather/src/index.test.ts`; it collects entities, commands, widgets,
-  automations, storage, disposers and `notify` so assertions read as "running this command
-  wrote that state". Use `vi.useFakeTimers()` for polling, and a stub `fetch` returning
+- `index.test.ts` — drive `setup()` against a fake `PluginContext` from
+  `createPluginTestContext()` (`@nightshift/sdk/testing`). It collects entities, commands,
+  widgets, automations, storage, disposers and `notify` so assertions read as "running this
+  command wrote that state". Pass `manifest: plugin.manifest`, seed `storageData` / `fetch`
+  as needed. Use `vi.useFakeTimers()` for polling, and a stub `fetch` returning
   `new Response(JSON.stringify(...))` for network.
 - `widgets.test.tsx` — render for real with `testRender` from `@opentui/react/test-utils`,
   wrapped in `ThemeProvider` + `RuntimeProvider`, then assert on `captureCharFrame()`.

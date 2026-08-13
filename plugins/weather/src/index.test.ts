@@ -1,14 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type {
-  AutomationSpec,
-  Disposable,
-  Entity,
-  EntityId,
-  Json,
-  PluginCommand,
-  PluginContext,
-  PluginWidget,
-} from '@nightshift/sdk';
+import { createPluginTestContext } from '@nightshift/sdk/testing';
+import type { PluginContext } from '@nightshift/sdk';
 import plugin from './index.js';
 import {
   WEATHER_LOCATIONS_ENTITY,
@@ -16,74 +8,12 @@ import {
   type WeatherLocationsState,
 } from './entity.js';
 
-function fakeContext(fetchImpl?: PluginContext['fetch']) {
-  const entities = new Map<string, Json>();
-  const commands = new Map<string, PluginCommand>();
-  const widgets: PluginWidget[] = [];
-  const automations: AutomationSpec[] = [];
-  const disposers: (() => void)[] = [];
-  const storageData = new Map<string, Json>();
-  const notify = vi.fn();
-
-  const entity = (id: string): Entity | undefined =>
-    entities.has(id)
-      ? { id: id as EntityId, state: entities.get(id)!, meta: {}, updatedAt: 0 }
-      : undefined;
-
-  const context: PluginContext = {
-    manifest: {
-      id: 'weather',
-      name: 'Weather',
-      version: '0.1.0',
-      apiVersion: 1,
-      capabilities: [],
-    },
-    log: { error() {}, warn() {}, info() {}, debug() {} },
-    notify,
-    entities: {
-      get: <State extends Json = Json>(id: EntityId) => entity(id) as Entity<State> | undefined,
-      has: (id) => entities.has(id),
-      list: () => [...entities.keys()].map((id) => entity(id)!),
-      register: <State extends Json = Json>(id: EntityId, state: State) => {
-        entities.set(id, state);
-        return entity(id)! as Entity<State>;
-      },
-      update: <State extends Json = Json>(id: EntityId, patch: Partial<State>) => {
-        const next = { ...(entities.get(id) as Record<string, Json>), ...patch };
-        entities.set(id, next);
-        return entity(id)! as Entity<State>;
-      },
-      set: <State extends Json = Json>(id: EntityId, state: State) => {
-        entities.set(id, state);
-        return entity(id)! as Entity<State>;
-      },
-      remove: (id) => entities.delete(id),
-      subscribe: () => () => {},
-      subscribeAll: () => () => {},
-      events: undefined as never,
-      clear: () => entities.clear(),
-    },
-    storage: {
-      get: async (key) => storageData.get(key) as never,
-      set: async (key, value) => void storageData.set(key, value),
-      delete: async (key) => void storageData.delete(key),
-    },
-    fetch:
-      fetchImpl ??
-      (async () => {
-        throw new Error('unexpected fetch');
-      }),
-    registerCommand: (command) => void commands.set(command.id, command),
-    registerWidget: (widget) => void widgets.push(widget),
-    registerAutomation: (automation) => void automations.push(automation),
-    registerEntity: (id, state) => void entities.set(id, state),
-    own: (disposable: Disposable | (() => void)) =>
-      void disposers.push(
-        typeof disposable === 'function' ? disposable : () => disposable.dispose(),
-      ),
-  };
-
-  return { context, entities, commands, widgets, automations, storageData, disposers, notify };
+function weatherTestContext(fetch?: PluginContext['fetch']) {
+  return createPluginTestContext({
+    manifest: plugin.manifest,
+    ...(fetch ? { fetch } : {}),
+    fetchErrorMessage: 'unexpected fetch',
+  });
 }
 
 function jsonResponse(body: unknown, status = 200): Response {
@@ -111,7 +41,7 @@ describe('manifest', () => {
 
 describe('setup', () => {
   it('registers entities, widgets, commands and the frost automation', async () => {
-    const { context, entities, commands, widgets, automations, disposers } = fakeContext();
+    const { context, entities, commands, widgets, automations, disposers } = weatherTestContext();
     await plugin.setup(context);
 
     expect(entities.has(WEATHER_LOCATIONS_ENTITY)).toBe(true);
@@ -167,7 +97,7 @@ describe('setup', () => {
       });
     });
 
-    const { context, entities, commands, storageData } = fakeContext(fetchImpl);
+    const { context, entities, commands, storageData } = weatherTestContext(fetchImpl);
     await plugin.setup(context);
 
     await commands.get('weather.configure-location')!.run({ id: 'home', query: '90210' });
@@ -213,7 +143,7 @@ describe('setup', () => {
       });
     });
 
-    const { context, entities, commands } = fakeContext(fetchImpl);
+    const { context, entities, commands } = weatherTestContext(fetchImpl);
     await plugin.setup(context);
 
     await commands.get('weather.configure-location')!.run({ id: 'home', query: '78701' });
@@ -230,7 +160,7 @@ describe('setup', () => {
       throw new Error('should not forecast');
     });
 
-    const { context, entities, commands, notify } = fakeContext(fetchImpl);
+    const { context, entities, commands, notify } = weatherTestContext(fetchImpl);
     await plugin.setup(context);
     await commands.get('weather.configure-location')!.run({ id: 'home', query: 'zzzzz' });
 
@@ -270,7 +200,7 @@ describe('setup', () => {
       });
     });
 
-    const { context, entities, commands, notify } = fakeContext(fetchImpl);
+    const { context, entities, commands, notify } = weatherTestContext(fetchImpl);
     await plugin.setup(context);
     await commands.get('weather.configure-location')!.run({ id: 'home', query: '78701' });
     expect(notify).not.toHaveBeenCalled();
@@ -291,7 +221,7 @@ describe('setup', () => {
 
   it('does not hit the network on setup when locations are stored but no widget is mounted', async () => {
     const fetchImpl = vi.fn(async () => jsonResponse({ results: [] }));
-    const { context, commands, storageData } = fakeContext(fetchImpl);
+    const { context, commands, storageData } = weatherTestContext(fetchImpl);
     storageData.set('weather', {
       primaryId: 'home',
       units: 'metric',
@@ -353,7 +283,7 @@ describe('setup', () => {
       });
     });
 
-    const { context, commands, storageData } = fakeContext(fetchImpl);
+    const { context, commands, storageData } = weatherTestContext(fetchImpl);
     storageData.set('weather', {
       primaryId: 'home',
       units: 'metric',
