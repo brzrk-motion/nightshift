@@ -1,0 +1,4 @@
+[
+  { "id": "rainy-day", "name": "Rainy Day", "file": "rainy-day.wav" },
+  { "id": "white-noise", "name": "White Noise", "file": "white-noise.wav" }
+]

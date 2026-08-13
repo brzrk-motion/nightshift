@@ -51,6 +51,7 @@ export default definePlugin({
     'entities:write',
     'widgets:register',
     'commands:register',
+    'automations:register',
     'storage',
     'network',
   ],
@@ -582,6 +583,16 @@ export default definePlugin({
         widgetMounted = Math.max(0, widgetMounted - 1);
         if (widgetMounted === 0) stopPolling();
       },
+    });
+
+    // Widgets cannot call each other; exclusive playback goes through the
+    // shared command registry. Pausing ambient does not set isPlaying, so
+    // the reverse automation does not loop.
+    context.registerAutomation({
+      name: 'spotify.pause-ambient-noise',
+      when: { type: 'entity', entity: SPOTIFY_PLAYER_ENTITY, key: 'isPlaying' },
+      and: [{ type: 'equals', entity: SPOTIFY_PLAYER_ENTITY, key: 'isPlaying', value: true }],
+      then: [{ command: 'ambient-noise.pause' }],
     });
 
     context.own(() => {

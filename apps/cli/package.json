@@ -31,6 +31,7 @@
     "@nightshift/core": "workspace:*",
     "@nightshift/dashboard": "workspace:*",
     "@nightshift/entities": "workspace:*",
+    "@nightshift/plugin-ambient-noise": "workspace:*",
     "@nightshift/plugin-clock": "workspace:*",
     "@nightshift/plugin-focus": "workspace:*",
     "@nightshift/plugin-habit": "workspace:*",

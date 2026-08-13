@@ -1,5 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { Json, PluginCommand, PluginContext, PluginWidget } from '@nightshift/sdk';
+import type {
+  AutomationSpec,
+  Json,
+  PluginCommand,
+  PluginContext,
+  PluginWidget,
+} from '@nightshift/sdk';
 import { createEntityStore } from '@nightshift/entities';
 import plugin from './index.js';
 import { PLAYER_SETTLE_MS } from './format.js';
@@ -19,12 +25,14 @@ function mockContext(
   context: PluginContext;
   commands: PluginCommand[];
   widgets: PluginWidget[];
+  automations: AutomationSpec[];
   storage: Record<string, Json>;
   notify: PluginContext['notify'];
 } {
   const entities = createEntityStore();
   const commands: PluginCommand[] = [];
   const widgets: PluginWidget[] = [];
+  const automations: AutomationSpec[] = [];
   const storage: Record<string, Json> = { ...(overrides.storage ?? {}) };
   const notify = vi.fn();
 
@@ -55,11 +63,11 @@ function mockContext(
     registerCommand: (command) => void commands.push(command),
     registerWidget: (widget) => void widgets.push(widget),
     registerEntity: (id, state, meta) => entities.register(id, state, meta),
-    registerAutomation: () => {},
+    registerAutomation: (automation) => void automations.push(automation),
     own: () => {},
   };
 
-  return { context, commands, widgets, storage, notify };
+  return { context, commands, widgets, automations, storage, notify };
 }
 
 const CONNECTED_AUTH: Json = {
@@ -74,6 +82,19 @@ describe('spotify plugin', () => {
   it('declares network among its capabilities', () => {
     expect(plugin.manifest.id).toBe('spotify');
     expect(plugin.manifest.capabilities).toContain('network');
+    expect(plugin.manifest.capabilities).toContain('automations:register');
+  });
+
+  it('pauses ambient noise when Spotify starts playing', async () => {
+    const { context, automations } = mockContext();
+    await plugin.setup(context);
+    expect(automations).toHaveLength(1);
+    expect(automations[0]).toMatchObject({
+      name: 'spotify.pause-ambient-noise',
+      when: { type: 'entity', entity: SPOTIFY_PLAYER_ENTITY, key: 'isPlaying' },
+      and: [{ type: 'equals', entity: SPOTIFY_PLAYER_ENTITY, key: 'isPlaying', value: true }],
+      then: [{ command: 'ambient-noise.pause' }],
+    });
   });
 
   it('registers the player widget and transport commands', async () => {
