@@ -1,14 +1,12 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
-import type { PluginFetchInit } from '@nightshift/sdk';
+import type { PluginFetch } from '@nightshift/sdk';
 import {
   SPOTIFY_CALLBACK_PORT,
   SPOTIFY_REDIRECT_URI,
   SPOTIFY_SCOPES,
   type SpotifyStoredAuth,
 } from './entity.js';
-
-export type SpotifyFetch = (url: string, init?: PluginFetchInit) => Promise<Response>;
 
 const AUTHORIZE_URL = 'https://accounts.spotify.com/authorize';
 const TOKEN_URL = 'https://accounts.spotify.com/api/token';
@@ -56,7 +54,7 @@ export function basicAuthHeader(clientId: string, clientSecret: string): string 
 }
 
 export async function exchangeAuthorizationCode(
-  fetchFn: SpotifyFetch,
+  fetchFn: PluginFetch,
   params: {
     clientId: string;
     clientSecret: string;
@@ -90,7 +88,7 @@ export async function exchangeAuthorizationCode(
 }
 
 export async function refreshAccessToken(
-  fetchFn: SpotifyFetch,
+  fetchFn: PluginFetch,
   params: {
     clientId: string;
     clientSecret: string;
@@ -135,7 +133,7 @@ export function applyTokenResponse(
 
 /** Access token with a 60s skew buffer; refreshes when missing or near expiry. */
 export async function ensureAccessToken(
-  fetchFn: SpotifyFetch,
+  fetchFn: PluginFetch,
   stored: SpotifyStoredAuth,
   now = Date.now(),
 ): Promise<{ token: string; stored: SpotifyStoredAuth }> {
@@ -401,7 +399,7 @@ export interface StartConnectResult {
 
 /** Kick off PKCE authorize; resolve via loopback callback and/or pasted redirect URL. */
 export function startConnectFlow(
-  fetchFn: SpotifyFetch,
+  fetchFn: PluginFetch,
   stored: SpotifyStoredAuth,
 ): StartConnectResult {
   const verifier = generateCodeVerifier();

@@ -166,6 +166,9 @@ export interface PluginContext {
   own(disposable: Disposable | Unsubscribe): void;
 }
 
+/** Network fetch function shape from `PluginContext.fetch`. */
+export type PluginFetch = PluginContext['fetch'];
+
 export interface PluginStorage {
   get<T extends Json>(key: string): Promise<T | undefined>;
   set(key: string, value: Json): Promise<void>;

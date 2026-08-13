@@ -1,6 +1,4 @@
-import type { PluginFetchInit } from '@nightshift/sdk';
-
-export type ClockFetch = (url: string, init?: PluginFetchInit) => Promise<Response>;
+import type { PluginFetch } from '@nightshift/sdk';
 
 export interface GeocodedTimezone {
   /** Display name, e.g. "Austin, Texas, United States". */
@@ -32,7 +30,7 @@ export function detectSystemTimezone(): string | null {
  * plugin's `geocode()` uses, trimmed to just the field the clock needs.
  */
 export async function geocodeTimezone(
-  fetchFn: ClockFetch,
+  fetchFn: PluginFetch,
   query: string,
 ): Promise<GeocodedTimezone | undefined> {
   const trimmed = query.trim();

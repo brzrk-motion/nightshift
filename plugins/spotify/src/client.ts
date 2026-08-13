@@ -1,4 +1,4 @@
-import type { PluginFetchInit } from '@nightshift/sdk';
+import type { PluginFetch, PluginFetchInit } from '@nightshift/sdk';
 import type {
   SpotifyItemKind,
   SpotifyLibraryItem,
@@ -6,8 +6,6 @@ import type {
   SpotifyPlayerState,
 } from './entity.js';
 import { initialLibraryState, initialPlayerState } from './entity.js';
-
-export type SpotifyFetch = (url: string, init?: PluginFetchInit) => Promise<Response>;
 
 const API = 'https://api.spotify.com/v1';
 
@@ -61,7 +59,7 @@ export function parseSpotifyErrorMessage(
 }
 
 async function api(
-  fetchFn: SpotifyFetch,
+  fetchFn: PluginFetch,
   accessToken: string,
   path: string,
   init?: PluginFetchInit,
@@ -102,7 +100,7 @@ export function pickDeviceId(devices: readonly SpotifyDevice[]): string | undefi
 }
 
 export async function fetchDevices(
-  fetchFn: SpotifyFetch,
+  fetchFn: PluginFetch,
   accessToken: string,
 ): Promise<SpotifyDevice[]> {
   const response = await api(fetchFn, accessToken, '/me/player/devices');
@@ -123,7 +121,7 @@ export async function fetchDevices(
 }
 
 async function resolveDeviceId(
-  fetchFn: SpotifyFetch,
+  fetchFn: PluginFetch,
   accessToken: string,
   preferred?: string,
 ): Promise<string | undefined> {
@@ -146,7 +144,7 @@ export interface SpotifyProfile {
 }
 
 export async function fetchProfile(
-  fetchFn: SpotifyFetch,
+  fetchFn: PluginFetch,
   accessToken: string,
 ): Promise<SpotifyProfile> {
   const response = await api(fetchFn, accessToken, '/me');
@@ -213,7 +211,7 @@ export function mapCurrentlyPlaying(body: CurrentlyPlayingJson | null): SpotifyP
 const CURRENTLY_PLAYING_PATH = '/me/player/currently-playing?additional_types=track,episode';
 
 export async function fetchCurrentlyPlaying(
-  fetchFn: SpotifyFetch,
+  fetchFn: PluginFetch,
   accessToken: string,
 ): Promise<SpotifyPlayerState> {
   const response = await api(fetchFn, accessToken, CURRENTLY_PLAYING_PATH);
@@ -234,7 +232,7 @@ export interface PlayOptions {
 }
 
 export async function play(
-  fetchFn: SpotifyFetch,
+  fetchFn: PluginFetch,
   accessToken: string,
   options: PlayOptions = {},
 ): Promise<void> {
@@ -268,7 +266,7 @@ export async function play(
  * @see https://developer.spotify.com/documentation/web-api/reference/start-a-users-playback
  */
 export async function playContext(
-  fetchFn: SpotifyFetch,
+  fetchFn: PluginFetch,
   accessToken: string,
   uri: string,
 ): Promise<void> {
@@ -295,7 +293,7 @@ function episodeMeta(entry: { duration_ms?: number; release_date?: string }): st
 
 /** A show's most recent episodes, newest first — what the browse page lists. */
 export async function fetchShowEpisodes(
-  fetchFn: SpotifyFetch,
+  fetchFn: PluginFetch,
   accessToken: string,
   showId: string,
   limit = 50,
@@ -329,7 +327,7 @@ export async function fetchShowEpisodes(
 }
 
 export async function fetchShowEpisodeUris(
-  fetchFn: SpotifyFetch,
+  fetchFn: PluginFetch,
   accessToken: string,
   showId: string,
   limit = 20,
@@ -339,7 +337,7 @@ export async function fetchShowEpisodeUris(
 }
 
 async function playerControl(
-  fetchFn: SpotifyFetch,
+  fetchFn: PluginFetch,
   accessToken: string,
   path: string,
   method: 'PUT' | 'POST',
@@ -359,15 +357,15 @@ async function playerControl(
   }
 }
 
-export async function pause(fetchFn: SpotifyFetch, accessToken: string): Promise<void> {
+export async function pause(fetchFn: PluginFetch, accessToken: string): Promise<void> {
   await playerControl(fetchFn, accessToken, '/me/player/pause', 'PUT');
 }
 
-export async function skipNext(fetchFn: SpotifyFetch, accessToken: string): Promise<void> {
+export async function skipNext(fetchFn: PluginFetch, accessToken: string): Promise<void> {
   await playerControl(fetchFn, accessToken, '/me/player/next', 'POST');
 }
 
-export async function skipPrevious(fetchFn: SpotifyFetch, accessToken: string): Promise<void> {
+export async function skipPrevious(fetchFn: PluginFetch, accessToken: string): Promise<void> {
   await playerControl(fetchFn, accessToken, '/me/player/previous', 'POST');
 }
 
@@ -377,7 +375,7 @@ interface Paging<T> {
 }
 
 export async function fetchPlaylists(
-  fetchFn: SpotifyFetch,
+  fetchFn: PluginFetch,
   accessToken: string,
 ): Promise<SpotifyLibraryItem[]> {
   const items: SpotifyLibraryItem[] = [];
@@ -411,7 +409,7 @@ export async function fetchPlaylists(
 }
 
 export async function fetchShows(
-  fetchFn: SpotifyFetch,
+  fetchFn: PluginFetch,
   accessToken: string,
 ): Promise<SpotifyLibraryItem[]> {
   const items: SpotifyLibraryItem[] = [];
@@ -441,7 +439,7 @@ export async function fetchShows(
 }
 
 export async function fetchLibrary(
-  fetchFn: SpotifyFetch,
+  fetchFn: PluginFetch,
   accessToken: string,
 ): Promise<SpotifyLibraryState> {
   try {
