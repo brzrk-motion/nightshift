@@ -34,6 +34,14 @@
     "@nightshift/ui": "workspace:*",
     "react": "^19.2.8"
   },
+  "peerDependencies": {
+    "vitest": "^3.2.4"
+  },
+  "peerDependenciesMeta": {
+    "vitest": {
+      "optional": true
+    }
+  },
   "devDependencies": {
     "@types/react": "^19.2.18",
     "vitest": "^3.2.4"
