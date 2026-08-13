@@ -114,9 +114,6 @@ importers:
       '@modelcontextprotocol/server':
         specifier: ^2.0.0
         version: 2.0.0
-      '@nightshift/core':
-        specifier: workspace:*
-        version: link:../../packages/core
       tree-sitter-wasms:
         specifier: ^0.1.13
         version: 0.1.13
