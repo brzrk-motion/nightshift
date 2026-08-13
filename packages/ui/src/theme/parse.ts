@@ -1,7 +1,12 @@
-import { mkdir, readdir, readFile, unlink, writeFile } from 'node:fs/promises';
-import { basename, extname, join } from 'node:path';
+import { readFile } from 'node:fs/promises';
+import { basename, extname } from 'node:path';
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
-import { NightshiftError } from '@nightshift/core';
+import {
+  deleteYamlResource,
+  loadYamlDir,
+  NightshiftError,
+  saveYamlResource,
+} from '@nightshift/core';
 import {
   BUILT_IN_THEMES,
   HEX_COLOR,
@@ -99,33 +104,17 @@ export function serializeTheme(theme: ThemeSpec): string {
  * needed. A user file of the same name replaces a built-in on the next load.
  */
 export async function saveTheme(directory: string, theme: ThemeSpec): Promise<string> {
-  const path = join(directory, `${theme.name}.yaml`);
-  try {
-    await mkdir(directory, { recursive: true });
-    await writeFile(path, serializeTheme(theme), 'utf8');
-  } catch (error) {
-    throw new NightshiftError('CONFIG_UNWRITABLE', `Could not write ${path}.`, { cause: error });
-  }
-  return path;
+  return saveYamlResource(directory, theme.name, serializeTheme(theme));
 }
 
 /** Removes `themes/<name>.yaml`. Refused when the file does not exist. */
 export async function deleteTheme(directory: string, name: string): Promise<void> {
-  const path = join(directory, `${name}.yaml`);
-  try {
-    await unlink(path);
-  } catch (error) {
-    const code = (error as NodeJS.ErrnoException).code;
-    if (code === 'ENOENT') {
-      throw new NightshiftError('CONFIG_INVALID', `No user theme file at ${path}.`, {
-        hint: 'Built-in themes cannot be deleted unless you have saved a user override.',
-      });
-    }
-    throw new NightshiftError('CONFIG_UNWRITABLE', `Could not delete ${path}.`, { cause: error });
-  }
+  return deleteYamlResource(directory, name, {
+    notFoundCode: 'CONFIG_INVALID',
+    notFoundMessage: (path) => `No user theme file at ${path}.`,
+    notFoundHint: 'Built-in themes cannot be deleted unless you have saved a user override.',
+  });
 }
-
-const EXTENSIONS = new Set(['.yaml', '.yml']);
 
 /** Reads and parses one theme file. */
 export async function loadThemeFile(path: string): Promise<ThemeSpec> {
@@ -149,26 +138,8 @@ export interface ThemeLoadResult {
  * thrown, so one bad theme does not hide the rest.
  */
 export async function loadThemes(directory: string): Promise<ThemeLoadResult> {
-  const result: ThemeLoadResult = { themes: [], failed: [] };
-
-  let entries: string[];
-  try {
-    entries = await readdir(directory);
-  } catch {
-    return result;
-  }
-
-  for (const entry of entries.sort()) {
-    if (!EXTENSIONS.has(extname(entry))) continue;
-    const path = join(directory, entry);
-    try {
-      result.themes.push(await loadThemeFile(path));
-    } catch (error) {
-      result.failed.push({ path, error });
-    }
-  }
-
-  return result;
+  const { items, failed } = await loadYamlDir(directory, loadThemeFile);
+  return { themes: items, failed };
 }
 
 /**

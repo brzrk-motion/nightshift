@@ -37,7 +37,7 @@ export interface NightshiftConfig {
   onboarded: boolean;
 }
 
-export const CONFIG_VERSION = 10;
+export const CONFIG_VERSION = 11;
 
 export const DEFAULT_CONFIG: NightshiftConfig = {
   version: CONFIG_VERSION,
@@ -47,7 +47,6 @@ export const DEFAULT_CONFIG: NightshiftConfig = {
   logLevel: 'info',
   plugins: [
     '@nightshift/plugin-clock',
-    '@nightshift/plugin-focus',
     '@nightshift/plugin-habit',
     '@nightshift/plugin-home-assistant',
     '@nightshift/plugin-pomodoro',
@@ -82,11 +81,94 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 const WEATHER_PLUGIN = '@nightshift/plugin-weather';
 const CLOCK_PLUGIN = '@nightshift/plugin-clock';
 const SPOTIFY_PLUGIN = '@nightshift/plugin-spotify';
+const FOCUS_PLUGIN = '@nightshift/plugin-focus';
 const POMODORO_PLUGIN = '@nightshift/plugin-pomodoro';
 const HABIT_PLUGIN = '@nightshift/plugin-habit';
 const HOME_ASSISTANT_PLUGIN = '@nightshift/plugin-home-assistant';
 const SYSTEM_MONITOR_PLUGIN = '@nightshift/plugin-system-monitor';
 const AMBIENT_NOISE_PLUGIN = '@nightshift/plugin-ambient-noise';
+
+function ensurePlugin(config: NightshiftConfig, plugin: string): NightshiftConfig {
+  if (config.plugins.includes(plugin)) {
+    return config;
+  }
+  return { ...config, plugins: [...config.plugins, plugin] };
+}
+
+function removePlugin(config: NightshiftConfig, plugin: string): NightshiftConfig {
+  if (!config.plugins.includes(plugin)) {
+    return config;
+  }
+  return { ...config, plugins: config.plugins.filter((entry) => entry !== plugin) };
+}
+
+function ensureNetworkGrant(config: NightshiftConfig, pluginId: string): NightshiftConfig {
+  const grant = config.pluginPermissions[pluginId];
+  if (grant === 'all' || (Array.isArray(grant) && grant.includes('network'))) {
+    return config;
+  }
+  const grants = Array.isArray(grant) ? grant : [];
+  return {
+    ...config,
+    pluginPermissions: {
+      ...config.pluginPermissions,
+      [pluginId]: [...grants, 'network'],
+    },
+  };
+}
+
+type ConfigMigration = {
+  toVersion: number;
+  apply: (config: NightshiftConfig) => NightshiftConfig;
+};
+
+/**
+ * Ordered config migrations. Each step bumps `version` to `toVersion` and may
+ * ship bundled plugins or network grants so existing installs match fresh defaults.
+ */
+const CONFIG_MIGRATIONS: ConfigMigration[] = [
+  {
+    toVersion: 2,
+    apply: (config) => ensureNetworkGrant(ensurePlugin(config, WEATHER_PLUGIN), 'weather'),
+  },
+  {
+    toVersion: 3,
+    apply: (config) => ensurePlugin(config, CLOCK_PLUGIN),
+  },
+  {
+    toVersion: 4,
+    apply: (config) => ensureNetworkGrant(ensurePlugin(config, SPOTIFY_PLUGIN), 'spotify'),
+  },
+  {
+    toVersion: 5,
+    apply: (config) => ensureNetworkGrant(config, 'clock'),
+  },
+  {
+    toVersion: 6,
+    apply: (config) => ensurePlugin(config, POMODORO_PLUGIN),
+  },
+  {
+    toVersion: 7,
+    apply: (config) => ensurePlugin(config, HABIT_PLUGIN),
+  },
+  {
+    toVersion: 8,
+    apply: (config) =>
+      ensureNetworkGrant(ensurePlugin(config, HOME_ASSISTANT_PLUGIN), 'home-assistant'),
+  },
+  {
+    toVersion: 9,
+    apply: (config) => ensurePlugin(config, SYSTEM_MONITOR_PLUGIN),
+  },
+  {
+    toVersion: 10,
+    apply: (config) => ensurePlugin(config, AMBIENT_NOISE_PLUGIN),
+  },
+  {
+    toVersion: 11,
+    apply: (config) => removePlugin(config, FOCUS_PLUGIN),
+  },
+];
 
 /**
  * Brings an older on-disk config forward. v1 → v2 ships the weather plugin and
@@ -95,8 +177,8 @@ const AMBIENT_NOISE_PLUGIN = '@nightshift/plugin-ambient-noise';
  * needed once it can look up a location's timezone; v5 → v6 ships the pomodoro
  * plugin; v6 → v7 ships the habit tracker; v7 → v8 ships Home Assistant scenes
  * and its network grant; v8 → v9 ships the system monitor plugin; v9 → v10
- * ships the ambient noise player — so existing installs see the same defaults
- * as a fresh one.
+ * ships the ambient noise player; v10 → v11 drops the focus plugin (superseded
+ * by pomodoro) — so existing installs see the same defaults as a fresh one.
  */
 export function migrateConfig(config: NightshiftConfig): {
   config: NightshiftConfig;
@@ -109,135 +191,11 @@ export function migrateConfig(config: NightshiftConfig): {
   let next: NightshiftConfig = { ...config };
   let migrated = false;
 
-  if (next.version < 2) {
-    if (!next.plugins.includes(WEATHER_PLUGIN)) {
-      next = { ...next, plugins: [...next.plugins, WEATHER_PLUGIN] };
+  for (const { toVersion, apply } of CONFIG_MIGRATIONS) {
+    if (next.version < toVersion) {
+      next = { ...apply(next), version: toVersion };
       migrated = true;
     }
-    const weatherGrant = next.pluginPermissions['weather'];
-    if (
-      weatherGrant !== 'all' &&
-      !(Array.isArray(weatherGrant) && weatherGrant.includes('network'))
-    ) {
-      const grants = Array.isArray(weatherGrant) ? weatherGrant : [];
-      next = {
-        ...next,
-        pluginPermissions: {
-          ...next.pluginPermissions,
-          weather: [...grants, 'network'],
-        },
-      };
-      migrated = true;
-    }
-    next = { ...next, version: 2 };
-    migrated = true;
-  }
-
-  if (next.version < 3) {
-    if (!next.plugins.includes(CLOCK_PLUGIN)) {
-      next = { ...next, plugins: [...next.plugins, CLOCK_PLUGIN] };
-      migrated = true;
-    }
-    next = { ...next, version: 3 };
-    migrated = true;
-  }
-
-  if (next.version < 4) {
-    if (!next.plugins.includes(SPOTIFY_PLUGIN)) {
-      next = { ...next, plugins: [...next.plugins, SPOTIFY_PLUGIN] };
-      migrated = true;
-    }
-    const spotifyGrant = next.pluginPermissions['spotify'];
-    if (
-      spotifyGrant !== 'all' &&
-      !(Array.isArray(spotifyGrant) && spotifyGrant.includes('network'))
-    ) {
-      const grants = Array.isArray(spotifyGrant) ? spotifyGrant : [];
-      next = {
-        ...next,
-        pluginPermissions: {
-          ...next.pluginPermissions,
-          spotify: [...grants, 'network'],
-        },
-      };
-      migrated = true;
-    }
-    next = { ...next, version: 4 };
-    migrated = true;
-  }
-
-  if (next.version < 5) {
-    const clockGrant = next.pluginPermissions['clock'];
-    if (clockGrant !== 'all' && !(Array.isArray(clockGrant) && clockGrant.includes('network'))) {
-      const grants = Array.isArray(clockGrant) ? clockGrant : [];
-      next = {
-        ...next,
-        pluginPermissions: {
-          ...next.pluginPermissions,
-          clock: [...grants, 'network'],
-        },
-      };
-      migrated = true;
-    }
-    next = { ...next, version: 5 };
-    migrated = true;
-  }
-
-  if (next.version < 6) {
-    if (!next.plugins.includes(POMODORO_PLUGIN)) {
-      next = { ...next, plugins: [...next.plugins, POMODORO_PLUGIN] };
-      migrated = true;
-    }
-    next = { ...next, version: 6 };
-    migrated = true;
-  }
-
-  if (next.version < 7) {
-    if (!next.plugins.includes(HABIT_PLUGIN)) {
-      next = { ...next, plugins: [...next.plugins, HABIT_PLUGIN] };
-      migrated = true;
-    }
-    next = { ...next, version: 7 };
-    migrated = true;
-  }
-
-  if (next.version < 8) {
-    if (!next.plugins.includes(HOME_ASSISTANT_PLUGIN)) {
-      next = { ...next, plugins: [...next.plugins, HOME_ASSISTANT_PLUGIN] };
-      migrated = true;
-    }
-    const haGrant = next.pluginPermissions['home-assistant'];
-    if (haGrant !== 'all' && !(Array.isArray(haGrant) && haGrant.includes('network'))) {
-      const grants = Array.isArray(haGrant) ? haGrant : [];
-      next = {
-        ...next,
-        pluginPermissions: {
-          ...next.pluginPermissions,
-          'home-assistant': [...grants, 'network'],
-        },
-      };
-      migrated = true;
-    }
-    next = { ...next, version: 8 };
-    migrated = true;
-  }
-
-  if (next.version < 9) {
-    if (!next.plugins.includes(SYSTEM_MONITOR_PLUGIN)) {
-      next = { ...next, plugins: [...next.plugins, SYSTEM_MONITOR_PLUGIN] };
-      migrated = true;
-    }
-    next = { ...next, version: 9 };
-    migrated = true;
-  }
-
-  if (next.version < 10) {
-    if (!next.plugins.includes(AMBIENT_NOISE_PLUGIN)) {
-      next = { ...next, plugins: [...next.plugins, AMBIENT_NOISE_PLUGIN] };
-      migrated = true;
-    }
-    next = { ...next, version: 10 };
-    migrated = true;
   }
 
   return { config: next, migrated };

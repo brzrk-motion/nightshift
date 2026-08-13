@@ -1,5 +1,5 @@
 import { join } from 'node:path';
-import { createEntityStore, type EntityStore } from '@nightshift/entities';
+import { createEntityStore, type EntityId, type EntityStore } from '@nightshift/entities';
 import {
   createPermissionPolicy,
   createPluginHost,
@@ -34,6 +34,7 @@ import {
   parseVibe,
   saveVibe,
   serializeVibe,
+  type VibeAction,
   type VibeEngine,
   type VibeSpec,
 } from '@nightshift/vibes';
@@ -178,103 +179,85 @@ function themeFromArgs(args: Record<string, Json> | undefined): ThemeSpec {
   return parseTheme(serializeTheme(draft), { source: 'theme.save' });
 }
 
-function publishThemesCatalog(
+function publishCatalog(
   entities: EntityStore,
-  themes: AppRuntime['themes'],
-  userThemeNames: ReadonlySet<string>,
+  entityId: EntityId,
+  rows: Json[],
+  meta?: { title: string },
 ): void {
-  const activeName = themes.current.name;
-  const rows: Json[] = themes.list().map((theme) => ({
+  const key = entityId.split('.').pop()!;
+  const state: Json = { [key]: rows };
+  if (entities.get(entityId)) {
+    entities.set(entityId, state);
+  } else {
+    entities.register(entityId, state, {
+      owner: 'nightshift',
+      title: meta?.title ?? entityId,
+    });
+  }
+}
+
+function catalogSource(name: string, userNames: ReadonlySet<string>): 'user' | 'built-in' {
+  return userNames.has(name) ? 'user' : 'built-in';
+}
+
+function vibeActionRows(actions: VibeAction[]): Json[] {
+  return actions.map((action) => {
+    const entry: Record<string, Json> = { command: action.command };
+    if (action.args !== undefined) entry['args'] = action.args;
+    return entry;
+  });
+}
+
+function themeCatalogRow(
+  theme: ThemeSpec,
+  userThemeNames: ReadonlySet<string>,
+  activeName: string,
+): Json {
+  return {
     name: theme.name,
-    source: userThemeNames.has(theme.name) ? 'user' : 'built-in',
+    source: catalogSource(theme.name, userThemeNames),
     active: theme.name === activeName,
     appearance: theme.appearance,
     colors: theme.colors as unknown as Json,
-  }));
-  const state: Json = { themes: rows };
-  if (entities.get('nightshift.themes')) {
-    entities.set('nightshift.themes', state);
-  } else {
-    entities.register('nightshift.themes', state, {
-      owner: 'nightshift',
-      title: 'Registered themes',
-    });
-  }
+  };
 }
 
-function publishVibesCatalog(
-  entities: EntityStore,
-  vibes: VibeEngine,
+function vibeCatalogRow(
+  vibe: VibeSpec,
   userVibeNames: ReadonlySet<string>,
-): void {
-  const active = entities.get<{ active: string | null }>('nightshift.vibe')?.state.active ?? null;
-  const rows: Json[] = vibes.list().map((vibe) => {
-    const row: Record<string, Json> = {
-      name: vibe.name,
-      title: vibe.title ?? vibe.name,
-      description: vibe.description ?? '',
-      theme: vibe.theme ?? '',
-      dashboard: vibe.dashboard ?? '',
-      source: userVibeNames.has(vibe.name) ? 'user' : 'built-in',
-      active: vibe.name === active,
-    };
-    if (vibe.entities !== undefined) row['entities'] = vibe.entities;
-    if (vibe.onActivate !== undefined) {
-      row['onActivate'] = vibe.onActivate.map((action) => {
-        const entry: Record<string, Json> = { command: action.command };
-        if (action.args !== undefined) entry['args'] = action.args;
-        return entry;
-      });
-    }
-    if (vibe.onDeactivate !== undefined) {
-      row['onDeactivate'] = vibe.onDeactivate.map((action) => {
-        const entry: Record<string, Json> = { command: action.command };
-        if (action.args !== undefined) entry['args'] = action.args;
-        return entry;
-      });
-    }
-    return row;
-  });
-
-  const state: Json = { vibes: rows };
-  if (entities.get('nightshift.vibes')) {
-    entities.set('nightshift.vibes', state);
-  } else {
-    entities.register('nightshift.vibes', state, {
-      owner: 'nightshift',
-      title: 'Registered vibes',
-    });
-  }
+  active: string | null,
+): Json {
+  const row: Record<string, Json> = {
+    name: vibe.name,
+    title: vibe.title ?? vibe.name,
+    description: vibe.description ?? '',
+    theme: vibe.theme ?? '',
+    dashboard: vibe.dashboard ?? '',
+    source: catalogSource(vibe.name, userVibeNames),
+    active: vibe.name === active,
+  };
+  if (vibe.entities !== undefined) row['entities'] = vibe.entities;
+  if (vibe.onActivate !== undefined) row['onActivate'] = vibeActionRows(vibe.onActivate);
+  if (vibe.onDeactivate !== undefined) row['onDeactivate'] = vibeActionRows(vibe.onDeactivate);
+  return row;
 }
 
-function publishDashboardsCatalog(
-  entities: EntityStore,
-  dashboards: readonly DashboardSpec[],
+function dashboardCatalogRow(
+  dashboard: DashboardSpec,
   userDashboardNames: ReadonlySet<string>,
-): void {
-  const active =
-    entities.get<{ active: string | null }>('nightshift.dashboard')?.state.active ?? null;
-  const rows: Json[] = dashboards.map((dashboard) => {
-    const row: Record<string, Json> = {
-      name: dashboard.name,
-      title: dashboard.title ?? dashboard.name,
-      source: userDashboardNames.has(dashboard.name) ? 'user' : 'built-in',
-      active: dashboard.name === active,
-    };
-    if (dashboard.theme !== undefined) row['theme'] = dashboard.theme;
-    if (dashboard.refresh !== undefined) row['refresh'] = dashboard.refresh;
-    row['rows'] = dashboard.rows as unknown as Json;
-    return row;
-  });
-  const state: Json = { dashboards: rows };
-  if (entities.get('nightshift.dashboards')) {
-    entities.set('nightshift.dashboards', state);
-  } else {
-    entities.register('nightshift.dashboards', state, {
-      owner: 'nightshift',
-      title: 'Registered dashboards',
-    });
-  }
+  active: string | null,
+): Json {
+  const row: Record<string, Json> = {
+    name: dashboard.name,
+    title: dashboard.title ?? dashboard.name,
+    source: catalogSource(dashboard.name, userDashboardNames),
+    active: dashboard.name === active,
+  };
+  if (dashboard.theme !== undefined) row['theme'] = dashboard.theme;
+  if (dashboard.refresh !== undefined) row['refresh'] = dashboard.refresh;
+  row['rows'] = dashboard.rows as unknown as Json;
+  return row;
 }
 
 export async function createNightshiftRuntime(
@@ -308,6 +291,17 @@ export async function createNightshiftRuntime(
 
   const registeredThemeCommands = new Set<string>();
 
+  const publishThemes = (): void => {
+    publishCatalog(
+      entities,
+      'nightshift.themes',
+      app.themes
+        .list()
+        .map((theme) => themeCatalogRow(theme, userThemeNames, app.themes.current.name)),
+      { title: 'Registered themes' },
+    );
+  };
+
   const refreshThemeActivateCommands = (): void => {
     for (const name of registeredThemeCommands) {
       app.commands.unregister(`theme.activate.${name}`);
@@ -326,14 +320,14 @@ export async function createNightshiftRuntime(
             { configDir: context.paths.configDir },
           );
           context.config.theme = theme.name;
-          publishThemesCatalog(entities, app.themes, userThemeNames);
+          publishThemes();
         },
       });
     }
   };
 
   refreshThemeActivateCommands();
-  publishThemesCatalog(entities, app.themes, userThemeNames);
+  publishThemes();
 
   const plugins = createPluginHost({
     entities,
@@ -382,9 +376,24 @@ export async function createNightshiftRuntime(
   const userDashboardNames = new Set(foundDashboards.dashboards.map((dashboard) => dashboard.name));
   const dashboardListeners = new Set<(dashboards: readonly DashboardSpec[]) => void>();
 
+  const publishDashboards = (): void => {
+    publishCatalog(
+      entities,
+      'nightshift.dashboards',
+      dashboards.map((dashboard) =>
+        dashboardCatalogRow(
+          dashboard,
+          userDashboardNames,
+          entities.get<{ active: string | null }>('nightshift.dashboard')?.state.active ?? null,
+        ),
+      ),
+      { title: 'Registered dashboards' },
+    );
+  };
+
   const syncDashboards = (next: DashboardSpec[]): void => {
     dashboards = next;
-    publishDashboardsCatalog(entities, dashboards, userDashboardNames);
+    publishDashboards();
     for (const listener of dashboardListeners) listener(dashboards);
   };
 
@@ -394,7 +403,7 @@ export async function createNightshiftRuntime(
       active: name,
       title: spec?.title ?? name,
     });
-    publishDashboardsCatalog(entities, dashboards, userDashboardNames);
+    publishDashboards();
   };
 
   // Plugin commands become app commands, so a keybinding, the palette and a
@@ -448,6 +457,23 @@ export async function createNightshiftRuntime(
   const vibes = createVibeEngine({ themes: app.themes, entities, commands: app.commands });
   const vibeDisposers = new Map<string, () => void>();
 
+  const publishVibes = (): void => {
+    publishCatalog(
+      entities,
+      'nightshift.vibes',
+      vibes
+        .list()
+        .map((vibe) =>
+          vibeCatalogRow(
+            vibe,
+            userVibeNames,
+            entities.get<{ active: string | null }>('nightshift.vibe')?.state.active ?? null,
+          ),
+        ),
+      { title: 'Registered vibes' },
+    );
+  };
+
   const registerActivateCommand = (vibe: VibeSpec): void => {
     app.commands.register({
       id: `vibe.activate.${vibe.name}`,
@@ -470,10 +496,10 @@ export async function createNightshiftRuntime(
   }
   for (const vibe of foundVibes.vibes) installVibe(vibe);
 
-  publishDashboardsCatalog(entities, dashboards, userDashboardNames);
+  publishDashboards();
 
   entities.register('nightshift.dashboard', { active: null, title: null }, { owner: 'nightshift' });
-  publishVibesCatalog(entities, vibes, userVibeNames);
+  publishVibes();
 
   app.commands.register({
     id: 'dashboard.save',
@@ -555,7 +581,7 @@ export async function createNightshiftRuntime(
       await saveVibe(context.paths.vibesDir, spec);
       installVibe(spec);
       userVibeNames.add(spec.name);
-      publishVibesCatalog(entities, vibes, userVibeNames);
+      publishVibes();
       app.toasts.push(`Saved vibe "${spec.title ?? spec.name}"`, { tone: 'success' });
     },
   });
@@ -587,7 +613,7 @@ export async function createNightshiftRuntime(
       app.commands.unregister(`vibe.activate.${name}`);
       const builtIn = findVibe(name);
       if (builtIn) installVibe(builtIn);
-      publishVibesCatalog(entities, vibes, userVibeNames);
+      publishVibes();
       app.toasts.push(`Deleted vibe "${name}"`, { tone: 'success' });
     },
   });
@@ -603,7 +629,7 @@ export async function createNightshiftRuntime(
       app.themes.register(spec);
       userThemeNames.add(spec.name);
       refreshThemeActivateCommands();
-      publishThemesCatalog(entities, app.themes, userThemeNames);
+      publishThemes();
       if (app.themes.current.name === spec.name) {
         app.themes.activate(spec.name);
       }
@@ -647,7 +673,7 @@ export async function createNightshiftRuntime(
         );
         context.config.theme = fallback;
       }
-      publishThemesCatalog(entities, app.themes, userThemeNames);
+      publishThemes();
       app.toasts.push(`Deleted theme "${name}"`, { tone: 'success' });
     },
   });
@@ -667,13 +693,13 @@ export async function createNightshiftRuntime(
       active: result.vibe.name,
       title: result.vibe.title ?? result.vibe.name,
     });
-    publishVibesCatalog(entities, vibes, userVibeNames);
+    publishVibes();
     automations.notifyVibe(result.vibe.name, 'activate');
   });
   vibes.events.on('deactivated', (name, deactivateWarnings) => {
     for (const warning of deactivateWarnings) app.toasts.push(warning, { tone: 'warning' });
     entities.set('nightshift.vibe', { active: null, title: null });
-    publishVibesCatalog(entities, vibes, userVibeNames);
+    publishVibes();
     automations.notifyVibe(name, 'deactivate');
   });
 

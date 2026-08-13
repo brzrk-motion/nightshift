@@ -2,7 +2,6 @@
 '@nightshift/automations': minor
 '@nightshift/dashboard': minor
 '@nightshift/entities': minor
-'@nightshift/plugin-focus': minor
 '@nightshift/services': minor
 '@nightshift/core': minor
 '@nightshift/vibes': minor

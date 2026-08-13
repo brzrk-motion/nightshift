@@ -22,11 +22,11 @@ describe('discoverPlugins', () => {
   });
 
   it('passes a bare package name through for Node to resolve', async () => {
-    const [found] = await discoverPlugins({ plugins: ['@nightshift/plugin-focus'] });
+    const [found] = await discoverPlugins({ plugins: ['@nightshift/plugin-pomodoro'] });
 
     expect(found).toEqual({
-      id: 'plugin-focus',
-      specifier: '@nightshift/plugin-focus',
+      id: 'plugin-pomodoro',
+      specifier: '@nightshift/plugin-pomodoro',
       origin: 'config',
     });
   });

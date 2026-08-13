@@ -62,9 +62,6 @@ importers:
       '@nightshift/plugin-clock':
         specifier: workspace:*
         version: link:../../plugins/clock
-      '@nightshift/plugin-focus':
-        specifier: workspace:*
-        version: link:../../plugins/focus
       '@nightshift/plugin-habit':
         specifier: workspace:*
         version: link:../../plugins/habit
@@ -278,28 +275,6 @@ importers:
         version: 19.2.18
 
   plugins/clock:
-    dependencies:
-      '@nightshift/sdk':
-        specifier: workspace:*
-        version: link:../../packages/sdk
-      '@opentui/react':
-        specifier: ^0.5.1
-        version: 0.5.1(react-devtools-core@7.0.1)(react@19.2.8)(typescript@5.9.3)(web-tree-sitter@0.25.10)(ws@8.21.3)
-      react:
-        specifier: ^19.2.8
-        version: 19.2.8
-    devDependencies:
-      '@nightshift/entities':
-        specifier: workspace:*
-        version: link:../../packages/entities
-      '@nightshift/ui':
-        specifier: workspace:*
-        version: link:../../packages/ui
-      '@types/react':
-        specifier: ^19.2.18
-        version: 19.2.18
-
-  plugins/focus:
     dependencies:
       '@nightshift/sdk':
         specifier: workspace:*

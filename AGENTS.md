@@ -31,7 +31,7 @@ pnpm workspaces + Turborepo. Workspace globs (`pnpm-workspace.yaml`):
 nightshift.mjs         Build-and-launch script for local development
 mcp-up.mjs             Build-and-launch script for the MCP servers in mcp/
 apps/cli               The nightshift command line interface (entry point)
-packages/core          Runtime primitives: errors, versions, events, disposables
+packages/core          Runtime primitives: errors, versions, events, disposables, YAML dir I/O
 packages/entities      Shared observable state — the contract for plugin state
 packages/sdk           The public interface plugins are written against
 packages/ui            Application shell, component library and themes
@@ -41,7 +41,7 @@ packages/automations   Triggers, conditions and actions
 packages/services      Config, logging, settings and the plugin runtime/host
 mcp/context-mcp        Agent tooling: a tree-sitter code index served over MCP
 plugins/clock          The time and date, with 12/24-hour and date format settings
-plugins/focus          The focus timer — the reference plugin
+plugins/pomodoro       Work intervals with short and long breaks — the reference plugin
 plugins/habit          Rolling 7-day habit tracker
 plugins/home-assistant Home Assistant scenes (list, activate, vibe bindings)
 plugins/spotify        Spotify Connect control (playlists, podcasts, transport)
@@ -73,7 +73,7 @@ Concretely:
 - `vibes` depends on `core`, `entities`, `yaml`.
 - `services` depends on `core`, `entities`, `automations`, `sdk`.
 - `apps/cli` depends on everything above, plus `commander`.
-- `plugins/focus` and `plugins/todo` depend only on `@nightshift/sdk` at
+- `plugins/pomodoro` and `plugins/todo` depend only on `@nightshift/sdk` at
   runtime (matching what a third-party plugin is allowed to depend on);
   `@nightshift/entities` and `@nightshift/ui` appear only as
   `devDependencies`, for types in tests. The same applies to `plugins/weather`
@@ -301,9 +301,10 @@ and is optional — not configured in this repo.
 
 - `core` provides `NightshiftError` (typed error code + optional `cause`/
   `hint`), a monomorphic `EventBus<T>`, `Disposable`/`Unsubscribe` types and a
-  disposable bag (`createDisposableBag`), and `NIGHTSHIFT_API_VERSION` — the
-  SDK contract version plugins are checked against (`isCompatible` in the
-  SDK, enforced by the plugin host).
+  disposable bag (`createDisposableBag`), shared YAML directory helpers
+  (`loadYamlDir` / `saveYamlResource` / `deleteYamlResource`), and
+  `NIGHTSHIFT_API_VERSION` — the SDK contract version plugins are checked
+  against (`isCompatible` in the SDK, enforced by the plugin host).
 - `entities` is the one piece of state that's shared across the whole app: a
   keyed, observable store (`EntityStore`) of small JSON blobs (`register`,
   `get`, `set`, `update`, `remove`, `subscribe`). Nothing about dashboards,
@@ -480,21 +481,21 @@ re-open this exact bug for whatever the next text-entering widget is.
 ## Adding a new plugin
 
 1. Scaffold a new workspace member under `plugins/<name>/`, matching
-   `plugins/focus`'s shape:
+   `plugins/pomodoro`'s shape:
    ```
    plugins/<name>/
      package.json       # name: @nightshift/plugin-<name>, deps: @nightshift/sdk only
      tsconfig.json       # extends ../../tsconfig.base.json
      src/
        index.ts          # default-exports definePlugin({...})
-       *.ts, *.tsx        # state/logic, split out like focus's timer.ts (types, reducers, entity id)
+       *.ts, *.tsx        # state/logic, split out like pomodoro's timer.ts (types, reducers, entity id)
        widgets.tsx        # render functions for any widgets it registers
        *.test.ts(x)       # co-located vitest specs
    ```
-   Copy `plugins/focus/package.json` and adjust the name/description; keep
+   Copy `plugins/pomodoro/package.json` and adjust the name/description; keep
    `@nightshift/sdk` as the only runtime `dependencies` entry (put
    `@nightshift/entities`/`@nightshift/ui` in `devDependencies` only if tests
-   need their types, as focus does).
+   need their types, as pomodoro does).
 2. Register it with the workspace: `pnpm-workspace.yaml` already globs
    `plugins/*`, so `pnpm install` picks it up once the directory exists.
 3. Write `setup(context)`: register any entities the plugin owns, register
@@ -503,9 +504,9 @@ re-open this exact bug for whatever the next text-entering widget is.
    re-exports unless you have a concrete reason to reach past it), register
    automations, and use `context.own()` for anything with a lifetime (timers,
    subscriptions) so `teardown` doesn't have to duplicate that bookkeeping.
-4. To ship it bundled with the CLI (as `focus` is), add it as a dependency of
+4. To ship it bundled with the CLI (as `pomodoro` is), add it as a dependency of
    `apps/cli` and wire it into the default `plugins` list the same way
-   `@nightshift/plugin-focus` is; for anything else, it's discovered via
+   `@nightshift/plugin-pomodoro` is; for anything else, it's discovered via
    `config.json`'s `plugins` array or by dropping it in the user's
    `plugins/` config directory — no core code changes required.
 5. Add a changeset (`pnpm changeset`) if the change is user-visible.

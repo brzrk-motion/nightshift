@@ -44,7 +44,7 @@ export interface VibeOptions {
  * `nightshift vibe [name]` — opens the dashboard with a vibe already active.
  *
  * A vibe is not something a headless process can meaningfully "run": its
- * `onActivate` actions are commands like `focus.start`, which only mean
+ * `onActivate` actions are commands like `pomodoro.start`, which only mean
  * anything once a dashboard is open to show the result. So this command opens
  * one — the vibe's own, or the configured default — and activates the vibe
  * right after, the same way switching vibes from the command palette does.

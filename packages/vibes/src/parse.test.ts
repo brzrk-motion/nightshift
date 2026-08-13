@@ -19,14 +19,12 @@ description: Deep work.
 theme: midnight
 dashboard: home
 entities:
-  timer.focus:
+  pomodoro.session:
     status: idle
 onActivate:
-  - command: focus.start
-    args:
-      minutes: 50
+  - command: pomodoro.start
 onDeactivate:
-  - focus.pause
+  - pomodoro.pause
 `;
 
 describe('parseVibe', () => {
@@ -39,14 +37,14 @@ describe('parseVibe', () => {
       description: 'Deep work.',
       theme: 'midnight',
       dashboard: 'home',
-      entities: { 'timer.focus': { status: 'idle' } },
-      onActivate: [{ command: 'focus.start', args: { minutes: 50 } }],
-      onDeactivate: [{ command: 'focus.pause' }],
+      entities: { 'pomodoro.session': { status: 'idle' } },
+      onActivate: [{ command: 'pomodoro.start' }],
+      onDeactivate: [{ command: 'pomodoro.pause' }],
     });
   });
 
   it('accepts a bare command string as shorthand for an action', () => {
-    expect(parseVibe(LOCKED_IN).onDeactivate).toEqual([{ command: 'focus.pause' }]);
+    expect(parseVibe(LOCKED_IN).onDeactivate).toEqual([{ command: 'pomodoro.pause' }]);
   });
 
   it('takes the name from the file when the document omits it', () => {

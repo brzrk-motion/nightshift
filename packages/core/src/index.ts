@@ -20,3 +20,11 @@ export {
   type DisposableBagOptions,
 } from './disposables.js';
 export { parseStoredVersion } from './storage.js';
+export {
+  deleteYamlResource,
+  loadYamlDir,
+  saveYamlResource,
+  YAML_EXTENSIONS,
+  type DeleteYamlResourceOptions,
+  type YamlDirLoadResult,
+} from './yamlResource.js';

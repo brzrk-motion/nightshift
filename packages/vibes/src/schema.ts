@@ -8,7 +8,7 @@ import type { EntityId } from '@nightshift/entities';
  * ids, which is the whole of what a vibe is allowed to touch.
  */
 export interface VibeAction {
-  /** Command id to run, e.g. `focus.start`. */
+  /** Command id to run, e.g. `pomodoro.start`. */
   command: string;
   /** Arguments passed to the command. */
   args?: Record<string, Json>;
@@ -42,7 +42,7 @@ export const BUILT_IN_VIBES: readonly VibeSpec[] = [
     // activating it visibly demonstrates a vibe switching the dashboard, not
     // just the theme and starting a timer.
     dashboard: 'nightshift',
-    onActivate: [{ command: 'focus.start', args: { minutes: 50 } }],
+    onActivate: [{ command: 'pomodoro.start' }],
   },
   {
     name: 'morning',
@@ -54,10 +54,10 @@ export const BUILT_IN_VIBES: readonly VibeSpec[] = [
   {
     name: 'night-shift',
     title: 'Night Shift',
-    description: 'Late hours. Dimmed, quiet, long sessions.',
+    description: 'Late hours. Dimmed, quiet, pomodoro running.',
     theme: 'midnight',
     dashboard: 'home',
-    onActivate: [{ command: 'focus.start', args: { minutes: 90 } }],
+    onActivate: [{ command: 'pomodoro.start' }],
   },
 ];
 

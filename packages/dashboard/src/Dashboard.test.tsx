@@ -14,13 +14,13 @@ const renderable = detectRuntime().ffi;
 
 function registry() {
   const widgets = createWidgetRegistry(BUILT_IN_WIDGETS);
-  widgets.registerPlugin('focus', [
+  widgets.registerPlugin('pomodoro', [
     {
-      type: 'focus.session',
-      title: 'Focus session',
-      entities: ['timer.focus'],
+      type: 'pomodoro.session',
+      title: 'Pomodoro',
+      entities: ['pomodoro.session'],
       render: ({ width }) => {
-        const entity = useEntity<{ status: string }>('timer.focus');
+        const entity = useEntity<{ status: string }>('pomodoro.session');
         return <text>{`session ${entity?.state.status ?? 'unknown'} @${width}`}</text>;
       },
     },
@@ -45,7 +45,7 @@ name: home
 title: Home
 rows:
   - widgets:
-      - type: focus.session
+      - type: pomodoro.session
         span: 2
       - type: core.note
         title: Reminder
@@ -55,7 +55,7 @@ rows:
 describe.skipIf(!renderable)('Dashboard', () => {
   it('draws each widget in its own panel', async () => {
     const runtime = createAppRuntime({ entities: createEntityStore() });
-    runtime.entities.register('timer.focus', { status: 'running' });
+    runtime.entities.register('pomodoro.session', { status: 'running' });
 
     const setup = await testRender(
       <DashboardApp runtime={runtime} dashboards={[home]} registry={registry()} />,
@@ -66,7 +66,7 @@ describe.skipIf(!renderable)('Dashboard', () => {
       await setup.renderOnce();
       const frame = setup.captureCharFrame();
 
-      expect(frame).toContain('Focus session');
+      expect(frame).toContain('Pomodoro');
       expect(frame).toContain('session running');
       expect(frame).toContain('Reminder');
       expect(frame).toContain('Ship the thing');
@@ -133,7 +133,7 @@ describe.skipIf(!renderable)('Dashboard', () => {
       await setup.renderOnce();
       const frame = setup.captureCharFrame();
       // Both widgets are drawn, each spanning the full width.
-      expect(frame).toContain('Focus session');
+      expect(frame).toContain('Pomodoro');
       expect(frame).toContain('Reminder');
       expect(frame).toContain('@50');
     } finally {
@@ -224,7 +224,8 @@ describe.skipIf(!renderable)('Dashboard', () => {
 
   it('draws a plugin clock widget alongside the built-in entities widget', async () => {
     const entities = createEntityStore();
-    entities.register('timer.focus', { status: 'running' }, { owner: 'focus' });
+    // Short synthetic id — this test asserts the entities table, not a timer plugin.
+    entities.register('timer.demo', { status: 'running' }, { owner: 'demo' });
     const runtime = createAppRuntime({ entities });
     const dashboard = parseDashboard('name: built\nrows:\n  - [clock.now, core.entities]');
 
@@ -239,7 +240,7 @@ describe.skipIf(!renderable)('Dashboard', () => {
       await setup.renderOnce();
       const frame = setup.captureCharFrame();
       expect(frame).toMatch(/\d\d:\d\d/);
-      expect(frame).toContain('timer.focus');
+      expect(frame).toContain('timer.demo');
       expect(frame).toContain('status=running');
     } finally {
       setup.renderer.destroy();
