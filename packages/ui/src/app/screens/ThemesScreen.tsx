@@ -1,5 +1,4 @@
 import { type ReactNode } from 'react';
-import type { Json } from '@nightshift/core';
 import { CatalogScreen } from './CatalogScreen.js';
 import { ThemeEditor } from './ThemeEditor.js';
 import { ThemesList } from './ThemesList.js';
@@ -29,7 +28,7 @@ export function ThemesScreen(): ReactNode {
       emptyDraft={emptyDraft}
       draftFromCatalog={draftFromCatalog}
       duplicateDraft={duplicateDraft}
-      draftToSaveArgs={(draft) => draftToSaveArgs(draft) as Record<string, Json>}
+      draftToSaveArgs={draftToSaveArgs}
       Editor={ThemeEditor}
       List={(props) => (
         <ThemesList

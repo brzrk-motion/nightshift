@@ -51,6 +51,10 @@ export interface CatalogScreenConfig<TDraft extends CatalogDraft, TRow extends C
   /** Display name for delete confirmation — defaults to `row.name`. */
   getRowDisplayName?: (row: TRow) => string;
   Editor: (props: CatalogEditorProps<TDraft>) => ReactNode;
+  /**
+   * List body. Invoked as a function (not `<List />`) so an inline arrow from a
+   * wrapper does not remount the list on every parent re-render.
+   */
   List: (props: CatalogListProps<TRow>) => ReactNode;
 }
 
@@ -117,8 +121,10 @@ export function CatalogScreen<TDraft extends CatalogDraft, TRow extends CatalogR
 
   if (!runtime) return <EmptyState message="No runtime available." />;
 
-  if (view.kind === 'create' || view.kind === 'edit') {
-    return (
+  // Keep confirm modals mounted while editing — otherwise `pendingOverride`
+  // set from create-save never surfaces (modals lived only on the list branch).
+  const body =
+    view.kind === 'create' || view.kind === 'edit' ? (
       <box
         style={{
           flexDirection: 'column',
@@ -134,18 +140,19 @@ export function CatalogScreen<TDraft extends CatalogDraft, TRow extends CatalogR
           onSave={(draft) => requestSave(draft)}
         />
       </box>
+    ) : (
+      List({
+        rows: items,
+        onCreate: () => setView({ kind: 'create', draft: emptyDraft() }),
+        onEdit: (row) => setView({ kind: 'edit', draft: draftFromCatalog(row) }),
+        onDuplicate: (row) => setView({ kind: 'create', draft: duplicateDraft(row) }),
+        onDelete: (row) => setPendingDelete(row),
+      })
     );
-  }
 
   return (
     <>
-      <List
-        rows={items}
-        onCreate={() => setView({ kind: 'create', draft: emptyDraft() })}
-        onEdit={(row) => setView({ kind: 'edit', draft: draftFromCatalog(row) })}
-        onDuplicate={(row) => setView({ kind: 'create', draft: duplicateDraft(row) })}
-        onDelete={(row) => setPendingDelete(row)}
-      />
+      {body}
 
       <ConfirmModal
         open={pendingDelete !== null}
