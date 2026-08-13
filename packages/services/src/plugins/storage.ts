@@ -1,4 +1,4 @@
-import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { NightshiftError, type Json } from '@nightshift/core';
 import type { PluginStorage } from '@nightshift/sdk';
@@ -70,9 +70,4 @@ export function createPluginStorage(options: PluginStorageOptions): PluginStorag
       await enqueue(flush);
     },
   };
-}
-
-/** Removes a plugin's stored state. Used when a plugin is uninstalled. */
-export async function clearPluginStorage(dataDir: string, pluginId: string): Promise<void> {
-  await rm(storagePath(dataDir, pluginId), { force: true });
 }
