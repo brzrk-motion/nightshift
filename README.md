@@ -7,9 +7,9 @@ configured in files you own.
 > left nav rail, and a persistent status bar around the dashboard canvas —
 > plugins load through the public SDK and contribute widgets, commands and
 > automations, the entity store drives the screen, vibes orchestrate the
-> workspace by name, and the bundled focus, todo, habit, home-assistant, and weather
+> workspace by name, and the bundled pomodoro, todo, habit, home-assistant, and weather
 > plugins ship with the CLI. A dashboard is config all the way down — three ship by
-> default, and `home` includes weather, focus, todo, habit, and Home Assistant widgets.
+> default, and `home` includes weather, pomodoro, todo, habit, and Home Assistant widgets.
 > Dashboards can be edited in place, saved back to disk and reloaded without a restart.
 > Packaging binaries and a release workflow are what's left of the MVP
 > checklist.
@@ -148,7 +148,6 @@ set every file — data and logs included — lives underneath it.
   "logLevel": "info",
   "plugins": [
     "@nightshift/plugin-clock",
-    "@nightshift/plugin-focus",
     "@nightshift/plugin-habit",
     "@nightshift/plugin-home-assistant",
     "@nightshift/plugin-pomodoro",
@@ -199,7 +198,7 @@ rows:
           text: Ship the thing.
         when: # only drawn while this holds against the entity store
           type: equals
-          entity: timer.focus
+          entity: pomodoro.session
           key: status
           value: running
   - height: 2
@@ -219,7 +218,7 @@ failing the dashboard.
 Three dashboards ship by default — `home`, `minimal` and `nightshift`.
 `minimal` and `nightshift` stick to the three built-ins, so they always
 render with no plugins installed; `home` also draws on every plugin
-Nightshift bundles by default (clock, focus, todo, weather). A user file of
+Nightshift bundles by default (clock, pomodoro, todo, weather). A user file of
 the same name replaces the built-in rather than sitting alongside it. The
 `dashboard.reload` command —
 from the palette, a keybinding, or a vibe's `onActivate` — re-reads
@@ -253,16 +252,14 @@ a built-in vibe of the same name:
 title: Locked In
 description: Deep work. Timer running, nothing else asking for attention.
 theme: midnight
-dashboard: focus
+dashboard: nightshift
 entities:
-  timer.focus:
-    completedToday: 0 # merged in, not replaced — only the keys listed change
+  pomodoro.session:
+    completedPomodorosToday: 0 # merged in, not replaced — only the keys listed change
 onActivate:
-  - command: focus.start
-    args:
-      minutes: 50
+  - pomodoro.start
 onDeactivate:
-  - focus.pause
+  - pomodoro.pause
 ```
 
 Nightshift ships three: `locked-in`, `morning` and `night-shift`. Switching to
@@ -287,9 +284,12 @@ fires, its conditions are checked, and its actions run.
 
 ```ts
 {
-  name: 'focus.notify-finished',
-  when: { type: 'entity', entity: 'timer.focus', key: 'status' },
-  and: [{ type: 'equals', entity: 'timer.focus', key: 'status', value: 'finished' }],
+  name: 'pomodoro.notify-work-complete',
+  when: { type: 'entity', entity: 'pomodoro.session', key: 'status' },
+  and: [
+    { type: 'equals', entity: 'pomodoro.session', key: 'status', value: 'phaseComplete' },
+    { type: 'equals', entity: 'pomodoro.session', key: 'phase', value: 'work' },
+  ],
   then: [{ command: 'app.notify', args: { message: 'Session complete.', tone: 'success' } }],
 }
 ```
@@ -304,8 +304,8 @@ fires, its conditions are checked, and its actions run.
 Conditions (`equals`, `above`, `below`) read an entity field at fire time; all
 of them must hold for the actions to run. There is no YAML format for
 automations yet — a plugin declares them with `context.registerAutomation(...)`
-(see below), which is how the bundled focus plugin notifies you when a session
-finishes.
+(see below), which is how the bundled pomodoro plugin notifies you when a work
+interval finishes.
 
 ## Plugins
 
@@ -364,7 +364,9 @@ Nightshift ships bundled plugins:
   widget's own "Settings" toggle rather than dashboard `options`, and persist
   across restarts. A clock added through the widget picker opens straight
   into that settings panel.
-- **focus** — the reference timer (session + today’s count).
+- **pomodoro** — work intervals with short and long breaks (25/5/15 by
+  default, long break every four pomodoros). Session widget plus today’s count.
+  The reference timer plugin.
 - **habit** — a rolling 7-day habit grid (`habit.tracker`) with add/toggle/
   rename/delete, current and longest streaks, and persistence via plugin
   storage. Day-label density adapts to the widget’s width.
@@ -373,8 +375,6 @@ Nightshift ships bundled plugins:
   bind scenes to vibes via `home-assistant.activate-scene` in vibe
   `onActivate` / `onDeactivate`. Token stays in plugin storage, never on the
   shared entity.
-- **pomodoro** — work intervals with short and long breaks (25/5/15 by
-  default, long break every four pomodoros). Session widget plus today’s count.
 - **todo** — a todo list with no backend; a single `todo.md` in your home
   directory is the source of truth (`- [ ]` / `- [x]`), mirrored into
   `todo.items`.
@@ -510,7 +510,7 @@ packages/automations   Triggers, conditions and actions
 packages/services      Config, logging, settings and the plugin runtime
 mcp/context-mcp        A tree-sitter code index served over MCP, for agents
 plugins/clock          The time and date, with 12/24-hour and date format settings
-plugins/focus          The focus timer — the reference plugin
+plugins/pomodoro       Work intervals with short and long breaks — the reference plugin
 plugins/habit          Rolling 7-day habit tracker
 plugins/home-assistant Home Assistant scenes (list, activate, vibe bindings)
 plugins/todo           A todo list backed by a plain todo.md file

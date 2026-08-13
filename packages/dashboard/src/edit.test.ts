@@ -294,6 +294,6 @@ describe('specForPickedWidget', () => {
   });
 
   it('leaves other widgets as a bare type', () => {
-    expect(specForPickedWidget('focus.session')).toEqual({ type: 'focus.session' });
+    expect(specForPickedWidget('pomodoro.session')).toEqual({ type: 'pomodoro.session' });
   });
 });
