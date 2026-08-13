@@ -10,6 +10,26 @@ describe('nowScale', () => {
       font: 'block',
       showSecondary: true,
       heroesInline: true,
+      showLabel: true,
+      showDetail: true,
+    });
+  });
+
+  it('keeps stacked large widgets on tiny until block has room for two bands', () => {
+    expect(nowScale(80, 20)).toMatchObject({
+      layout: 'large',
+      font: 'tiny',
+      heroesInline: false,
+    });
+    expect(nowScale(80, 24)).toMatchObject({
+      layout: 'large',
+      font: 'block',
+      heroesInline: false,
+    });
+    expect(nowScale(92, 20)).toMatchObject({
+      layout: 'large',
+      font: 'block',
+      heroesInline: true,
     });
   });
 
