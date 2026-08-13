@@ -38,7 +38,6 @@ import {
   type VibeSpec,
 } from '@nightshift/vibes';
 import {
-  BUILT_IN_THEMES,
   createAppRuntime,
   createThemeEngine,
   deleteTheme,
