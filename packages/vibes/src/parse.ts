@@ -1,7 +1,13 @@
-import { mkdir, readdir, readFile, unlink, writeFile } from 'node:fs/promises';
-import { basename, extname, join } from 'node:path';
+import { readFile } from 'node:fs/promises';
+import { basename, extname } from 'node:path';
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
-import { NightshiftError, type Json } from '@nightshift/core';
+import {
+  deleteYamlResource,
+  loadYamlDir,
+  NightshiftError,
+  saveYamlResource,
+  type Json,
+} from '@nightshift/core';
 import { isEntityId, type EntityId } from '@nightshift/entities';
 import type { VibeAction, VibeSpec } from './schema.js';
 
@@ -149,33 +155,17 @@ export function serializeVibe(vibe: VibeSpec): string {
  * needed. A user file of the same name replaces a built-in on the next load.
  */
 export async function saveVibe(directory: string, vibe: VibeSpec): Promise<string> {
-  const path = join(directory, `${vibe.name}.yaml`);
-  try {
-    await mkdir(directory, { recursive: true });
-    await writeFile(path, serializeVibe(vibe), 'utf8');
-  } catch (error) {
-    throw new NightshiftError('CONFIG_UNWRITABLE', `Could not write ${path}.`, { cause: error });
-  }
-  return path;
+  return saveYamlResource(directory, vibe.name, serializeVibe(vibe));
 }
 
 /** Removes `vibes/<name>.yaml`. Refused when the file does not exist. */
 export async function deleteVibe(directory: string, name: string): Promise<void> {
-  const path = join(directory, `${name}.yaml`);
-  try {
-    await unlink(path);
-  } catch (error) {
-    const code = (error as NodeJS.ErrnoException).code;
-    if (code === 'ENOENT') {
-      throw new NightshiftError('VIBE_NOT_FOUND', `No user vibe file at ${path}.`, {
-        hint: 'Built-in vibes cannot be deleted unless you have saved a user override.',
-      });
-    }
-    throw new NightshiftError('CONFIG_UNWRITABLE', `Could not delete ${path}.`, { cause: error });
-  }
+  return deleteYamlResource(directory, name, {
+    notFoundCode: 'VIBE_NOT_FOUND',
+    notFoundMessage: (path) => `No user vibe file at ${path}.`,
+    notFoundHint: 'Built-in vibes cannot be deleted unless you have saved a user override.',
+  });
 }
-
-const EXTENSIONS = new Set(['.yaml', '.yml']);
 
 /** Reads and parses one vibe file. */
 export async function loadVibeFile(path: string): Promise<VibeSpec> {
@@ -199,24 +189,6 @@ export interface VibeLoadResult {
  * thrown, so one bad vibe does not hide the rest.
  */
 export async function loadVibes(directory: string): Promise<VibeLoadResult> {
-  const result: VibeLoadResult = { vibes: [], failed: [] };
-
-  let entries: string[];
-  try {
-    entries = await readdir(directory);
-  } catch {
-    return result;
-  }
-
-  for (const entry of entries.sort()) {
-    if (!EXTENSIONS.has(extname(entry))) continue;
-    const path = join(directory, entry);
-    try {
-      result.vibes.push(await loadVibeFile(path));
-    } catch (error) {
-      result.failed.push({ path, error });
-    }
-  }
-
-  return result;
+  const { items, failed } = await loadYamlDir(directory, loadVibeFile);
+  return { vibes: items, failed };
 }

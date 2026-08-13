@@ -1,7 +1,13 @@
-import { mkdir, readdir, readFile, unlink, writeFile } from 'node:fs/promises';
-import { basename, extname, join } from 'node:path';
+import { readFile } from 'node:fs/promises';
+import { basename, extname } from 'node:path';
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
-import { NightshiftError, type Json } from '@nightshift/core';
+import {
+  deleteYamlResource,
+  loadYamlDir,
+  NightshiftError,
+  saveYamlResource,
+  type Json,
+} from '@nightshift/core';
 import type { Condition } from '@nightshift/automations';
 import { isEntityId, type EntityId } from '@nightshift/entities';
 import {
@@ -247,17 +253,8 @@ export function serializeDashboard(dashboard: DashboardSpec): string {
  * old one being overwritten, since nothing tracks a spec's original path.
  */
 export async function saveDashboard(directory: string, dashboard: DashboardSpec): Promise<string> {
-  const path = join(directory, `${dashboard.name}.yaml`);
-  try {
-    await mkdir(directory, { recursive: true });
-    await writeFile(path, serializeDashboard(dashboard), 'utf8');
-  } catch (error) {
-    throw new NightshiftError('CONFIG_UNWRITABLE', `Could not write ${path}.`, { cause: error });
-  }
-  return path;
+  return saveYamlResource(directory, dashboard.name, serializeDashboard(dashboard));
 }
-
-const EXTENSIONS = new Set(['.yaml', '.yml']);
 
 /** Reads and parses one dashboard file. */
 export async function loadDashboardFile(path: string): Promise<DashboardSpec> {
@@ -281,26 +278,8 @@ export interface DashboardLoadResult {
  * thrown, so one bad dashboard does not hide the rest.
  */
 export async function loadDashboards(directory: string): Promise<DashboardLoadResult> {
-  const result: DashboardLoadResult = { dashboards: [], failed: [] };
-
-  let entries: string[];
-  try {
-    entries = await readdir(directory);
-  } catch {
-    return result;
-  }
-
-  for (const entry of entries.sort()) {
-    if (!EXTENSIONS.has(extname(entry))) continue;
-    const path = join(directory, entry);
-    try {
-      result.dashboards.push(await loadDashboardFile(path));
-    } catch (error) {
-      result.failed.push({ path, error });
-    }
-  }
-
-  return result;
+  const { items, failed } = await loadYamlDir(directory, loadDashboardFile);
+  return { dashboards: items, failed };
 }
 
 /**
@@ -319,18 +298,10 @@ export function mergeDashboards(
   );
 }
 
-/** Removes `dashboards/<name>.yaml`. Refused when the file does not exist. */
 export async function deleteDashboard(directory: string, name: string): Promise<void> {
-  const path = join(directory, `${name}.yaml`);
-  try {
-    await unlink(path);
-  } catch (error) {
-    const code = (error as NodeJS.ErrnoException).code;
-    if (code === 'ENOENT') {
-      throw new NightshiftError('DASHBOARD_NOT_FOUND', `No user dashboard file at ${path}.`, {
-        hint: 'Built-in dashboards cannot be deleted unless you have saved a user override.',
-      });
-    }
-    throw new NightshiftError('CONFIG_UNWRITABLE', `Could not delete ${path}.`, { cause: error });
-  }
+  return deleteYamlResource(directory, name, {
+    notFoundCode: 'DASHBOARD_NOT_FOUND',
+    notFoundMessage: (path) => `No user dashboard file at ${path}.`,
+    notFoundHint: 'Built-in dashboards cannot be deleted unless you have saved a user override.',
+  });
 }
