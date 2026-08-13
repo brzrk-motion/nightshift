@@ -22,12 +22,6 @@ export {
   type LoggerOptions,
 } from './logger.js';
 export {
-  createSettingsStore,
-  type SettingsEvents,
-  type SettingsStore,
-  type SettingsStoreOptions,
-} from './settings.js';
-export {
   discoverPlugins,
   type DiscoverOptions,
   type PluginOrigin,
