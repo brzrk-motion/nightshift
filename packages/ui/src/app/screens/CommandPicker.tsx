@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { TextInput } from '../../components/controls.js';
 import { List } from '../../components/Table.js';
 import { useRuntime, useTheme } from '../context.js';
-import { filterCommands } from './commandPicker.js';
+import { filterCommands } from './filterCommands.js';
 import { CommandPickerListKeys } from './CommandPickerListKeys.js';
 
 export interface CommandPickerProps {
