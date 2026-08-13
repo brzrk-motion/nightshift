@@ -2,9 +2,9 @@
  * The timer's reducers: pure functions from one `FocusState` to the next.
  * `setup()` wires these to real commands and a real clock; keeping the rules
  * here, with no interval or entity store in sight, is what makes them
- * testable without waiting on a clock.
+ * testable without waiting on a clock. The entity id lives here too so
+ * widgets can import it without pulling in `setup()`.
  */
-/** Entity id shared by index/widgets so widgets avoid importing setup(). */
 export const FOCUS_ENTITY = 'timer.focus' as const;
 
 export type FocusStatus = 'idle' | 'running' | 'paused' | 'finished';
