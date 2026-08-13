@@ -3,8 +3,6 @@
  * Accepts bare IPv4, `host:port`, or an absolute http(s) URL.
  */
 
-import { isIPv4 } from 'node:net';
-
 export class UrlValidationError extends Error {
   constructor(message: string) {
     super(message);
@@ -44,23 +42,9 @@ export function normalizeBaseUrl(input: string): string {
     throw new UrlValidationError(`Invalid address "${input}".`);
   }
 
-  // Bare IPv4 without an explicit port → HA default 8123.
-  if (
-    parsed.port === '' &&
-    isIPv4(parsed.hostname) &&
-    (parsed.protocol === 'http:' || parsed.protocol === 'https:')
-  ) {
-    // Only default port for http (local). HTTPS remote IPs keep default 443.
-    if (parsed.protocol === 'http:') {
-      parsed.port = DEFAULT_PORT;
-    }
-  }
-
-  // Host without port that isn't IPv4 — for http, still apply 8123 when the
-  // user typed a LAN hostname without a scheme (already handled above as
-  // http://). Leave https alone (443).
-  if (parsed.port === '' && parsed.protocol === 'http:' && !isIPv4(parsed.hostname)) {
-    // User wrote "homeassistant.local" → http://homeassistant.local:8123
+  // HTTP without an explicit port → HA default 8123 (bare IP or hostname).
+  // HTTPS is left alone (default 443).
+  if (parsed.port === '' && parsed.protocol === 'http:') {
     parsed.port = DEFAULT_PORT;
   }
 

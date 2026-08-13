@@ -18,6 +18,10 @@ describe('normalizeBaseUrl', () => {
     expect(normalizeBaseUrl('https://example.ui.nabu.casa')).toBe('https://example.ui.nabu.casa');
   });
 
+  it('keeps https IPv4 without forcing port 8123', () => {
+    expect(normalizeBaseUrl('https://192.168.1.10')).toBe('https://192.168.1.10');
+  });
+
   it('defaults bare hostnames on http to port 8123', () => {
     expect(normalizeBaseUrl('homeassistant.local')).toBe('http://homeassistant.local:8123');
   });
