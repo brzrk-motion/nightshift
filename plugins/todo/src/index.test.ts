@@ -24,15 +24,13 @@ const fileState = vi.hoisted(() => ({
 
 vi.mock('./file.js', () => ({
   DEFAULT_TODO_PATH: '/fake/home/todo.md',
-  createTodoFile: () => ({
-    load: async () => {
-      if (fileState.loadError) throw fileState.loadError;
-      return fileState.items;
-    },
-    save: async (items: readonly TodoItem[]) => {
-      fileState.saved = [...items];
-    },
-  }),
+  loadTodos: async () => {
+    if (fileState.loadError) throw fileState.loadError;
+    return fileState.items;
+  },
+  saveTodos: async (items: readonly TodoItem[]) => {
+    fileState.saved = [...items];
+  },
 }));
 
 const { default: plugin } = await import('./index.js');
