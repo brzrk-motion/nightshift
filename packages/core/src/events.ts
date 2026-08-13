@@ -23,14 +23,7 @@ export interface EventBus<Events extends EventMap> {
     event: Name,
     listener: EventListener<Events[Name]>,
   ): Unsubscribe;
-  /** Subscribes for a single emission. */
-  once<Name extends keyof Events & string>(
-    event: Name,
-    listener: EventListener<Events[Name]>,
-  ): Unsubscribe;
-  off<Name extends keyof Events & string>(event: Name, listener: EventListener<Events[Name]>): void;
   emit<Name extends keyof Events & string>(event: Name, ...args: Events[Name]): void;
-  listenerCount(event?: keyof Events & string): number;
   /** Drops every listener, for one event or for all of them. */
   clear(event?: keyof Events & string): void;
 }
@@ -73,22 +66,6 @@ export function createEventBus<Events extends EventMap>(
       return add(event, listener as EventListener<never>);
     },
 
-    once(event, listener) {
-      const wrapper = ((...args: unknown[]) => {
-        dispose();
-        (listener as EventListener<unknown[]>)(...args);
-      }) as EventListener<never>;
-      const dispose = add(event, wrapper);
-      return dispose;
-    },
-
-    off(event, listener) {
-      const set = listeners.get(event);
-      if (!set) return;
-      set.delete(listener as EventListener<never>);
-      if (set.size === 0) listeners.delete(event);
-    },
-
     emit(event, ...args) {
       const set = listeners.get(event);
       if (!set) return;
@@ -101,13 +78,6 @@ export function createEventBus<Events extends EventMap>(
           onError(error, event);
         }
       }
-    },
-
-    listenerCount(event) {
-      if (event !== undefined) return listeners.get(event)?.size ?? 0;
-      let total = 0;
-      for (const set of listeners.values()) total += set.size;
-      return total;
     },
 
     clear(event) {
