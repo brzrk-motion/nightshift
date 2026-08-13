@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { filterCommands } from './commandPicker.js';
+import { filterCommands } from './filterCommands.js';
 import type { Command } from '../../commands.js';
 
 function command(id: string, hidden = false): Command {

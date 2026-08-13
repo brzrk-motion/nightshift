@@ -6,8 +6,8 @@
 
 ## Entities
 
-| Id | Publisher | Shape | Consumers |
-|----|-----------|-------|-----------|
+| Id                  | Publisher   | Shape                           | Consumers                     |
+| ------------------- | ----------- | ------------------------------- | ----------------------------- |
 | `nightshift.themes` | CLI runtime | `{ themes: ThemeCatalogRow[] }` | ThemesScreen list + edit load |
 
 UI MUST NOT import theme parse/save from `@nightshift/ui/theme/parse` or read `themesDir` directly.
@@ -32,7 +32,7 @@ UI MUST NOT import theme parse/save from `@nightshift/ui/theme/parse` or read `t
     success: string;
     warning: string;
     danger: string;
-  };
+  }
 }
 ```
 
@@ -40,11 +40,11 @@ UI MUST NOT import theme parse/save from `@nightshift/ui/theme/parse` or read `t
 
 ### `theme.save` (new; hidden)
 
-| Arg | Type | Required | Description |
-|-----|------|----------|-------------|
-| `name` | string | yes | `/^[a-z][a-z0-9-]*$/` |
-| `appearance` | string | yes | `'dark'` or `'light'` |
-| `colors` | object | yes | All ThemeColors keys, `#rrggbb` hex strings |
+| Arg          | Type   | Required | Description                                 |
+| ------------ | ------ | -------- | ------------------------------------------- |
+| `name`       | string | yes      | `/^[a-z][a-z0-9-]*$/`                       |
+| `appearance` | string | yes      | `'dark'` or `'light'`                       |
+| `colors`     | object | yes      | All ThemeColors keys, `#rrggbb` hex strings |
 
 **Effect**: Validate via serialize→parse → `saveTheme(themesDir)` → `app.themes.register(spec)` → re-register `theme.activate.*` commands → `publishThemesCatalog` → if saved theme is currently active, re-activate to refresh subscribers → success toast.
 
@@ -52,9 +52,9 @@ UI MUST NOT import theme parse/save from `@nightshift/ui/theme/parse` or read `t
 
 ### `theme.delete` (new; hidden)
 
-| Arg | Type | Required | Description |
-|-----|------|----------|-------------|
-| `name` | string | yes | Theme name |
+| Arg    | Type   | Required | Description |
+| ------ | ------ | -------- | ----------- |
+| `name` | string | yes      | Theme name  |
 
 **Effect**: If no user file → error "built-in themes cannot be deleted". Else delete file → unregister from engine if user-only → re-merge built-in → if deleted was active, activate fallback → persist `config.json` → refresh activate commands → refresh catalog → toast.
 
@@ -63,6 +63,7 @@ UI MUST NOT import theme parse/save from `@nightshift/ui/theme/parse` or read `t
 Registered dynamically for every theme in merged catalog (built-in + user). **Activate** / Enter on Themes list runs this id.
 
 **Effect**:
+
 1. `app.themes.activate(name)`
 2. `saveConfig({ ...config, theme: name })`
 3. `publishThemesCatalog` (update `active` flags)
@@ -95,20 +96,20 @@ Activate → theme.activate.<selected.name>
 
 ## Shell changes
 
-| Location | Change |
-|----------|--------|
-| `DEFAULT_SCREENS` | Insert `{ id: 'themes', label: 'Themes', icon: 'themes', render: ThemesScreen }` after Vibes |
-| `AppShell.tsx` | Remove static `theme.activate.*` registration block |
-| `SettingsScreen.tsx` | Remove theme List; keep terminal stats + hint to Themes screen |
-| `NavRail` / icons | Add `themes` icon glyph (match existing icon set pattern) |
+| Location             | Change                                                                                       |
+| -------------------- | -------------------------------------------------------------------------------------------- |
+| `DEFAULT_SCREENS`    | Insert `{ id: 'themes', label: 'Themes', icon: 'themes', render: ThemesScreen }` after Vibes |
+| `AppShell.tsx`       | Remove static `theme.activate.*` registration block                                          |
+| `SettingsScreen.tsx` | Remove theme List; keep terminal stats + hint to Themes screen                               |
+| `NavRail` / icons    | Add `themes` icon glyph (match existing icon set pattern)                                    |
 
 ## Picker data sources
 
-| Field | Source |
-|-------|--------|
+| Field                                   | Source                                       |
+| --------------------------------------- | -------------------------------------------- |
 | Theme dropdown (Vibe/Dashboard editors) | `runtime.themes.list()` after engine refresh |
-| List rows | `nightshift.themes` |
-| Active indicator | `row.active` |
+| List rows                               | `nightshift.themes`                          |
+| Active indicator                        | `row.active`                                 |
 
 ## File format
 
@@ -126,20 +127,20 @@ Machine writes via `serializeTheme`. Unknown keys ignored on parse (forward-comp
 
 ## Paths
 
-| Path | Added |
-|------|-------|
+| Path                        | Added                       |
+| --------------------------- | --------------------------- |
 | `NightshiftPaths.themesDir` | `join(configDir, 'themes')` |
-| `ensureConfigDirs` | creates `themesDir` |
+| `ensureConfigDirs`          | creates `themesDir`         |
 
 ## ColorField component contract
 
-| Prop | Type | Description |
-|------|------|-------------|
-| `label` | string | Field name shown to user |
-| `value` | string | Hex string (may be invalid while typing) |
-| `focused` | boolean | Focus ring |
-| `onFocus` | () => void | |
-| `onChange` | (hex: string) => void | |
-| `disabled` | boolean? | Edit locked name row only |
+| Prop       | Type                  | Description                              |
+| ---------- | --------------------- | ---------------------------------------- |
+| `label`    | string                | Field name shown to user                 |
+| `value`    | string                | Hex string (may be invalid while typing) |
+| `focused`  | boolean               | Focus ring                               |
+| `onFocus`  | () => void            |                                          |
+| `onChange` | (hex: string) => void |                                          |
+| `disabled` | boolean?              | Edit locked name row only                |
 
 Renders: `[swatch] #rrggbb ▏` using `TextInput` with `keyboardCapture`. Swatch uses parsed color when valid, `theme.colors.border` when invalid.

@@ -6,10 +6,10 @@
 
 ## Plugin manifest
 
-| Field | Value |
-|-------|--------|
-| `id` | `home-assistant` |
-| Package | `@nightshift/plugin-home-assistant` |
+| Field        | Value                                                                                            |
+| ------------ | ------------------------------------------------------------------------------------------------ |
+| `id`         | `home-assistant`                                                                                 |
+| Package      | `@nightshift/plugin-home-assistant`                                                              |
 | Capabilities | `entities:read`, `entities:write`, `widgets:register`, `commands:register`, `storage`, `network` |
 
 Default grant (bundled): `pluginPermissions["home-assistant"]` includes `network` (same migration pattern as weather/spotify).
@@ -25,15 +25,15 @@ All other URLs → `NETWORK_DENIED`.
 
 ## Entities
 
-| Id | Title | Shape |
-|----|-------|--------|
-| `home-assistant.connection` | Home Assistant | [ConnectionState](../data-model.md) |
-| `home-assistant.scenes` | Home Assistant scenes | [ScenesState](../data-model.md) |
+| Id                          | Title                 | Shape                               |
+| --------------------------- | --------------------- | ----------------------------------- |
+| `home-assistant.connection` | Home Assistant        | [ConnectionState](../data-model.md) |
+| `home-assistant.scenes`     | Home Assistant scenes | [ScenesState](../data-model.md)     |
 
 ## Widget
 
-| Type | Title | Entities | Notes |
-|------|-------|----------|--------|
+| Type                    | Title          | Entities                                             | Notes                                                                  |
+| ----------------------- | -------------- | ---------------------------------------------------- | ---------------------------------------------------------------------- |
 | `home-assistant.scenes` | Home Assistant | `home-assistant.connection`, `home-assistant.scenes` | Configure form when unconfigured; scene list + activate when connected |
 
 Dashboard YAML:
@@ -49,10 +49,10 @@ Invalid args soft-fail (log/notify); must not throw to the host.
 
 ### `home-assistant.configure`
 
-| Arg | Type | Required | Description |
-|-----|------|----------|-------------|
-| `address` | string | yes | IP, `host:port`, or absolute URL |
-| `token` | string | yes | Long-lived access token |
+| Arg       | Type   | Required | Description                      |
+| --------- | ------ | -------- | -------------------------------- |
+| `address` | string | yes      | IP, `host:port`, or absolute URL |
+| `token`   | string | yes      | Long-lived access token          |
 
 **Effect**: Normalize address → persist credentials → connection check → refresh scenes.
 
@@ -66,9 +66,9 @@ No args. Re-fetches scene list when configured; no-op if not.
 
 ### `home-assistant.activate-scene`
 
-| Arg | Type | Required | Description |
-|-----|------|----------|-------------|
-| `entity_id` | string | yes | HA scene entity id, e.g. `scene.locked_in` |
+| Arg         | Type   | Required | Description                                |
+| ----------- | ------ | -------- | ------------------------------------------ |
+| `entity_id` | string | yes      | HA scene entity id, e.g. `scene.locked_in` |
 
 **Effect**: `POST {baseUrl}/api/services/scene/turn_on` with JSON `{"entity_id":"…"}` and Bearer token.
 
@@ -121,10 +121,10 @@ Key: `credentials`
 
 ## Address normalization rules
 
-| Input | Result |
-|-------|--------|
-| `192.168.1.10` | `http://192.168.1.10:8123` |
-| `192.168.1.10:8123` | `http://192.168.1.10:8123` |
-| `http://192.168.1.10:8123/` | `http://192.168.1.10:8123` |
+| Input                          | Result                                                |
+| ------------------------------ | ----------------------------------------------------- |
+| `192.168.1.10`                 | `http://192.168.1.10:8123`                            |
+| `192.168.1.10:8123`            | `http://192.168.1.10:8123`                            |
+| `http://192.168.1.10:8123/`    | `http://192.168.1.10:8123`                            |
 | `https://example.ui.nabu.casa` | `https://example.ui.nabu.casa` (default port omitted) |
-| empty / garbage | validation error |
+| empty / garbage                | validation error                                      |

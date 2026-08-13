@@ -8,7 +8,7 @@
 
 **Input**: User description: "System monitor plugin with CPU, GPU, network activity and RAM usage. Basic graphics for each metric. Settings page where we can turn graphs on or off."
 
-## User Scenarios & Testing *(mandatory)*
+## User Scenarios & Testing _(mandatory)_
 
 ### User Story 1 - See live system metrics at a glance (Priority: P1)
 
@@ -87,7 +87,7 @@ In a narrow widget slot the monitor stays readable (metric label + value + one-l
 - Corrupt storage for settings loads defaults (all graphs on except GPU off by default if unavailable — or all on with GPU soft-fail).
 - Container/chroot environments without `/proc/stat` behave like unsupported platform for affected metrics.
 
-## Requirements *(mandatory)*
+## Requirements _(mandatory)_
 
 ### Functional Requirements
 
@@ -104,13 +104,13 @@ In a narrow widget slot the monitor stays readable (metric label + value + one-l
 - **FR-011**: Plugin MUST use only the public SDK for runtime imports and register entities, commands, and widgets per Nightshift plugin conventions.
 - **FR-012**: Automated tests MUST cover metric parsing/normalization, settings hydration, history rolling, toggle filtering, and setup against a fake context with mocked collectors.
 
-### Key Entities *(include if feature involves data)*
+### Key Entities _(include if feature involves data)_
 
 - **Monitor settings**: Per-graph enable flags for CPU, GPU, network, RAM (durable).
 - **Monitor snapshot**: Latest sampled values and availability flags per metric (live entity).
 - **Metric history**: Rolling numeric arrays per metric for charts (live entity or derived in widget from snapshot stream).
 
-## Success Criteria *(mandatory)*
+## Success Criteria _(mandatory)_
 
 ### Measurable Outcomes
 

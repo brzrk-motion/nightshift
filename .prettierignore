@@ -4,3 +4,8 @@ node_modules
 coverage
 pnpm-lock.yaml
 CHANGELOG.md
+
+# Speckit vendor copies. Prettier would rewrite YAML quotes and wrap
+# prompt text, then the next speckit upgrade would fight the result.
+.specify/
+.cursor/skills/speckit-*

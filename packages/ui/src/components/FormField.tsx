@@ -15,13 +15,7 @@ export function formFieldLabel(label: string, stackFields: boolean): string {
   return stackFields ? label : label.padEnd(12);
 }
 
-export function FormField({
-  label,
-  scale,
-  focused,
-  onFocus,
-  children,
-}: FormFieldProps): ReactNode {
+export function FormField({ label, scale, focused, onFocus, children }: FormFieldProps): ReactNode {
   const theme = useTheme();
   return (
     <box

@@ -10,42 +10,48 @@
 
 New exports added by this feature:
 
-| Symbol | Module | Kind |
-|--------|--------|------|
-| `FormSection` | `components/FormSection.tsx` | Component |
-| `FormField` | `components/FormField.tsx` | Component |
-| `ActionBar` | `components/ActionBar.tsx` | Component |
-| `ScreenLayout` | `components/ScreenLayout.tsx` | Component |
-| `ConfirmModal` | `components/ConfirmModal.tsx` | Component |
-| `FooterHint` | `components/FooterHint.tsx` | Component |
-| `useListKeyboard` | `components/useListKeyboard.ts` | Hook |
-| `formScale` | `formLayout.ts` | Pure function |
-| `formContentSize` | `formLayout.ts` | Pure function |
-| `useFormScale` | `formLayout.ts` | Hook |
-| `useShellContentSize` | `app/useShellContentSize.ts` | Hook (promoted from internal) |
-| `FormScale` | `formLayout.ts` | Type |
-| `FormLayout` | `formLayout.ts` | Type |
+| Symbol                | Module                          | Kind                          |
+| --------------------- | ------------------------------- | ----------------------------- |
+| `FormSection`         | `components/FormSection.tsx`    | Component                     |
+| `FormField`           | `components/FormField.tsx`      | Component                     |
+| `ActionBar`           | `components/ActionBar.tsx`      | Component                     |
+| `ScreenLayout`        | `components/ScreenLayout.tsx`   | Component                     |
+| `ConfirmModal`        | `components/ConfirmModal.tsx`   | Component                     |
+| `FooterHint`          | `components/FooterHint.tsx`     | Component                     |
+| `useListKeyboard`     | `components/useListKeyboard.ts` | Hook                          |
+| `formScale`           | `formLayout.ts`                 | Pure function                 |
+| `formContentSize`     | `formLayout.ts`                 | Pure function                 |
+| `useFormScale`        | `formLayout.ts`                 | Hook                          |
+| `useShellContentSize` | `app/useShellContentSize.ts`    | Hook (promoted from internal) |
+| `FormScale`           | `formLayout.ts`                 | Type                          |
+| `FormLayout`          | `formLayout.ts`                 | Type                          |
 
 Existing exports unchanged. `vibeEditorLayout.ts` MAY re-export from `formLayout` as deprecated shim:
 
 ```ts
 /** @deprecated Use formScale / useFormScale from formLayout */
-export { formScale as vibeEditorScale, formContentSize as vibeEditorContentSize } from '../formLayout.js';
-export type { FormScale as VibeEditorScale, FormLayout as VibeEditorLayout } from '../formLayout.js';
+export {
+  formScale as vibeEditorScale,
+  formContentSize as vibeEditorContentSize,
+} from '../formLayout.js';
+export type {
+  FormScale as VibeEditorScale,
+  FormLayout as VibeEditorLayout,
+} from '../formLayout.js';
 ```
 
 ### `@nightshift/sdk` (plugin surface)
 
 New re-exports:
 
-| Symbol | Source |
-|--------|--------|
-| `SelectField` | `@nightshift/ui` |
-| `SelectOption` | `@nightshift/ui` |
-| `resolveBreakpoint` | `@nightshift/ui/layout` |
-| `useShellContentSize` | `@nightshift/ui` |
-| `TerminalSize` | `@nightshift/ui/layout` |
-| `Breakpoint` | `@nightshift/ui/layout` |
+| Symbol                | Source                  |
+| --------------------- | ----------------------- |
+| `SelectField`         | `@nightshift/ui`        |
+| `SelectOption`        | `@nightshift/ui`        |
+| `resolveBreakpoint`   | `@nightshift/ui/layout` |
+| `useShellContentSize` | `@nightshift/ui`        |
+| `TerminalSize`        | `@nightshift/ui/layout` |
+| `Breakpoint`          | `@nightshift/ui/layout` |
 
 Form primitives (`FormSection`, `ScreenLayout`, etc.) remain **shell-internal** unless a plugin needs full settings panels in a later feature.
 
@@ -131,17 +137,17 @@ Selection state driven by `useListKeyboard` or thin wrapper preserving current k
 
 ## Dependency rules
 
-| From | Must NOT import |
-|------|-----------------|
-| `components/*` | `app/screens/*` |
+| From                    | Must NOT import                           |
+| ----------------------- | ----------------------------------------- |
+| `components/*`          | `app/screens/*`                           |
 | `components/ColorField` | `themeDraft.ts` (use `theme/validate.ts`) |
-| Plugins | `@nightshift/ui` directly (SDK only) |
+| Plugins                 | `@nightshift/ui` directly (SDK only)      |
 
 ## Test contract
 
-| Module | Required tests |
-|--------|----------------|
-| `formLayout.ts` | Threshold boundaries; parity with old vibeEditorLayout tests |
-| `useListKeyboard.ts` | Capture guard; selection clamp; key mapping |
-| `FormField.tsx` | Stack vs inline at scale flags (renderer test or snapshot) |
-| Migrated screens | Existing screen tests pass without modification |
+| Module               | Required tests                                               |
+| -------------------- | ------------------------------------------------------------ |
+| `formLayout.ts`      | Threshold boundaries; parity with old vibeEditorLayout tests |
+| `useListKeyboard.ts` | Capture guard; selection clamp; key mapping                  |
+| `FormField.tsx`      | Stack vs inline at scale flags (renderer test or snapshot)   |
+| Migrated screens     | Existing screen tests pass without modification              |

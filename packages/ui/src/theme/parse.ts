@@ -2,7 +2,13 @@ import { mkdir, readdir, readFile, unlink, writeFile } from 'node:fs/promises';
 import { basename, extname, join } from 'node:path';
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 import { NightshiftError } from '@nightshift/core';
-import { BUILT_IN_THEMES, HEX_COLOR, THEME_COLOR_KEYS, type Theme, type ThemeColors } from '../theme.js';
+import {
+  BUILT_IN_THEMES,
+  HEX_COLOR,
+  THEME_COLOR_KEYS,
+  type Theme,
+  type ThemeColors,
+} from '../theme.js';
 import type { ThemeSpec } from './schema.js';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -169,7 +175,10 @@ export async function loadThemes(directory: string): Promise<ThemeLoadResult> {
  * Merges user themes over built-ins by name. User files replace built-ins
  * of the same name rather than appearing alongside them.
  */
-export function mergeThemes(userThemes: readonly ThemeSpec[], builtIn: readonly Theme[]): ThemeSpec[] {
+export function mergeThemes(
+  userThemes: readonly ThemeSpec[],
+  builtIn: readonly Theme[],
+): ThemeSpec[] {
   const registry = new Map<string, ThemeSpec>(builtIn.map((theme) => [theme.name, theme]));
   for (const theme of userThemes) registry.set(theme.name, theme);
   return [...registry.values()].sort((a, b) => a.name.localeCompare(b.name));

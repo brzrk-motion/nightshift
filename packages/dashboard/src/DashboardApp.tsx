@@ -313,7 +313,7 @@ export function DashboardApp({
         id: 'dashboard.reload',
         title: 'Reload dashboards from disk',
         category: 'Dashboard',
-        run: () => void reload(),
+        run: () => reload(),
       }),
     ];
     return () => {

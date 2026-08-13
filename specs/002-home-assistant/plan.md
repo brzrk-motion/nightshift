@@ -32,22 +32,22 @@ Ship a bundled `@nightshift/plugin-home-assistant` plugin that stores HA base UR
 
 ## Constitution Check
 
-*GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
+_GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 
 `.specify/memory/constitution.md` is still the Speckit placeholder (principles not ratified). Gates below are taken from project law in `AGENTS.md` / README design principles:
 
-| Gate | Status | Notes |
-|------|--------|-------|
-| Everything is a plugin | PASS | New work lives in `plugins/home-assistant` |
-| Public SDK is the only plugin interface | PASS | Runtime dep: `@nightshift/sdk` only |
-| Dashboards consume widgets | PASS | Widget type `home-assistant.scenes` |
-| Vibes orchestrate actions | PASS | Vibe YAML calls `home-assistant.activate-scene` |
-| Entities provide shared state | PASS | Connection + scenes entities; secrets only in storage |
-| Automations react to events | PASS (optional) | Commands sufficient for vibes; no required automation in MVP |
-| Never let one bad input break startup | PASS | Defensive storage parse; HA failures soft |
-| Capability model honored | PASS | Declares `network` + storage/entity/widget/command; default grant migration |
-| No console outside CLI | PASS | `context.log` / `context.notify` |
-| Tests co-located; lint/typecheck/test before done | PASS | Mirror weather/spotify |
+| Gate                                              | Status          | Notes                                                                       |
+| ------------------------------------------------- | --------------- | --------------------------------------------------------------------------- |
+| Everything is a plugin                            | PASS            | New work lives in `plugins/home-assistant`                                  |
+| Public SDK is the only plugin interface           | PASS            | Runtime dep: `@nightshift/sdk` only                                         |
+| Dashboards consume widgets                        | PASS            | Widget type `home-assistant.scenes`                                         |
+| Vibes orchestrate actions                         | PASS            | Vibe YAML calls `home-assistant.activate-scene`                             |
+| Entities provide shared state                     | PASS            | Connection + scenes entities; secrets only in storage                       |
+| Automations react to events                       | PASS (optional) | Commands sufficient for vibes; no required automation in MVP                |
+| Never let one bad input break startup             | PASS            | Defensive storage parse; HA failures soft                                   |
+| Capability model honored                          | PASS            | Declares `network` + storage/entity/widget/command; default grant migration |
+| No console outside CLI                            | PASS            | `context.log` / `context.notify`                                            |
+| Tests co-located; lint/typecheck/test before done | PASS            | Mirror weather/spotify                                                      |
 
 **Host fetch exception**: Allowing private-network `http:` is a deliberate, narrowly scoped change to the documented HTTPS-only fetch rule, justified in [research.md](./research.md). Public HTTP remains denied.
 
@@ -105,6 +105,6 @@ packages/services/src/config.ts       # DEFAULT_CONFIG plugins + network grant +
 
 ## Complexity Tracking
 
-| Violation | Why Needed | Simpler Alternative Rejected Because |
-|-----------|------------|-------------------------------------|
+| Violation                                           | Why Needed                                                               | Simpler Alternative Rejected Because                              |
+| --------------------------------------------------- | ------------------------------------------------------------------------ | ----------------------------------------------------------------- |
 | Host `context.fetch` allows private-network `http:` | Local HA is almost always cleartext on LAN IP:8123; user ask is IP-first | HTTPS-only would force Nabu Casa/TLS proxy before any scene works |

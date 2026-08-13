@@ -79,10 +79,9 @@ describe.skipIf(!renderable)('HabitTrackerWidget', () => {
 
   it('shows streak values at wide width', async () => {
     const today = todayKey();
-    const state = initialState(
-      [{ id: 'h1', name: 'Water', createdAt: `${today}T00:00:00.000Z` }],
-      { h1: [addDays(today, -2), addDays(today, -1), today] },
-    );
+    const state = initialState([{ id: 'h1', name: 'Water', createdAt: `${today}T00:00:00.000Z` }], {
+      h1: [addDays(today, -2), addDays(today, -1), today],
+    });
     const { setup } = await renderWidget(state, { width: 80, height: 12 });
 
     try {

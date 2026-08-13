@@ -10,11 +10,11 @@ Live state is an entity (`habit.tracker`). Durable copy mirrors that shape in pl
 
 ### Habit
 
-| Field | Type | Rules |
-|-------|------|--------|
-| `id` | string | Stable unique id (e.g. ULID/UUID/nanoid); required |
-| `name` | string | Trimmed display name; non-empty after trim |
-| `createdAt` | string (ISO-8601) | Set on create; immutable |
+| Field       | Type              | Rules                                              |
+| ----------- | ----------------- | -------------------------------------------------- |
+| `id`        | string            | Stable unique id (e.g. ULID/UUID/nanoid); required |
+| `name`      | string            | Trimmed display name; non-empty after trim         |
+| `createdAt` | string (ISO-8601) | Set on create; immutable                           |
 
 **Relationships**: Has many Completions (by `habitId`).
 
@@ -22,11 +22,11 @@ Live state is an entity (`habit.tracker`). Durable copy mirrors that shape in pl
 
 ### Completion
 
-| Field | Type | Rules |
-|-------|------|--------|
-| `habitId` | string | Must reference an existing habit |
-| `date` | string | Local calendar `YYYY-MM-DD` |
-| (presence) | — | Binary: existence means done; no count field |
+| Field      | Type   | Rules                                        |
+| ---------- | ------ | -------------------------------------------- |
+| `habitId`  | string | Must reference an existing habit             |
+| `date`     | string | Local calendar `YYYY-MM-DD`                  |
+| (presence) | —      | Binary: existence means done; no count field |
 
 **Uniqueness**: At most one completion per `(habitId, date)`.
 
@@ -49,17 +49,17 @@ completions: Record<string, string[]>; // habitId -> sorted unique YYYY-MM-DD
 
 ### RollingWindow (view)
 
-| Field | Type | Rules |
-|-------|------|--------|
+| Field   | Type      | Rules                            |
+| ------- | --------- | -------------------------------- |
 | `dates` | string[7] | `[today-6, …, today]` local keys |
-| `today` | string | Injected/clock `todayKey()` |
+| `today` | string    | Injected/clock `todayKey()`      |
 
 ### StreakSummary (derived)
 
-| Field | Type | Rules |
-|-------|------|--------|
-| `habitId` | string | |
-| `current` | number | ≥ 0; see FR-006 |
+| Field     | Type   | Rules                   |
+| --------- | ------ | ----------------------- |
+| `habitId` | string |                         |
+| `current` | number | ≥ 0; see FR-006         |
 | `longest` | number | ≥ `current`; see FR-007 |
 
 ## Validation rules
@@ -81,9 +81,9 @@ day rollover --> window slides; completions unchanged
 
 ## Persistence mapping
 
-| Layer | Key / id | Contents |
-|-------|----------|----------|
-| Entity | `habit.tracker` | Full `HabitState` for UI |
-| Storage | e.g. `state` | Serialized `HabitState` JSON |
+| Layer   | Key / id        | Contents                     |
+| ------- | --------------- | ---------------------------- |
+| Entity  | `habit.tracker` | Full `HabitState` for UI     |
+| Storage | e.g. `state`    | Serialized `HabitState` JSON |
 
 Write-through: every successful command updates entity then `storage.set`.

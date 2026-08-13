@@ -15,6 +15,7 @@ Full inventory: ~35 exported components in `packages/ui/src/components/`, plus `
 **Rationale**: Thresholds are battle-tested across VibeEditor; VibeEditorScale flags are already semantic (`stackFields` not raw numbers). Editors and future Settings panels share the same density needs.
 
 **Alternatives considered**:
+
 - Reuse dashboard `resolveBreakpoint` (`compact`/`normal`/`wide` at 72/132) — too coarse for form label stacking; forms need sub-72 behavior.
 - Per-screen magic numbers — current problem; rejected.
 - CSS-media-query-style tier system with many breakpoints — over-engineering for terminal cells.
@@ -28,6 +29,7 @@ Full inventory: ~35 exported components in `packages/ui/src/components/`, plus `
 **Rationale**: Matches existing component style (`Panel`, `Modal`); editors already use render-prop `Field` pattern which maps cleanly to `FormField` with `children={(focused) => ...}`.
 
 **Alternatives considered**:
+
 - Hooks-only (`useFormFieldLayout`) — still leaves box styling duplicated.
 - Higher-order screen generator — too abstract for 3–6 screens.
 
@@ -40,6 +42,7 @@ Full inventory: ~35 exported components in `packages/ui/src/components/`, plus `
 **Rationale**: VibesList uses `Table`; SelectField uses `List`; CommandPicker uses custom filtered list. Behavior shared, markup differs.
 
 **Alternatives considered**:
+
 - `SelectableList` component — would force Table/List unification prematurely.
 - Inline duplication — rejected (3× copies today).
 
@@ -52,6 +55,7 @@ Full inventory: ~35 exported components in `packages/ui/src/components/`, plus `
 **Rationale**: Plugin dependency rule: SDK is the only import. Spotify/Home Assistant settings benefit from SelectField. Layout hooks let widgets match shell responsive behavior.
 
 **Alternatives considered**:
+
 - Export entire `formLayout` module — may expose shell-specific padding assumptions; export hook only first.
 - Export nothing — leaves plugins with ad-hoc width checks.
 
@@ -64,6 +68,7 @@ Full inventory: ~35 exported components in `packages/ui/src/components/`, plus `
 **Rationale**: ThemeEditor was recently added and lacks shared `Field`; good proving ground. VibeEditor last due to ActionList complexity.
 
 **Alternatives considered**:
+
 - Big-bang refactor all screens in one PR — high regression risk.
 - Primitives only, no migration — doesn't deliver user-visible consistency.
 
@@ -76,6 +81,7 @@ Full inventory: ~35 exported components in `packages/ui/src/components/`, plus `
 **Rationale**: Components must not import from `app/screens/`. Validation is theme-domain logic.
 
 **Alternatives considered**:
+
 - Inline regex in ColorField — duplicates validation intent.
 - Keep in themeDraft — preserves bad dependency direction.
 
@@ -96,15 +102,16 @@ Full inventory: ~35 exported components in `packages/ui/src/components/`, plus `
 **Rationale**: Delete and override dialogs are identical across three screens; Modal already handles overlay sizing.
 
 **Alternatives considered**:
+
 - Extend Modal with `variant="confirm"` — couples concerns; separate component clearer.
 
 ---
 
 ## Open Questions Resolved
 
-| Question | Resolution |
-|----------|------------|
-| Should `CatalogScreen` be generic in v1? | Defer to P3; document interface in data-model for future |
-| Export ColorField on SDK? | Optional; revisit when plugin needs color picking |
-| Replace magic padding with SPACING tokens? | Follow-up sweep after primitives land |
-| Fix Tabs 120-col underline? | Include as minor fix in tasks, not blocking |
+| Question                                   | Resolution                                               |
+| ------------------------------------------ | -------------------------------------------------------- |
+| Should `CatalogScreen` be generic in v1?   | Defer to P3; document interface in data-model for future |
+| Export ColorField on SDK?                  | Optional; revisit when plugin needs color picking        |
+| Replace magic padding with SPACING tokens? | Follow-up sweep after primitives land                    |
+| Fix Tabs 120-col underline?                | Include as minor fix in tasks, not blocking              |

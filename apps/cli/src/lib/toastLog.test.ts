@@ -84,7 +84,9 @@ describe('attachLogToasts', () => {
     const toasts = createToastStore({ setTimer: () => undefined, clearTimer: () => undefined });
     const detach = attachLogToasts({ log, toasts, restoreStream: stream });
 
-    process.stderr.write('(node:1) MaxListenersExceededWarning: Possible EventEmitter memory leak\n');
+    process.stderr.write(
+      '(node:1) MaxListenersExceededWarning: Possible EventEmitter memory leak\n',
+    );
 
     expect(text()).toBe('');
     expect(toasts.list()[0]?.tone).toBe('warning');

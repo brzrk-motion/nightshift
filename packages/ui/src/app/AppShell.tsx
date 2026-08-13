@@ -79,8 +79,7 @@ export function AppShell({
   );
   const allScreens = useMemo(() => [dashboardScreen, ...screens], [dashboardScreen, screens]);
   const current = allScreens.find((screen) => screen.id === activeScreen) ?? dashboardScreen;
-  const footerLabel =
-    activeScreen === DASHBOARD_SCREEN_ID ? (title ?? 'Dashboard') : current.label;
+  const footerLabel = activeScreen === DASHBOARD_SCREEN_ID ? (title ?? 'Dashboard') : current.label;
 
   // Commands the shell itself owns. Registering them here — rather than in the
   // CLI — keeps them available to anything that mounts a shell.
@@ -241,7 +240,9 @@ export function AppShell({
           ) : (
             <>
               <Header runtime={runtime} />
-              <box style={{ flexGrow: 1, flexDirection: 'row', alignItems: 'stretch', minHeight: 0 }}>
+              <box
+                style={{ flexGrow: 1, flexDirection: 'row', alignItems: 'stretch', minHeight: 0 }}
+              >
                 <NavRail
                   screens={allScreens}
                   active={activeScreen}

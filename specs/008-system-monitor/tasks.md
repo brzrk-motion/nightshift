@@ -1,5 +1,5 @@
 ---
-description: "Task list for System Monitor plugin"
+description: 'Task list for System Monitor plugin'
 ---
 
 # Tasks: System Monitor
@@ -169,12 +169,12 @@ description: "Task list for System Monitor plugin"
 
 ### User Story Dependencies
 
-| Story | Priority | Depends on | Notes |
-|-------|----------|------------|-------|
-| US1 | P1 | Foundational | Delivers live CPU/RAM/network — **MVP** |
-| US2 | P1 | US1 widget scaffold | Settings toggles on same widget |
-| US3 | P2 | Foundational collector | GPU row; independent of US2 except toggle filter |
-| US4 | P2 | US1 + US2 | Layout only; no new data |
+| Story | Priority | Depends on             | Notes                                            |
+| ----- | -------- | ---------------------- | ------------------------------------------------ |
+| US1   | P1       | Foundational           | Delivers live CPU/RAM/network — **MVP**          |
+| US2   | P1       | US1 widget scaffold    | Settings toggles on same widget                  |
+| US3   | P2       | Foundational collector | GPU row; independent of US2 except toggle filter |
+| US4   | P2       | US1 + US2              | Layout only; no new data                         |
 
 ### Within Each User Story
 
@@ -262,16 +262,16 @@ Task T023: plugins/system-monitor/src/index.ts (poll label formatting)
 
 ## Task Summary
 
-| Phase | Tasks | Story |
-|-------|-------|-------|
-| Setup | T001–T003 (3) | — |
-| Foundational | T004–T018 (15) | — |
-| US1 Live metrics | T019–T023 (5) | US1 |
-| US2 Settings toggles | T024–T029 (6) | US2 |
-| US3 GPU | T030–T033 (4) | US3 |
-| US4 Responsive layout | T034–T036 (3) | US4 |
-| Polish | T037–T040 (4) | — |
-| **Total** | **40 tasks** | |
+| Phase                 | Tasks          | Story |
+| --------------------- | -------------- | ----- |
+| Setup                 | T001–T003 (3)  | —     |
+| Foundational          | T004–T018 (15) | —     |
+| US1 Live metrics      | T019–T023 (5)  | US1   |
+| US2 Settings toggles  | T024–T029 (6)  | US2   |
+| US3 GPU               | T030–T033 (4)  | US3   |
+| US4 Responsive layout | T034–T036 (3)  | US4   |
+| Polish                | T037–T040 (4)  | —     |
+| **Total**             | **40 tasks**   |       |
 
 **Suggested MVP scope**: Phase 1 + 2 + 3 + 4 (US1 + US2) — live metrics with toggleable, persistent graphs.
 

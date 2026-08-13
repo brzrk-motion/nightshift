@@ -5,7 +5,11 @@ describe('scenesFromStates', () => {
   it('keeps only scene.* entities and drops others', () => {
     const scenes = scenesFromStates([
       { entity_id: 'light.kitchen', state: 'on', attributes: { friendly_name: 'Kitchen' } },
-      { entity_id: 'scene.deep_work', state: 'scening', attributes: { friendly_name: 'Deep Work' } },
+      {
+        entity_id: 'scene.deep_work',
+        state: 'scening',
+        attributes: { friendly_name: 'Deep Work' },
+      },
       { entity_id: 'scene.morning', state: 'scening', attributes: {} },
     ]);
     expect(scenes.map((s) => s.entityId)).toEqual(['scene.deep_work', 'scene.morning']);

@@ -32,21 +32,21 @@ Ship a bundled `@nightshift/plugin-habit` plugin that registers a dashboard widg
 
 ## Constitution Check
 
-*GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
+_GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 
 `.specify/memory/constitution.md` is still the Speckit placeholder (principles not ratified). Gates below are taken from project law in `AGENTS.md` / `README.md` design principles:
 
-| Gate | Status | Notes |
-|------|--------|-------|
-| Everything is a plugin | PASS | New work lives in `plugins/habit`, not a new host package |
-| Public SDK is the only plugin interface | PASS | Runtime dep: `@nightshift/sdk` only |
-| Dashboards consume widgets | PASS | Feature surface is a registered widget type |
-| Entities provide shared state | PASS | Live state via `registerEntity` + `useEntity` |
-| Automations react to events | PASS (optional v1) | Commands exist for future automations; no required automation in MVP |
-| Never let one bad input break startup | PASS | Load/parse storage defensively; skip/empty on corruption |
-| No console outside CLI | PASS | Use `context.log` |
-| Tests co-located; lint/typecheck/test before done | PASS | Follow focus/todo package scripts |
-| Capability model honored | PASS | Declare `storage` + entity/widget/command caps; no `network`/`shell` |
+| Gate                                              | Status             | Notes                                                                |
+| ------------------------------------------------- | ------------------ | -------------------------------------------------------------------- |
+| Everything is a plugin                            | PASS               | New work lives in `plugins/habit`, not a new host package            |
+| Public SDK is the only plugin interface           | PASS               | Runtime dep: `@nightshift/sdk` only                                  |
+| Dashboards consume widgets                        | PASS               | Feature surface is a registered widget type                          |
+| Entities provide shared state                     | PASS               | Live state via `registerEntity` + `useEntity`                        |
+| Automations react to events                       | PASS (optional v1) | Commands exist for future automations; no required automation in MVP |
+| Never let one bad input break startup             | PASS               | Load/parse storage defensively; skip/empty on corruption             |
+| No console outside CLI                            | PASS               | Use `context.log`                                                    |
+| Tests co-located; lint/typecheck/test before done | PASS               | Follow focus/todo package scripts                                    |
+| Capability model honored                          | PASS               | Declare `storage` + entity/widget/command caps; no `network`/`shell` |
 
 **Post-design re-check**: Still PASS — contracts stay inside plugin entity/commands/widget; no reverse-dependency on services/dashboard from the plugin.
 

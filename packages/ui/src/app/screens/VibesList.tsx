@@ -92,7 +92,9 @@ export function VibesList({
         />
       </ActionBar>
 
-      <box style={{ flexDirection: 'column', gap: 1, flexGrow: 1, paddingLeft: 1, paddingRight: 1 }}>
+      <box
+        style={{ flexDirection: 'column', gap: 1, flexGrow: 1, paddingLeft: 1, paddingRight: 1 }}
+      >
         {vibes.length === 0 ? (
           <EmptyState message="No vibes available." hint="Press Add vibe to create one." />
         ) : (

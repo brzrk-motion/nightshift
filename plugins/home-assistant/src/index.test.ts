@@ -126,9 +126,7 @@ describe('home-assistant plugin', () => {
     expect(JSON.stringify(connection)).not.toContain('secret-token');
 
     const scenes = context.entities.get<ScenesState>(HOME_ASSISTANT_SCENES_ENTITY)?.state;
-    expect(scenes?.scenes).toEqual([
-      { entityId: 'scene.focus', name: 'Focus', state: 'scening' },
-    ]);
+    expect(scenes?.scenes).toEqual([{ entityId: 'scene.focus', name: 'Focus', state: 'scening' }]);
   });
 
   it('surfaces auth errors without throwing', async () => {
@@ -228,9 +226,9 @@ describe('home-assistant plugin', () => {
     expect(
       context.entities.get<ConnectionState>(HOME_ASSISTANT_CONNECTION_ENTITY)?.state?.configured,
     ).toBe(false);
-    expect(
-      context.entities.get<ScenesState>(HOME_ASSISTANT_SCENES_ENTITY)?.state?.scenes,
-    ).toEqual([]);
+    expect(context.entities.get<ScenesState>(HOME_ASSISTANT_SCENES_ENTITY)?.state?.scenes).toEqual(
+      [],
+    );
   });
 
   it('reconfigure replaces the token used by subsequent activates', async () => {

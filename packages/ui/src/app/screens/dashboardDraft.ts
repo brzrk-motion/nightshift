@@ -37,9 +37,7 @@ export function draftFromCatalog(row: DashboardCatalogRow): DashboardDraft {
     title: row.title === row.name ? '' : row.title,
     theme: row.theme ?? '',
     refresh:
-      row.refresh === undefined
-        ? String(DEFAULT_DASHBOARD_REFRESH_SECONDS)
-        : String(row.refresh),
+      row.refresh === undefined ? String(DEFAULT_DASHBOARD_REFRESH_SECONDS) : String(row.refresh),
     ...(row.rows === undefined ? {} : { rows: row.rows }),
   };
 }
@@ -80,8 +78,7 @@ export function draftToSaveArgs(draft: DashboardDraft): Record<string, Json> {
   if (title !== undefined) args['title'] = title;
   if (theme !== undefined) args['theme'] = theme;
   const refreshText = draft.refresh.trim();
-  const refresh =
-    refreshText === '' ? DEFAULT_DASHBOARD_REFRESH_SECONDS : Number(refreshText);
+  const refresh = refreshText === '' ? DEFAULT_DASHBOARD_REFRESH_SECONDS : Number(refreshText);
   if (!Number.isInteger(refresh) || refresh < 0) {
     throw new Error('Refresh must be a non-negative whole number of seconds.');
   }

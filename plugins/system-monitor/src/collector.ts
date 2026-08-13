@@ -89,7 +89,11 @@ export async function pollMetrics(
 ): Promise<{ metrics: MonitorMetricsState; collectorState: CollectorState }> {
   const now = Date.now();
   const deltaMs =
-    collectorState.previousPollAt === null ? deps.platform === 'linux' ? POLL_FALLBACK_MS : 0 : now - collectorState.previousPollAt;
+    collectorState.previousPollAt === null
+      ? deps.platform === 'linux'
+        ? POLL_FALLBACK_MS
+        : 0
+      : now - collectorState.previousPollAt;
 
   if (deps.platform !== 'linux') {
     const metrics = { ...current.metrics };
@@ -123,11 +127,7 @@ export async function pollMetrics(
     } else {
       const percent = clampPercent(cpuPercentFromDelta(nextCollector.previousCpu, counters));
       nextCollector = { ...nextCollector, previousCpu: counters };
-      nextMetrics.cpu = okSample(
-        percent,
-        formatPercent(percent),
-        current.metrics.cpu.history,
-      );
+      nextMetrics.cpu = okSample(percent, formatPercent(percent), current.metrics.cpu.history);
     }
   }
 
@@ -151,11 +151,17 @@ export async function pollMetrics(
 
   const netContent = await readProcFile(deps.readFile, '/proc/net/dev');
   if (netContent === null) {
-    nextMetrics.network = errorSample(current.metrics.network.history, 'Could not read network stats');
+    nextMetrics.network = errorSample(
+      current.metrics.network.history,
+      'Could not read network stats',
+    );
   } else {
     const counters = parseNetDev(netContent);
     if (counters === null) {
-      nextMetrics.network = unavailableSample(current.metrics.network.history, 'No network interfaces');
+      nextMetrics.network = unavailableSample(
+        current.metrics.network.history,
+        'No network interfaces',
+      );
     } else if (nextCollector.previousNetwork === null || deltaMs <= 0) {
       nextCollector = { ...nextCollector, previousNetwork: counters };
       nextMetrics.network = {

@@ -87,7 +87,11 @@ export function isMetricKey(value: unknown): value is MetricKey {
   return typeof value === 'string' && (METRIC_KEYS as readonly string[]).includes(value);
 }
 
-export function appendHistory(history: readonly number[], value: number, cap = HISTORY_LEN): number[] {
+export function appendHistory(
+  history: readonly number[],
+  value: number,
+  cap = HISTORY_LEN,
+): number[] {
   const next = [...history, value];
   if (next.length <= cap) return next;
   return next.slice(next.length - cap);

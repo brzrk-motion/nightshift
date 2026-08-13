@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeEach, afterEach } from 'vitest';
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { MIDNIGHT_THEME } from '../theme.js';
@@ -97,7 +97,13 @@ describe('loadThemes', () => {
 
 describe('mergeThemes', () => {
   it('lets user themes override built-ins by name', () => {
-    const user = [{ ...MIDNIGHT_THEME, name: 'midnight', colors: { ...MIDNIGHT_THEME.colors, accent: '#ffffff' } }];
+    const user = [
+      {
+        ...MIDNIGHT_THEME,
+        name: 'midnight',
+        colors: { ...MIDNIGHT_THEME.colors, accent: '#ffffff' },
+      },
+    ];
     const merged = mergeThemes(user, [MIDNIGHT_THEME]);
     expect(merged).toHaveLength(1);
     expect(merged[0]?.colors.accent).toBe('#ffffff');

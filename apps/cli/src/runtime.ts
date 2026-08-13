@@ -38,7 +38,6 @@ import {
   type VibeSpec,
 } from '@nightshift/vibes';
 import {
-  BUILT_IN_THEMES,
   createAppRuntime,
   createThemeEngine,
   deleteTheme,
@@ -108,7 +107,11 @@ function dashboardFromArgs(
   args: Record<string, Json> | undefined,
   existingRows?: RowSpec[],
 ): DashboardSpec {
-  if (args === undefined || typeof args['name'] !== 'string' || !DASHBOARD_NAME.test(args['name'])) {
+  if (
+    args === undefined ||
+    typeof args['name'] !== 'string' ||
+    !DASHBOARD_NAME.test(args['name'])
+  ) {
     throw new NightshiftError(
       'CONFIG_INVALID',
       'dashboard.save needs a name like `work-board` (lowercase letters, digits, hyphens).',
@@ -571,11 +574,9 @@ export async function createNightshiftRuntime(
         );
       }
       if (!userVibeNames.has(name)) {
-        throw new NightshiftError(
-          'CONFIG_INVALID',
-          `Built-in vibe "${name}" cannot be deleted.`,
-          { hint: 'Only user vibe files in your vibes/ directory can be removed.' },
-        );
+        throw new NightshiftError('CONFIG_INVALID', `Built-in vibe "${name}" cannot be deleted.`, {
+          hint: 'Only user vibe files in your vibes/ directory can be removed.',
+        });
       }
       const active = entities.get<{ active: string | null }>('nightshift.vibe')?.state.active;
       if (active === name) await vibes.deactivate();
@@ -624,11 +625,9 @@ export async function createNightshiftRuntime(
         );
       }
       if (!userThemeNames.has(name)) {
-        throw new NightshiftError(
-          'CONFIG_INVALID',
-          `Built-in theme "${name}" cannot be deleted.`,
-          { hint: 'Only user theme files in your themes/ directory can be removed.' },
-        );
+        throw new NightshiftError('CONFIG_INVALID', `Built-in theme "${name}" cannot be deleted.`, {
+          hint: 'Only user theme files in your themes/ directory can be removed.',
+        });
       }
       const wasActive = app.themes.current.name === name;
       await deleteTheme(context.paths.themesDir, name);

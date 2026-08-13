@@ -285,8 +285,8 @@ describe('spotify plugin', () => {
   });
 
   it('does not hit the network on setup when connected but the widget is off-screen', async () => {
-    const fetchFn = vi.fn(async () =>
-      new Response('{"error":{"message":"Service unavailable"}}', { status: 503 }),
+    const fetchFn = vi.fn(
+      async () => new Response('{"error":{"message":"Service unavailable"}}', { status: 503 }),
     );
     const { context, commands } = mockContext({
       storage: { auth: CONNECTED_AUTH },

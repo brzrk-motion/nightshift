@@ -63,7 +63,9 @@ export function Header({ runtime }: HeaderProps): ReactNode {
         {vibe?.state.active && (
           <>
             <StatusDot tone="accent" />
-            <text fg={theme.colors.text}>{(vibe.state.title ?? vibe.state.active).toLowerCase()}</text>
+            <text fg={theme.colors.text}>
+              {(vibe.state.title ?? vibe.state.active).toLowerCase()}
+            </text>
           </>
         )}
       </box>

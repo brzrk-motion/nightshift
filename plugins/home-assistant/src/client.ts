@@ -59,7 +59,10 @@ export async function listScenes(
   }
   const json: unknown = await response.json();
   if (!Array.isArray(json)) {
-    throw new HomeAssistantApiError(response.status, 'Home Assistant /api/states was not an array.');
+    throw new HomeAssistantApiError(
+      response.status,
+      'Home Assistant /api/states was not an array.',
+    );
   }
   return scenesFromStates(json as HaStateRow[]);
 }

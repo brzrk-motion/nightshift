@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { useRuntime, useTheme } from '../app/context.js';
+import { useTheme } from '../app/context.js';
 import { List, type ListItem } from './Table.js';
 import { SelectFieldListKeys } from './SelectFieldListKeys.js';
 
@@ -35,9 +35,7 @@ export function SelectField({
   const theme = useTheme();
 
   const items: ListItem[] = [
-    ...(allowClear
-      ? [{ id: '', label: placeholder, marker: value === '' ? '●' : '·' }]
-      : []),
+    ...(allowClear ? [{ id: '', label: placeholder, marker: value === '' ? '●' : '·' }] : []),
     ...options.map((option) => ({
       id: option.value,
       label: option.label,
@@ -53,15 +51,10 @@ export function SelectField({
   }, [focused, valueIndex]);
 
   const display =
-    value === ''
-      ? placeholder
-      : (options.find((option) => option.value === value)?.label ?? value);
+    value === '' ? placeholder : (options.find((option) => option.value === value)?.label ?? value);
 
   return (
-    <box
-      onMouseDown={() => onFocus?.()}
-      style={{ flexDirection: 'column', gap: 1, flexGrow: 1 }}
-    >
+    <box onMouseDown={() => onFocus?.()} style={{ flexDirection: 'column', gap: 1, flexGrow: 1 }}>
       <text fg={focused ? theme.colors.accent : theme.colors.text}>{display}</text>
       {focused && (
         <>

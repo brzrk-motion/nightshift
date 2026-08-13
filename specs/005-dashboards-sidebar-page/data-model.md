@@ -10,54 +10,54 @@ Canonical durable model remains `DashboardSpec` on disk. The Dashboards screen e
 
 ### DashboardSpec (file + renderer) — existing
 
-| Field | Type | Rules |
-|-------|------|--------|
-| `name` | string | Non-empty; filename stem `<name>.yaml` |
-| `title` | string? | Display name |
-| `theme` | string? | Optional theme override |
-| `refresh` | number? | Seconds; `0` disables |
-| `version` | number? | Schema version |
-| `rows` | `RowSpec[]` | Non-empty (parse rule); preserved on metadata save |
+| Field     | Type        | Rules                                              |
+| --------- | ----------- | -------------------------------------------------- |
+| `name`    | string      | Non-empty; filename stem `<name>.yaml`             |
+| `title`   | string?     | Display name                                       |
+| `theme`   | string?     | Optional theme override                            |
+| `refresh` | number?     | Seconds; `0` disables                              |
+| `version` | number?     | Schema version                                     |
+| `rows`    | `RowSpec[]` | Non-empty (parse rule); preserved on metadata save |
 
 ### DashboardCatalogRow (`nightshift.dashboards.dashboards[]`) — extended
 
-| Field | Type | Rules |
-|-------|------|--------|
-| `name` | string | Unique in merged catalog |
-| `title` | string | `title ?? name` |
-| `source` | `'built-in' \| 'user'` | `user` if file exists in dashboards dir for name |
-| `active` | boolean | `name === nightshift.dashboard.active` |
-| `theme` | string? | For edit round-trip; may be `''` |
-| `refresh` | number? | Optional |
-| `rows` | array? | Full payload for duplicate/edit preserve-rows save |
+| Field     | Type                   | Rules                                              |
+| --------- | ---------------------- | -------------------------------------------------- |
+| `name`    | string                 | Unique in merged catalog                           |
+| `title`   | string                 | `title ?? name`                                    |
+| `source`  | `'built-in' \| 'user'` | `user` if file exists in dashboards dir for name   |
+| `active`  | boolean                | `name === nightshift.dashboard.active`             |
+| `theme`   | string?                | For edit round-trip; may be `''`                   |
+| `refresh` | number?                | Optional                                           |
+| `rows`    | array?                 | Full payload for duplicate/edit preserve-rows save |
 
 ### DashboardDraft (UI-only)
 
-| Field | Type | Rules |
-|-------|------|--------|
-| `name` | string | Editable only on create; `/^[a-z][a-z0-9-]*$/` |
-| `title` | string | Display title; empty → omit on save |
-| `theme` | string | Empty → omit on save |
-| `refresh` | string | Empty → omit; else positive integer |
-| `rows` | `RowSpec[]?` | Copied from catalog on edit/duplicate; preserved on save |
+| Field     | Type         | Rules                                                    |
+| --------- | ------------ | -------------------------------------------------------- |
+| `name`    | string       | Editable only on create; `/^[a-z][a-z0-9-]*$/`           |
+| `title`   | string       | Display title; empty → omit on save                      |
+| `theme`   | string       | Empty → omit on save                                     |
+| `refresh` | string       | Empty → omit; else positive integer                      |
+| `rows`    | `RowSpec[]?` | Copied from catalog on edit/duplicate; preserved on save |
 
 ### Active snapshot (`nightshift.dashboard`) — new
 
-| Field | Type | Rules |
-|-------|------|--------|
+| Field    | Type           | Rules                                 |
+| -------- | -------------- | ------------------------------------- |
 | `active` | string \| null | Currently open dashboard name on Home |
-| `title` | string \| null | Display title of active dashboard |
+| `title`  | string \| null | Display title of active dashboard     |
 
 Publisher: `DashboardApp` on switch (via runtime callback or direct entity set from host). Consumer: Dashboards list ● column, optional header hints.
 
 ### BLANK_DASHBOARD template (code constant)
 
-| Field | Value |
-|-------|-------|
-| `name` | from draft |
-| `title` | from draft or name |
-| `version` | `DASHBOARD_SCHEMA_VERSION` |
-| `rows` | `[{ widgets: [{ type: 'core.note', options: { text: '' } }] }]` |
+| Field     | Value                                                           |
+| --------- | --------------------------------------------------------------- |
+| `name`    | from draft                                                      |
+| `title`   | from draft or name                                              |
+| `version` | `DASHBOARD_SCHEMA_VERSION`                                      |
+| `rows`    | `[{ widgets: [{ type: 'core.note', options: { text: '' } }] }]` |
 
 ## Validation rules
 
@@ -80,14 +80,14 @@ Publisher: `DashboardApp` on switch (via runtime callback or direct entity set f
 
 ## Persistence mapping
 
-| Layer | Location | Contents |
-|-------|----------|----------|
-| File | `dashboards/<name>.yaml` | Serialized DashboardSpec |
-| Memory | `runtime.dashboards` / `DashboardApp` state | Merged built-in + user specs |
-| Entity | `nightshift.dashboards` | Catalog rows |
-| Entity | `nightshift.dashboard` | `{ active, title }` session snapshot |
-| Config | `config.json` `defaultDashboard` | Startup default (unchanged in v1 open flow) |
-| Commands | `dashboard.save`, `dashboard.delete`, `dashboard.open.*` | Mutations / navigation |
+| Layer    | Location                                                 | Contents                                    |
+| -------- | -------------------------------------------------------- | ------------------------------------------- |
+| File     | `dashboards/<name>.yaml`                                 | Serialized DashboardSpec                    |
+| Memory   | `runtime.dashboards` / `DashboardApp` state              | Merged built-in + user specs                |
+| Entity   | `nightshift.dashboards`                                  | Catalog rows                                |
+| Entity   | `nightshift.dashboard`                                   | `{ active, title }` session snapshot        |
+| Config   | `config.json` `defaultDashboard`                         | Startup default (unchanged in v1 open flow) |
+| Commands | `dashboard.save`, `dashboard.delete`, `dashboard.open.*` | Mutations / navigation                      |
 
 ## Integration with Vibe editor
 

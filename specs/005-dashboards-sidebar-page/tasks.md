@@ -1,5 +1,5 @@
 ---
-description: "Task list for Dashboards sidebar page implementation"
+description: 'Task list for Dashboards sidebar page implementation'
 ---
 
 # Tasks: Dashboards Sidebar Page
@@ -31,9 +31,9 @@ description: "Task list for Dashboards sidebar page implementation"
 
 **Purpose**: Confirm baseline against contracts and prep user-visible release note
 
-- [X] T001 Audit existing dashboard shell surface against `specs/005-dashboards-sidebar-page/contracts/dashboards-surface.md` and note gaps at top of `specs/005-dashboards-sidebar-page/plan.md` Complexity Tracking (or inline comment in `packages/ui/src/app/screens/index.ts`)
-- [X] T002 [P] Confirm `packages/ui` has zero imports of `@nightshift/dashboard` under `packages/ui/src/app/screens/` (grep gate; allowed in tests only if mocked)
-- [X] T003 [P] Add changeset `.changeset/nightshift-dashboards-sidebar.md` for user-visible Dashboards nav + catalog UX
+- [x] T001 Audit existing dashboard shell surface against `specs/005-dashboards-sidebar-page/contracts/dashboards-surface.md` and note gaps at top of `specs/005-dashboards-sidebar-page/plan.md` Complexity Tracking (or inline comment in `packages/ui/src/app/screens/index.ts`)
+- [x] T002 [P] Confirm `packages/ui` has zero imports of `@nightshift/dashboard` under `packages/ui/src/app/screens/` (grep gate; allowed in tests only if mocked)
+- [x] T003 [P] Add changeset `.changeset/nightshift-dashboards-sidebar.md` for user-visible Dashboards nav + catalog UX
 
 ---
 
@@ -43,20 +43,20 @@ description: "Task list for Dashboards sidebar page implementation"
 
 **CRITICAL**: No Dashboards screen work beyond stubs until this phase completes
 
-- [X] T004 [P] Add `BLANK_DASHBOARD(name, title?)` factory in `packages/dashboard/src/schema.ts` (minimal valid one-row spec per `specs/005-dashboards-sidebar-page/data-model.md`); export from `packages/dashboard/src/index.ts`
-- [X] T005 [P] Implement `deleteDashboard(directory, name)` in `packages/dashboard/src/parse.ts` (`DASHBOARD_NOT_FOUND` / `CONFIG_UNWRITABLE`); export from `packages/dashboard/src/index.ts`
-- [X] T006 [P] Write Vitest cases for `deleteDashboard` and `BLANK_DASHBOARD` round-trip save in `packages/dashboard/src/parse.test.ts`
-- [X] T007 Extend `publishDashboardsCatalog` in `apps/cli/src/runtime.ts` to emit full `DashboardCatalogRow` shape (`source`, `active`, optional `theme`/`refresh`/`rows`) per `specs/005-dashboards-sidebar-page/data-model.md`
-- [X] T008 Register `nightshift.dashboard` entity `{ active, title }` in `apps/cli/src/runtime.ts`; initialize from `initial` dashboard passed to `DashboardApp`
-- [X] T009 Track `userDashboardNames` set in `apps/cli/src/runtime.ts` (mirror `userVibeNames`) for save/delete source detection
-- [X] T010 Register hidden `dashboard.save` command in `apps/cli/src/runtime.ts` per `specs/005-dashboards-sidebar-page/contracts/dashboards-surface.md` (validate serialize→parse, preserve rows when omitted, refresh merged list, re-register `dashboard.open.*`, republish catalog, toast)
-- [X] T011 Register hidden `dashboard.delete` command in `apps/cli/src/runtime.ts` (refuse built-in-only, re-merge built-ins, unregister stale open commands, open fallback if active deleted, republish catalog, toast)
-- [X] T012 Wire `DashboardApp` `open()` in `packages/dashboard/src/DashboardApp.tsx` to update `nightshift.dashboard` and patch `nightshift.dashboards` `active` flags via `runtime.entities` (or accept `onSwitch` callback from host that performs entity updates)
-- [X] T013 Pass entity-sync `onSwitch` from `apps/cli/src/commands/dashboard.ts` when mounting `DashboardApp` so catalog ● stays accurate after palette/Home switches
-- [X] T014 [P] Implement `dashboardDraft.ts` helpers (`emptyDraft`, `draftFromCatalog`, `duplicateDraft`, `draftToSaveArgs`, name regex) in `packages/ui/src/app/screens/dashboardDraft.ts`
-- [X] T015 [P] Write Vitest for `dashboardDraft` (name validation, refresh parsing, rows preserved on metadata edit) in `packages/ui/src/app/screens/dashboardDraft.test.ts`
-- [X] T016 Rename first nav item label to **Home** in `packages/ui/src/app/AppShell.tsx` (`dashboardScreen.label`; keep footer dynamic title on Home)
-- [X] T017 Add `DashboardsScreen` stub export and insert `{ id: 'dashboards', label: 'Dashboards', render: DashboardsScreen }` before Vibes in `packages/ui/src/app/screens/index.ts`
+- [x] T004 [P] Add `BLANK_DASHBOARD(name, title?)` factory in `packages/dashboard/src/schema.ts` (minimal valid one-row spec per `specs/005-dashboards-sidebar-page/data-model.md`); export from `packages/dashboard/src/index.ts`
+- [x] T005 [P] Implement `deleteDashboard(directory, name)` in `packages/dashboard/src/parse.ts` (`DASHBOARD_NOT_FOUND` / `CONFIG_UNWRITABLE`); export from `packages/dashboard/src/index.ts`
+- [x] T006 [P] Write Vitest cases for `deleteDashboard` and `BLANK_DASHBOARD` round-trip save in `packages/dashboard/src/parse.test.ts`
+- [x] T007 Extend `publishDashboardsCatalog` in `apps/cli/src/runtime.ts` to emit full `DashboardCatalogRow` shape (`source`, `active`, optional `theme`/`refresh`/`rows`) per `specs/005-dashboards-sidebar-page/data-model.md`
+- [x] T008 Register `nightshift.dashboard` entity `{ active, title }` in `apps/cli/src/runtime.ts`; initialize from `initial` dashboard passed to `DashboardApp`
+- [x] T009 Track `userDashboardNames` set in `apps/cli/src/runtime.ts` (mirror `userVibeNames`) for save/delete source detection
+- [x] T010 Register hidden `dashboard.save` command in `apps/cli/src/runtime.ts` per `specs/005-dashboards-sidebar-page/contracts/dashboards-surface.md` (validate serialize→parse, preserve rows when omitted, refresh merged list, re-register `dashboard.open.*`, republish catalog, toast)
+- [x] T011 Register hidden `dashboard.delete` command in `apps/cli/src/runtime.ts` (refuse built-in-only, re-merge built-ins, unregister stale open commands, open fallback if active deleted, republish catalog, toast)
+- [x] T012 Wire `DashboardApp` `open()` in `packages/dashboard/src/DashboardApp.tsx` to update `nightshift.dashboard` and patch `nightshift.dashboards` `active` flags via `runtime.entities` (or accept `onSwitch` callback from host that performs entity updates)
+- [x] T013 Pass entity-sync `onSwitch` from `apps/cli/src/commands/dashboard.ts` when mounting `DashboardApp` so catalog ● stays accurate after palette/Home switches
+- [x] T014 [P] Implement `dashboardDraft.ts` helpers (`emptyDraft`, `draftFromCatalog`, `duplicateDraft`, `draftToSaveArgs`, name regex) in `packages/ui/src/app/screens/dashboardDraft.ts`
+- [x] T015 [P] Write Vitest for `dashboardDraft` (name validation, refresh parsing, rows preserved on metadata edit) in `packages/ui/src/app/screens/dashboardDraft.test.ts`
+- [x] T016 Rename first nav item label to **Home** in `packages/ui/src/app/AppShell.tsx` (`dashboardScreen.label`; keep footer dynamic title on Home)
+- [x] T017 Add `DashboardsScreen` stub export and insert `{ id: 'dashboards', label: 'Dashboards', render: DashboardsScreen }` before Vibes in `packages/ui/src/app/screens/index.ts`
 
 **Checkpoint**: `dashboard.save` / `dashboard.delete` callable; enriched `nightshift.dashboards` + `nightshift.dashboard` at runtime; Home nav label updated; `deleteDashboard` tests green
 
@@ -70,14 +70,14 @@ description: "Task list for Dashboards sidebar page implementation"
 
 ### Tests for User Story 1
 
-- [X] T018 [P] [US1] Add unit test for catalog active-marker mapping (uses `nightshift.dashboard.active`) in `packages/ui/src/app/screens/dashboardDraft.test.ts` or extracted `dashboardCatalog.test.ts`
+- [x] T018 [P] [US1] Add unit test for catalog active-marker mapping (uses `nightshift.dashboard.active`) in `packages/ui/src/app/screens/dashboardDraft.test.ts` or extracted `dashboardCatalog.test.ts`
 
 ### Implementation for User Story 1
 
-- [X] T019 [P] [US1] Implement `DashboardsList.tsx` in `packages/ui/src/app/screens/DashboardsList.tsx`: Table columns (active ●, title, name, source), full-width toolbar (Add / Edit / Open / Duplicate / Delete — wire handlers as no-ops where not yet implemented), keyboard ↑↓/jk, Enter → `dashboard.open.<name>`, `a`/`e` hooks, `keyboardCapture` guard, `useShellContentSize`
-- [X] T020 [US1] Implement list-only `DashboardsScreen.tsx` in `packages/ui/src/app/screens/DashboardsScreen.tsx`: read `nightshift.dashboards`, render `DashboardsList`, Open button runs `dashboard.open.<selected>`, empty state with Add CTA
-- [X] T021 [US1] Update nav digit/key hints in `packages/ui/src/app/AppShell.tsx` and/or `packages/ui/src/app/HelpOverlay.tsx` for new screen order (Home=1, Dashboards=2, Vibes=3, …) if hard-coded
-- [X] T022 [US1] Fix/adjust shell nav tests for Home label and Dashboards insertion in `packages/ui/src/app/shell.test.tsx`
+- [x] T019 [P] [US1] Implement `DashboardsList.tsx` in `packages/ui/src/app/screens/DashboardsList.tsx`: Table columns (active ●, title, name, source), full-width toolbar (Add / Edit / Open / Duplicate / Delete — wire handlers as no-ops where not yet implemented), keyboard ↑↓/jk, Enter → `dashboard.open.<name>`, `a`/`e` hooks, `keyboardCapture` guard, `useShellContentSize`
+- [x] T020 [US1] Implement list-only `DashboardsScreen.tsx` in `packages/ui/src/app/screens/DashboardsScreen.tsx`: read `nightshift.dashboards`, render `DashboardsList`, Open button runs `dashboard.open.<selected>`, empty state with Add CTA
+- [x] T021 [US1] Update nav digit/key hints in `packages/ui/src/app/AppShell.tsx` and/or `packages/ui/src/app/HelpOverlay.tsx` for new screen order (Home=1, Dashboards=2, Vibes=3, …) if hard-coded
+- [x] T022 [US1] Fix/adjust shell nav tests for Home label and Dashboards insertion in `packages/ui/src/app/shell.test.tsx`
 
 **Checkpoint**: Dashboards list usable; Open switches Home without restart; MVP demo-ready
 
@@ -91,11 +91,11 @@ description: "Task list for Dashboards sidebar page implementation"
 
 ### Implementation for User Story 2
 
-- [X] T023 [P] [US2] Implement `DashboardEditor.tsx` in `packages/ui/src/app/screens/DashboardEditor.tsx`: Identity (name/title), Look (theme SelectField from `runtime.themes`, refresh text field), responsive layout mirroring `VibeEditor.tsx`, Save/Cancel full-width bar, `keyboardCapture` on TextInput only
-- [X] T024 [US2] Extend `DashboardsScreen.tsx` view state machine (`list | create | edit`) and wire Add → create draft → `dashboard.save` on Save per `specs/005-dashboards-sidebar-page/contracts/dashboards-surface.md`
-- [X] T025 [US2] Add built-in override confirmation Modal in `DashboardsScreen.tsx` when create name collides with `source: 'built-in'` row (mirror `VibesScreen.tsx` pattern)
-- [X] T026 [US2] On successful create, verify `publishDashboardsCatalog` refresh exposes new row to `packages/ui/src/app/screens/VibeEditor.tsx` dashboard SelectField without restart (manual/quickstart step; fix runtime if stale)
-- [X] T027 [US2] Ensure `dashboard.save` create path uses `BLANK_DASHBOARD` when draft has no rows in `apps/cli/src/runtime.ts`
+- [x] T023 [P] [US2] Implement `DashboardEditor.tsx` in `packages/ui/src/app/screens/DashboardEditor.tsx`: Identity (name/title), Look (theme SelectField from `runtime.themes`, refresh text field), responsive layout mirroring `VibeEditor.tsx`, Save/Cancel full-width bar, `keyboardCapture` on TextInput only
+- [x] T024 [US2] Extend `DashboardsScreen.tsx` view state machine (`list | create | edit`) and wire Add → create draft → `dashboard.save` on Save per `specs/005-dashboards-sidebar-page/contracts/dashboards-surface.md`
+- [x] T025 [US2] Add built-in override confirmation Modal in `DashboardsScreen.tsx` when create name collides with `source: 'built-in'` row (mirror `VibesScreen.tsx` pattern)
+- [x] T026 [US2] On successful create, verify `publishDashboardsCatalog` refresh exposes new row to `packages/ui/src/app/screens/VibeEditor.tsx` dashboard SelectField without restart (manual/quickstart step; fix runtime if stale)
+- [x] T027 [US2] Ensure `dashboard.save` create path uses `BLANK_DASHBOARD` when draft has no rows in `apps/cli/src/runtime.ts`
 
 **Checkpoint**: Create blank dashboard end-to-end; vibe picker includes new dashboard
 
@@ -109,11 +109,11 @@ description: "Task list for Dashboards sidebar page implementation"
 
 ### Implementation for User Story 3
 
-- [X] T028 [US3] Wire Edit flow in `DashboardsScreen.tsx`: load draft from catalog row (`draftFromCatalog`), lock name on edit, save via `dashboard.save` preserving `rows` from catalog payload
-- [X] T029 [US3] Wire Duplicate in `DashboardsScreen.tsx` + `dashboardDraft.ts`: prefilled create draft with cleared name, rows copied from source row
-- [X] T030 [US3] Wire Delete with confirm Modal in `DashboardsScreen.tsx`: call `dashboard.delete`; disable/refuse for `source: 'built-in'` without user file
-- [X] T031 [US3] Implement active-dashboard fallback when deleted dashboard was open in `apps/cli/src/runtime.ts` (`dashboard.delete` runs `dashboard.open.<fallback>` — prefer `config.defaultDashboard` if still available, else first catalog entry)
-- [X] T032 [US3] Enable toolbar Edit / Duplicate / Delete buttons in `DashboardsList.tsx` with selection-aware enable/disable (e.g. Delete only for `source: 'user'`)
+- [x] T028 [US3] Wire Edit flow in `DashboardsScreen.tsx`: load draft from catalog row (`draftFromCatalog`), lock name on edit, save via `dashboard.save` preserving `rows` from catalog payload
+- [x] T029 [US3] Wire Duplicate in `DashboardsScreen.tsx` + `dashboardDraft.ts`: prefilled create draft with cleared name, rows copied from source row
+- [x] T030 [US3] Wire Delete with confirm Modal in `DashboardsScreen.tsx`: call `dashboard.delete`; disable/refuse for `source: 'built-in'` without user file
+- [x] T031 [US3] Implement active-dashboard fallback when deleted dashboard was open in `apps/cli/src/runtime.ts` (`dashboard.delete` runs `dashboard.open.<fallback>` — prefer `config.defaultDashboard` if still available, else first catalog entry)
+- [x] T032 [US3] Enable toolbar Edit / Duplicate / Delete buttons in `DashboardsList.tsx` with selection-aware enable/disable (e.g. Delete only for `source: 'user'`)
 
 **Checkpoint**: Full CRUD parity with Vibes metadata UX; SC-004/SC-005 satisfied
 
@@ -123,10 +123,10 @@ description: "Task list for Dashboards sidebar page implementation"
 
 **Purpose**: Exports, docs, validation across stories
 
-- [X] T033 [P] Export `DashboardsScreen`, `DashboardsList`, `DashboardEditor` from `packages/ui/src/index.ts` if other packages need them (optional — skip if shell-only)
-- [X] T034 [P] Update folder doc comment in `packages/ui/src/app/screens/index.ts` for Dashboards flow and entity ids
-- [X] T035 Run `pnpm --filter @nightshift/dashboard test && pnpm --filter @nightshift/ui test && pnpm --filter @nightshift/cli typecheck` per `specs/005-dashboards-sidebar-page/quickstart.md`
-- [X] T036 [P] Add `.changeset` entry amendment if scope grew during polish (same file as T003)
+- [x] T033 [P] Export `DashboardsScreen`, `DashboardsList`, `DashboardEditor` from `packages/ui/src/index.ts` if other packages need them (optional — skip if shell-only)
+- [x] T034 [P] Update folder doc comment in `packages/ui/src/app/screens/index.ts` for Dashboards flow and entity ids
+- [x] T035 Run `pnpm --filter @nightshift/dashboard test && pnpm --filter @nightshift/ui test && pnpm --filter @nightshift/cli typecheck` per `specs/005-dashboards-sidebar-page/quickstart.md`
+- [x] T036 [P] Add `.changeset` entry amendment if scope grew during polish (same file as T003)
 
 ---
 

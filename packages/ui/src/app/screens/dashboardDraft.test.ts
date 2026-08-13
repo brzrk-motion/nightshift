@@ -82,8 +82,8 @@ describe('dashboardDraft', () => {
   });
 
   it('rejects invalid refresh', () => {
-    expect(() =>
-      draftToSaveArgs({ ...emptyDraft(), name: 'work', refresh: 'fast' }),
-    ).toThrow(/Refresh must be/);
+    expect(() => draftToSaveArgs({ ...emptyDraft(), name: 'work', refresh: 'fast' })).toThrow(
+      /Refresh must be/,
+    );
   });
 });

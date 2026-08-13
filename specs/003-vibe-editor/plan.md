@@ -32,21 +32,21 @@ Upgrade the Vibes screen from a raw TextInput form into a guided, picker-driven 
 
 ## Constitution Check
 
-*GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
+_GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 
 `.specify/memory/constitution.md` is still the Speckit placeholder. Gates from `AGENTS.md` / README:
 
-| Gate | Status | Notes |
-|------|--------|-------|
-| Everything is a plugin | N/A / PASS | Vibes are core shell + vibe package, not a third-party plugin |
-| Public SDK only for plugins | PASS | No plugin changes required |
-| Dashboards consume widgets | PASS | Unchanged |
-| Vibes orchestrate actions | PASS | Editor authors those actions |
-| Entities provide shared state | PASS | `nightshift.vibes` (+ optional picker snapshots) |
-| UI must not import vibe engine | PASS | Save/delete via commands |
-| Never let one bad input break startup | PASS | Soft-fail save/delete; broken YAML already skipped at load |
-| No console outside CLI | PASS | Toasts / `context`-equivalent via AppRuntime |
-| Tests co-located | PASS | Draft + parse/save tests |
+| Gate                                  | Status     | Notes                                                         |
+| ------------------------------------- | ---------- | ------------------------------------------------------------- |
+| Everything is a plugin                | N/A / PASS | Vibes are core shell + vibe package, not a third-party plugin |
+| Public SDK only for plugins           | PASS       | No plugin changes required                                    |
+| Dashboards consume widgets            | PASS       | Unchanged                                                     |
+| Vibes orchestrate actions             | PASS       | Editor authors those actions                                  |
+| Entities provide shared state         | PASS       | `nightshift.vibes` (+ optional picker snapshots)              |
+| UI must not import vibe engine        | PASS       | Save/delete via commands                                      |
+| Never let one bad input break startup | PASS       | Soft-fail save/delete; broken YAML already skipped at load    |
+| No console outside CLI                | PASS       | Toasts / `context`-equivalent via AppRuntime                  |
+| Tests co-located                      | PASS       | Draft + parse/save tests                                      |
 
 **Post-design re-check**: Still PASS — contracts are command/entity surfaces; pickers read published entities or `runtime.themes` / command registry already on `AppRuntime`; no reverse dependency.
 
@@ -95,5 +95,5 @@ packages/ui/src/components/
 > **Fill ONLY if Constitution Check has violations that must be justified**
 
 | Violation | Why Needed | Simpler Alternative Rejected Because |
-|-----------|------------|-------------------------------------|
-| — | — | — |
+| --------- | ---------- | ------------------------------------ |
+| —         | —          | —                                    |

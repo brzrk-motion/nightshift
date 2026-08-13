@@ -17,7 +17,12 @@ import {
   type MonitorMetricsState,
   type MonitorSettings,
 } from './entity.js';
-import { hydrateSettings, initialSettings, settingsToStorage, SETTINGS_STORAGE_KEY } from './settings.js';
+import {
+  hydrateSettings,
+  initialSettings,
+  settingsToStorage,
+  SETTINGS_STORAGE_KEY,
+} from './settings.js';
 import { OverviewWidget } from './widgets.js';
 
 function isBoolean(value: unknown): value is boolean {

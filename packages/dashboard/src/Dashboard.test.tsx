@@ -80,10 +80,13 @@ describe.skipIf(!renderable)('Dashboard', () => {
     const runtime = createAppRuntime({ entities: createEntityStore() });
     runtime.entities.register('timer.focus', { status: 'idle' });
 
-    const setup = await testRender(<Dashboard dashboard={home} registry={registry()} shell={false}/>, {
-      width: 90,
-      height: 20,
-    });
+    const setup = await testRender(
+      <Dashboard dashboard={home} registry={registry()} shell={false} />,
+      {
+        width: 90,
+        height: 20,
+      },
+    );
 
     try {
       await setup.renderOnce();
@@ -96,10 +99,13 @@ describe.skipIf(!renderable)('Dashboard', () => {
 
   it('shows a placeholder rather than failing on an unknown widget type', async () => {
     const dashboard = parseDashboard('name: broken\nrows:\n  - [nope.widget]');
-    const setup = await testRender(<Dashboard dashboard={dashboard} registry={registry()} shell={false} />, {
-      width: 70,
-      height: 12,
-    });
+    const setup = await testRender(
+      <Dashboard dashboard={dashboard} registry={registry()} shell={false} />,
+      {
+        width: 70,
+        height: 12,
+      },
+    );
 
     try {
       await setup.renderOnce();
@@ -115,10 +121,13 @@ describe.skipIf(!renderable)('Dashboard', () => {
     const runtime = createAppRuntime({ entities: createEntityStore() });
     runtime.entities.register('timer.focus', { status: 'idle' });
 
-    const setup = await testRender(<Dashboard dashboard={home} registry={registry()} shell={false}/>, {
-      width: 50,
-      height: 20,
-    });
+    const setup = await testRender(
+      <Dashboard dashboard={home} registry={registry()} shell={false} />,
+      {
+        width: 50,
+        height: 20,
+      },
+    );
 
     try {
       await setup.renderOnce();
@@ -197,10 +206,13 @@ describe.skipIf(!renderable)('Dashboard', () => {
 
   it('says so when a dashboard has no widgets it can draw', async () => {
     const empty: DashboardSpec = { name: 'empty', rows: [] };
-    const setup = await testRender(<Dashboard dashboard={empty} registry={registry()} shell={false} />, {
-      width: 60,
-      height: 10,
-    });
+    const setup = await testRender(
+      <Dashboard dashboard={empty} registry={registry()} shell={false} />,
+      {
+        width: 60,
+        height: 10,
+      },
+    );
 
     try {
       await setup.renderOnce();
@@ -307,7 +319,12 @@ rows:
   it('does not call onSelectWidget from a click when not editing', async () => {
     const onSelectWidget = vi.fn();
     const setup = await testRender(
-      <Dashboard dashboard={home} registry={registry()} shell={false} onSelectWidget={onSelectWidget} />,
+      <Dashboard
+        dashboard={home}
+        registry={registry()}
+        shell={false}
+        onSelectWidget={onSelectWidget}
+      />,
       { width: 90, height: 20 },
     );
 

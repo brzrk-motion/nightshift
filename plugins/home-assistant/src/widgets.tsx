@@ -138,9 +138,7 @@ function SceneList({
         <LoadingState message="Loading scenes…" />
       ) : null}
 
-      {scenes.error && !scenes.loading ? (
-        <ErrorState message={scenes.error} />
-      ) : null}
+      {scenes.error && !scenes.loading ? <ErrorState message={scenes.error} /> : null}
 
       {!scenes.loading && scenes.scenes.length === 0 && !scenes.error ? (
         <EmptyState message="No scenes found on this Home Assistant." />
@@ -175,8 +173,7 @@ function SceneList({
 export function ScenesWidget(_props: WidgetProps): ReactNode {
   const commands = useCommands();
   const connection =
-    useEntity<ConnectionState>(HOME_ASSISTANT_CONNECTION_ENTITY)?.state ??
-    initialConnectionState();
+    useEntity<ConnectionState>(HOME_ASSISTANT_CONNECTION_ENTITY)?.state ?? initialConnectionState();
   const scenes =
     useEntity<ScenesState>(HOME_ASSISTANT_SCENES_ENTITY)?.state ?? initialScenesState();
 
