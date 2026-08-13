@@ -129,7 +129,7 @@ describe('spotify plugin', () => {
     const configure = commands.find((c) => c.id === 'spotify.configure');
     await configure?.run({ clientId: 'cid', clientSecret: 'csecret' });
 
-    expect(storage['auth']).toEqual({ clientId: 'cid', clientSecret: 'csecret' });
+    expect(storage['auth']).toEqual({ version: 1, clientId: 'cid', clientSecret: 'csecret' });
     const session = context.entities.get<SpotifySessionState>(SPOTIFY_SESSION_ENTITY)?.state;
     expect(session?.status).toBe('needs_auth');
     expect(session?.clientIdSet).toBe(true);

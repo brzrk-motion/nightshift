@@ -14,6 +14,7 @@ import {
   SPOTIFY_LOGIN_URI,
   SPOTIFY_REDIRECT_URI,
   SPOTIFY_SCOPES,
+  STORED_AUTH_VERSION,
   isSpotifyStoredAuth,
   sessionFromStored,
 } from './entity.js';
@@ -150,7 +151,7 @@ describe('createAuthWaiter loopback', () => {
 describe('applyTokenResponse', () => {
   it('stores access token, expiry and optional refresh token', () => {
     const next = applyTokenResponse(
-      { clientId: 'id', clientSecret: 'secret', refreshToken: 'old' },
+      { version: STORED_AUTH_VERSION, clientId: 'id', clientSecret: 'secret', refreshToken: 'old' },
       {
         access_token: 'access',
         token_type: 'Bearer',
@@ -166,7 +167,12 @@ describe('applyTokenResponse', () => {
 
   it('keeps the previous refresh token when Spotify omits one', () => {
     const next = applyTokenResponse(
-      { clientId: 'id', clientSecret: 'secret', refreshToken: 'keep' },
+      {
+        version: STORED_AUTH_VERSION,
+        clientId: 'id',
+        clientSecret: 'secret',
+        refreshToken: 'keep',
+      },
       { access_token: 'access', token_type: 'Bearer', expires_in: 60 },
       0,
     );
@@ -180,11 +186,14 @@ describe('sessionFromStored', () => {
   });
 
   it('maps credentials without refresh to needs_auth', () => {
-    expect(sessionFromStored({ clientId: 'a', clientSecret: 'b' }).status).toBe('needs_auth');
+    expect(
+      sessionFromStored({ version: STORED_AUTH_VERSION, clientId: 'a', clientSecret: 'b' }).status,
+    ).toBe('needs_auth');
   });
 
   it('maps a refresh token to ready', () => {
     const session = sessionFromStored({
+      version: STORED_AUTH_VERSION,
       clientId: 'a',
       clientSecret: 'b',
       refreshToken: 'r',

@@ -23,8 +23,9 @@ import {
   initialLibraryState,
   initialPlayerState,
   initialSessionState,
-  isSpotifyStoredAuth,
+  parseStoredAuth,
   sessionFromStored,
+  STORED_AUTH_VERSION,
   type SpotifyEpisodesState,
   type SpotifyLibraryState,
   type SpotifyPlayerState,
@@ -58,7 +59,7 @@ export default definePlugin({
 
   async setup(context: PluginContext) {
     const raw = await context.storage.get(STORAGE_KEY);
-    let stored: SpotifyStoredAuth | undefined = isSpotifyStoredAuth(raw) ? raw : undefined;
+    let stored: SpotifyStoredAuth | undefined = parseStoredAuth(raw) ?? undefined;
 
     context.registerEntity(SPOTIFY_SESSION_ENTITY, sessionFromStored(stored), {
       title: 'Spotify session',
@@ -231,6 +232,7 @@ export default definePlugin({
         }
 
         const next: SpotifyStoredAuth = {
+          version: STORED_AUTH_VERSION,
           clientId,
           clientSecret,
           // Drop tokens when credentials change — force a fresh Connect.
@@ -365,6 +367,7 @@ export default definePlugin({
       run: async () => {
         if (stored) {
           await persist({
+            version: STORED_AUTH_VERSION,
             clientId: stored.clientId,
             clientSecret: stored.clientSecret,
           });
@@ -618,7 +621,7 @@ export {
   initialLibraryState,
   initialPlayerState,
   initialSessionState,
-  isSpotifyStoredAuth,
+  parseStoredAuth,
   sessionFromStored,
 } from './entity.js';
 export { PlayerWidget } from './widgets.js';
