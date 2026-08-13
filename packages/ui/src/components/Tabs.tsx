@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { useTerminalDimensions } from '@opentui/react';
 import { useTheme } from '../app/context.js';
 
 export interface TabItem {
@@ -21,6 +22,8 @@ export interface TabsProps {
  */
 export function Tabs({ items, value, onChange, children }: TabsProps): ReactNode {
   const theme = useTheme();
+  const terminal = useTerminalDimensions();
+  const underlineWidth = Math.max(0, terminal.width - 2);
 
   return (
     <box style={{ flexDirection: 'column', flexGrow: 1 }}>
@@ -37,7 +40,7 @@ export function Tabs({ items, value, onChange, children }: TabsProps): ReactNode
         })}
       </box>
       <box style={{ height: 1, flexShrink: 0 }}>
-        <text fg={theme.colors.border}>{'─'.repeat(120)}</text>
+        <text fg={theme.colors.border}>{'─'.repeat(underlineWidth)}</text>
       </box>
       <box style={{ flexDirection: 'column', flexGrow: 1 }}>{children}</box>
     </box>

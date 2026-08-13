@@ -76,9 +76,7 @@ export function draftToSaveArgs(draft: ThemeDraft): Record<string, unknown> {
 }
 
 /** Validates a single hex field while typing (for ColorField hints). */
-export function isValidHex(value: string): boolean {
-  return /^#[0-9a-f]{6}$/.test(value.trim());
-}
+export { isValidHex } from '../../theme/validate.js';
 
 /** Midnight accent for tests that need a known catalog row. */
 export const SAMPLE_CATALOG_ROW: ThemeCatalogRow = {

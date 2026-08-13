@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { Table, type TableColumn } from '../../components/Table.js';
 import { EmptyState } from '../../components/States.js';
 import { useRuntime } from '../context.js';
+import { useShellContentSize } from '../useShellContentSize.js';
 
 interface EntityRow {
   id: string;
@@ -27,6 +28,7 @@ const ENTITY_COLUMNS: readonly TableColumn<EntityRow>[] = [
 
 export function EntitiesScreen(): ReactNode {
   const runtime = useRuntime();
+  const contentSize = useShellContentSize();
   const [rows, setRows] = useState<EntityRow[]>([]);
 
   useEffect(() => {
@@ -45,5 +47,5 @@ export function EntitiesScreen(): ReactNode {
   }, [runtime]);
 
   if (rows.length === 0) return <EmptyState message="No entities registered yet." />;
-  return <Table columns={ENTITY_COLUMNS} rows={rows} width={(runtime?.size.width ?? 60) - 20} />;
+  return <Table columns={ENTITY_COLUMNS} rows={rows} width={contentSize.width} />;
 }

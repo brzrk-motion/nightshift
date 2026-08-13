@@ -32,6 +32,17 @@ export { themeFromMidnight, type ThemeSpec } from './theme/schema.js';
 export { BORDERS, SPACING, type BorderToken, type SpacingToken } from './tokens.js';
 
 export {
+  formContentSize,
+  formScale,
+  useFormScale,
+  type FormLayout,
+  type FormScale,
+  type FormScaleOptions,
+} from './formLayout.js';
+
+export { useShellContentSize } from './app/useShellContentSize.js';
+
+export {
   COMPACT_WIDTH,
   distribute,
   isNavRailCollapsed,

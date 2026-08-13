@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { TextInput } from './controls.js';
 import { useTheme } from '../app/context.js';
-import { isValidHex } from '../app/screens/themeDraft.js';
+import { isValidHex } from '../theme/validate.js';
 
 export interface ColorFieldProps {
   label: string;

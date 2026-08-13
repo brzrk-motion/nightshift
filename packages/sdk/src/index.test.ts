@@ -6,9 +6,12 @@ import {
   Icon,
   isCapability,
   isCompatible,
+  resolveBreakpoint,
+  SelectField,
   StatRow,
   Timeline,
   Toolbar,
+  useShellContentSize,
 } from './index.js';
 
 const base = {
@@ -77,5 +80,13 @@ describe('phase 7 component re-exports', () => {
     expect(typeof StatRow).toBe('function');
     expect(typeof Toolbar).toBe('function');
     expect(typeof Timeline).toBe('function');
+  });
+});
+
+describe('ui component system re-exports', () => {
+  it('re-exports form and layout helpers for plugin settings UI', () => {
+    expect(typeof SelectField).toBe('function');
+    expect(typeof resolveBreakpoint).toBe('function');
+    expect(typeof useShellContentSize).toBe('function');
   });
 });

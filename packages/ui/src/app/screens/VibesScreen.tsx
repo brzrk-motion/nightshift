@@ -1,7 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import type { Json } from '@nightshift/core';
-import { Button } from '../../components/controls.js';
-import { Modal } from '../../components/Modal.js';
+import { ConfirmModal } from '../../components/ConfirmModal.js';
 import { EmptyState } from '../../components/States.js';
 import { useEntity, useRuntime, useToasts } from '../context.js';
 import { VibeEditor } from './VibeEditor.js';
@@ -76,8 +75,6 @@ export function VibesScreen(): ReactNode {
           flexDirection: 'column',
           flexGrow: 1,
           height: '100%',
-          paddingLeft: 1,
-          paddingRight: 1,
         }}
       >
         <VibeEditor
@@ -101,59 +98,35 @@ export function VibesScreen(): ReactNode {
         onDelete={(row) => setPendingDelete(row)}
       />
 
-      <Modal
+      <ConfirmModal
         open={pendingDelete !== null}
         title="Delete vibe?"
-        hint="y confirm · esc cancel"
+        message={`Delete user vibe “${pendingDelete?.title ?? pendingDelete?.name}”? This removes vibes/${pendingDelete?.name}.yaml.`}
+        confirmLabel="Delete"
         width={48}
-      >
-        <box style={{ flexDirection: 'column', gap: 1 }}>
-          <text>
-            Delete user vibe “{pendingDelete?.title ?? pendingDelete?.name}”? This removes{' '}
-            vibes/{pendingDelete?.name}.yaml.
-          </text>
-          <box style={{ flexDirection: 'row', gap: 1 }}>
-            <Button
-              label="Delete"
-              primary
-              onPress={() => {
-                if (!pendingDelete) return;
-                void runtime.commands
-                  .run('vibe.delete', { name: pendingDelete.name })
-                  .then(() => setPendingDelete(null));
-              }}
-            />
-            <Button label="Cancel" onPress={() => setPendingDelete(null)} />
-          </box>
-        </box>
-      </Modal>
+        onConfirm={() => {
+          if (!pendingDelete) return;
+          void runtime.commands
+            .run('vibe.delete', { name: pendingDelete.name })
+            .then(() => setPendingDelete(null));
+        }}
+        onCancel={() => setPendingDelete(null)}
+      />
 
-      <Modal
+      <ConfirmModal
         open={pendingOverride !== null}
         title="Override built-in?"
-        hint="y confirm · esc cancel"
+        message={`A built-in vibe named “${pendingOverride?.name}” already exists. Saving will create a user file that overrides it.`}
+        confirmLabel="Save anyway"
         width={52}
-      >
-        <box style={{ flexDirection: 'column', gap: 1 }}>
-          <text>
-            A built-in vibe named “{pendingOverride?.name}” already exists. Saving will create a
-            user file that overrides it.
-          </text>
-          <box style={{ flexDirection: 'row', gap: 1 }}>
-            <Button
-              label="Save anyway"
-              primary
-              onPress={() => {
-                if (!pendingOverride) return;
-                const draft = pendingOverride;
-                setPendingOverride(null);
-                saveDraft(draft);
-              }}
-            />
-            <Button label="Cancel" onPress={() => setPendingOverride(null)} />
-          </box>
-        </box>
-      </Modal>
+        onConfirm={() => {
+          if (!pendingOverride) return;
+          const draft = pendingOverride;
+          setPendingOverride(null);
+          saveDraft(draft);
+        }}
+        onCancel={() => setPendingOverride(null)}
+      />
     </>
   );
 }

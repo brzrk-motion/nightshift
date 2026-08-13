@@ -1,14 +1,17 @@
 import type { Json } from '@nightshift/core';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useKeyboard } from '@opentui/react';
-import { COMPACT_WIDTH } from '../../layout.js';
+import { ActionBar } from '../../components/ActionBar.js';
 import { Button, TextInput } from '../../components/controls.js';
+import { FormField } from '../../components/FormField.js';
+import { FormSection } from '../../components/FormSection.js';
+import { ScreenLayout } from '../../components/ScreenLayout.js';
 import { SelectField } from '../../components/SelectField.js';
 import { IconButton } from '../../components/Toolbar.js';
+import { type FormScale, useFormScale } from '../../formLayout.js';
 import { useEntity, useRuntime, useTheme } from '../context.js';
 import { CommandPicker } from './CommandPicker.js';
 import type { ActionDraft, VibeDraft } from './vibeDraft.js';
-import { vibeEditorContentSize, vibeEditorScale, type VibeEditorScale } from './vibeEditorLayout.js';
 import { summariseDraft } from './vibeSummary.js';
 
 export interface VibeEditorProps {
@@ -32,56 +35,6 @@ interface DashboardCatalogState {
   [key: string]: Json;
 }
 
-function Section({
-  title,
-  scale,
-  children,
-}: {
-  title: string;
-  scale: VibeEditorScale;
-  children: ReactNode;
-}): ReactNode {
-  const theme = useTheme();
-  return (
-    <box style={{ flexDirection: 'column', gap: scale.tightGaps ? 0 : 1 }}>
-      <text fg={theme.colors.accent}>
-        <b>{title}</b>
-      </text>
-      {children}
-    </box>
-  );
-}
-
-function Field({
-  label,
-  focused,
-  scale,
-  onFocus,
-  children,
-}: {
-  label: string;
-  focused: boolean;
-  scale: VibeEditorScale;
-  onFocus: () => void;
-  children: (focused: boolean) => ReactNode;
-}): ReactNode {
-  const theme = useTheme();
-  return (
-    <box
-      onMouseDown={onFocus}
-      style={{
-        flexDirection: scale.stackFields ? 'column' : 'row',
-        gap: scale.stackFields ? 0 : 2,
-        minHeight: 1,
-        alignItems: scale.stackFields ? 'stretch' : 'flex-start',
-      }}
-    >
-      <text fg={theme.colors.muted}>{scale.stackFields ? label : label.padEnd(12)}</text>
-      <box style={{ flexGrow: 1 }}>{children(focused)}</box>
-    </box>
-  );
-}
-
 function ActionListEditor({
   label,
   actions,
@@ -95,7 +48,7 @@ function ActionListEditor({
   actions: ActionDraft[];
   list: 'onActivate' | 'onDeactivate';
   focus: FocusTarget;
-  scale: VibeEditorScale;
+  scale: FormScale;
   setFocus: (target: FocusTarget) => void;
   onChange: (actions: ActionDraft[]) => void;
 }): ReactNode {
@@ -250,10 +203,7 @@ export function VibeEditor({
   const [draft, setDraft] = useState(initialDraft);
   const [focus, setFocus] = useState<FocusTarget>(nameLocked ? 'title' : 'name');
 
-  const terminalSize = runtime?.size ?? { width: 80, height: 24 };
-  const navCollapsed = terminalSize.width < COMPACT_WIDTH;
-  const contentSize = vibeEditorContentSize(terminalSize, navCollapsed);
-  const scale = vibeEditorScale(contentSize.width, contentSize.height);
+  const scale = useFormScale();
   const sectionGap = scale.tightGaps ? 0 : 1;
 
   const patch = (partial: Partial<VibeDraft>): void => {
@@ -269,6 +219,7 @@ export function VibeEditor({
     })) ?? [];
 
   useKeyboard((key) => {
+    if (runtime?.keyboardCapture.isCaptured()) return;
     if (key.name === 'escape') onCancel();
   });
 
@@ -278,155 +229,142 @@ export function VibeEditor({
     : 'esc cancel · Saves to vibes/<name>.yaml — same format as a hand-edited file.';
 
   return (
-    <box style={{ flexDirection: 'column', flexGrow: 1, height: '100%' }}>
-      <box style={{ flexShrink: 0 }}>
+    <ScreenLayout
+      title={
         <text fg={theme.colors.text}>
           <b>{nameLocked ? `Edit ${draft.name}` : 'New vibe'}</b>
         </text>
+      }
+      hint={footerHint}
+      actions={
+        <ActionBar>
+          <Button label="Save" primary compact={false} onPress={() => onSave(draft)} />
+          <Button label="Cancel" compact={false} onPress={onCancel} />
+        </ActionBar>
+      }
+    >
+      <box style={{ flexDirection: 'column', gap: sectionGap }}>
+        <FormSection title="Identity" scale={scale}>
+          <FormField
+            label="name"
+            scale={scale}
+            focused={!nameLocked && focus === 'name'}
+            onFocus={() => {
+              if (!nameLocked) setFocus('name');
+            }}
+          >
+            {(focused) => (
+              <TextInput
+                value={draft.name}
+                placeholder="locked-in"
+                focused={focused}
+                onInput={(name) => {
+                  if (!nameLocked) patch({ name });
+                }}
+              />
+            )}
+          </FormField>
+          <FormField
+            label="title"
+            scale={scale}
+            focused={focus === 'title'}
+            onFocus={() => setFocus('title')}
+          >
+            {(focused) => (
+              <TextInput
+                value={draft.title}
+                placeholder="Locked In"
+                focused={focused}
+                onInput={(title) => patch({ title })}
+              />
+            )}
+          </FormField>
+          <FormField
+            label="description"
+            scale={scale}
+            focused={focus === 'description'}
+            onFocus={() => setFocus('description')}
+          >
+            {(focused) => (
+              <TextInput
+                value={draft.description}
+                placeholder="Deep work."
+                focused={focused}
+                onInput={(description) => patch({ description })}
+              />
+            )}
+          </FormField>
+        </FormSection>
+
+        <FormSection title="Look" scale={scale}>
+          <FormField
+            label="theme"
+            scale={scale}
+            focused={focus === 'theme'}
+            onFocus={() => setFocus('theme')}
+          >
+            {(focused) => (
+              <SelectField
+                value={draft.theme}
+                options={themeOptions}
+                placeholder="(none)"
+                focused={focused}
+                onFocus={() => setFocus('theme')}
+                onChange={(themeName) => patch({ theme: themeName })}
+              />
+            )}
+          </FormField>
+          <FormField
+            label="dashboard"
+            scale={scale}
+            focused={focus === 'dashboard'}
+            onFocus={() => setFocus('dashboard')}
+          >
+            {(focused) => (
+              <SelectField
+                value={draft.dashboard}
+                options={dashboardOptions}
+                placeholder="(none)"
+                focused={focused}
+                onFocus={() => setFocus('dashboard')}
+                onChange={(dashboard) => patch({ dashboard })}
+              />
+            )}
+          </FormField>
+        </FormSection>
+
+        <FormSection title="On activate" scale={scale}>
+          <ActionListEditor
+            label="onActivate"
+            list="onActivate"
+            actions={draft.onActivate}
+            focus={focus}
+            scale={scale}
+            setFocus={setFocus}
+            onChange={(onActivate) => patch({ onActivate })}
+          />
+        </FormSection>
+
+        <FormSection title="On deactivate" scale={scale}>
+          <ActionListEditor
+            label="onDeactivate"
+            list="onDeactivate"
+            actions={draft.onDeactivate}
+            focus={focus}
+            scale={scale}
+            setFocus={setFocus}
+            onChange={(onDeactivate) => patch({ onDeactivate })}
+          />
+        </FormSection>
+
+        <FormSection title="Summary" scale={scale}>
+          {summary.map((line, index) => (
+            <text key={index} fg={theme.colors.muted}>
+              {line}
+            </text>
+          ))}
+        </FormSection>
       </box>
-
-      <scrollbox style={{ flexGrow: 1 }}>
-        <box style={{ flexDirection: 'column', gap: sectionGap }}>
-          <Section title="Identity" scale={scale}>
-            <Field
-              label="name"
-              scale={scale}
-              focused={!nameLocked && focus === 'name'}
-              onFocus={() => {
-                if (!nameLocked) setFocus('name');
-              }}
-            >
-              {(focused) => (
-                <TextInput
-                  value={draft.name}
-                  placeholder="locked-in"
-                  focused={focused}
-                  onInput={(name) => {
-                    if (!nameLocked) patch({ name });
-                  }}
-                />
-              )}
-            </Field>
-            <Field
-              label="title"
-              scale={scale}
-              focused={focus === 'title'}
-              onFocus={() => setFocus('title')}
-            >
-              {(focused) => (
-                <TextInput
-                  value={draft.title}
-                  placeholder="Locked In"
-                  focused={focused}
-                  onInput={(title) => patch({ title })}
-                />
-              )}
-            </Field>
-            <Field
-              label="description"
-              scale={scale}
-              focused={focus === 'description'}
-              onFocus={() => setFocus('description')}
-            >
-              {(focused) => (
-                <TextInput
-                  value={draft.description}
-                  placeholder="Deep work."
-                  focused={focused}
-                  onInput={(description) => patch({ description })}
-                />
-              )}
-            </Field>
-          </Section>
-
-          <Section title="Look" scale={scale}>
-            <Field
-              label="theme"
-              scale={scale}
-              focused={focus === 'theme'}
-              onFocus={() => setFocus('theme')}
-            >
-              {(focused) => (
-                <SelectField
-                  value={draft.theme}
-                  options={themeOptions}
-                  placeholder="(none)"
-                  focused={focused}
-                  onFocus={() => setFocus('theme')}
-                  onChange={(themeName) => patch({ theme: themeName })}
-                />
-              )}
-            </Field>
-            <Field
-              label="dashboard"
-              scale={scale}
-              focused={focus === 'dashboard'}
-              onFocus={() => setFocus('dashboard')}
-            >
-              {(focused) => (
-                <SelectField
-                  value={draft.dashboard}
-                  options={dashboardOptions}
-                  placeholder="(none)"
-                  focused={focused}
-                  onFocus={() => setFocus('dashboard')}
-                  onChange={(dashboard) => patch({ dashboard })}
-                />
-              )}
-            </Field>
-          </Section>
-
-          <Section title="On activate" scale={scale}>
-            <ActionListEditor
-              label="onActivate"
-              list="onActivate"
-              actions={draft.onActivate}
-              focus={focus}
-              scale={scale}
-              setFocus={setFocus}
-              onChange={(onActivate) => patch({ onActivate })}
-            />
-          </Section>
-
-          <Section title="On deactivate" scale={scale}>
-            <ActionListEditor
-              label="onDeactivate"
-              list="onDeactivate"
-              actions={draft.onDeactivate}
-              focus={focus}
-              scale={scale}
-              setFocus={setFocus}
-              onChange={(onDeactivate) => patch({ onDeactivate })}
-            />
-          </Section>
-
-          <Section title="Summary" scale={scale}>
-            {summary.map((line, index) => (
-              <text key={index} fg={theme.colors.muted}>
-                {line}
-              </text>
-            ))}
-          </Section>
-        </box>
-      </scrollbox>
-
-      <box
-        style={{
-          flexDirection: 'row',
-          gap: 1,
-          flexShrink: 0,
-          width: '100%',
-          backgroundColor: theme.colors.surface,
-          alignItems: 'center',
-        }}
-      >
-        <Button label="Save" primary compact={false} onPress={() => onSave(draft)} />
-        <Button label="Cancel" compact={false} onPress={onCancel} />
-      </box>
-
-      <box style={{ flexShrink: 0 }}>
-        <text fg={theme.colors.muted}>{footerHint}</text>
-      </box>
-    </box>
+    </ScreenLayout>
   );
 }

@@ -1,4 +1,6 @@
+import { useEffect } from 'react';
 import { useKeyboard } from '@opentui/react';
+import { useRuntime } from '../context.js';
 import { type Command } from '../../commands.js';
 
 /** List navigation for a focused command picker — mounted only while open. */
@@ -13,6 +15,10 @@ export function CommandPickerListKeys({
   onCursorChange: (update: number | ((current: number) => number)) => void;
   onPick: (command: Command) => void;
 }): null {
+  const runtime = useRuntime();
+
+  useEffect(() => runtime?.keyboardCapture.acquire(), [runtime]);
+
   useKeyboard((key) => {
     if (results.length === 0) return;
     if (key.name === 'up' || key.name === 'k') {
