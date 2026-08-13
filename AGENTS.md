@@ -133,6 +133,21 @@ it rebuilds only what changed and launches on a clean terminal (build output
 is swallowed unless it fails). `pnpm --filter <pkg> test` / `build` /
 `typecheck` scopes to one package when you don't need the whole graph.
 
+### Before you commit
+
+Do not commit until `pnpm check` is green. It runs Prettier (`format:check`),
+ESLint, TypeScript (`typecheck`), and Vitest — the same gates CI uses. Husky
+runs it as a pre-commit hook; a failing hook means the commit did not land.
+Fix whatever failed and try again:
+
+- Format: `pnpm format` (rewrites files), then re-run `pnpm check`
+- Lint / typecheck / tests: fix the reported errors; do not skip or weaken
+  the rules
+
+`HUSKY=0 git commit` bypasses the hook and is not a substitute for a passing
+check. Scoped `pnpm --filter <pkg> …` is fine while iterating; the commit
+hook still runs the full graph.
+
 ## Agent tooling (MCP)
 
 Four MCP servers are wired in `.cursor/mcp.json`. Use the right one for the
@@ -538,6 +553,7 @@ third party could ship. Most new functionality should be a plugin instead.
 - **Unknown config keys are ignored, not rejected** — `config.json` and
   dashboard/vibe YAML are forward-compatible by convention; don't add strict
   "unknown key" rejection without checking this is intended to change.
-- Run `pnpm lint && pnpm typecheck && pnpm test` (or the `--filter`-scoped
-  equivalents) before considering a change done — Turborepo caches make the
-  full run cheap when only one package changed.
+- Run `pnpm check` and fix every failure before considering a change done
+  (and before committing — the pre-commit hook runs the same command).
+  Turborepo caches make the full run cheap when only one package changed.
+  `--filter`-scoped lint/typecheck/test is fine while iterating.
