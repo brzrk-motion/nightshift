@@ -149,11 +149,16 @@ describe('ambient-noise plugin', () => {
     const { context, automations, disposers } = fakeContext();
     await plugin.setup(context);
 
-    expect(automations).toHaveLength(1);
+    expect(automations).toHaveLength(2);
     expect(automations[0]).toMatchObject({
       name: 'ambient-noise.pause-spotify',
       when: { type: 'entity', entity: PLAYER_ENTITY, key: 'status' },
       and: [{ type: 'equals', entity: PLAYER_ENTITY, key: 'status', value: 'playing' }],
+      then: [{ command: 'spotify.pause' }],
+    });
+    expect(automations[1]).toMatchObject({
+      name: 'ambient-noise.pause-spotify-on-load',
+      and: [{ type: 'equals', entity: PLAYER_ENTITY, key: 'status', value: 'loading' }],
       then: [{ command: 'spotify.pause' }],
     });
 
@@ -236,7 +241,7 @@ describe('ambient-noise plugin', () => {
       release = resolve;
     });
     const playRun = commands.get('ambient-noise.play')?.run() ?? Promise.resolve();
-    await vi.waitFor(() => expect(loadGate.entered).toBeGreaterThan(0));
+    expect(player(entities).status).toBe('loading');
     await commands.get('ambient-noise.pause')?.run();
     release();
     await playRun;
@@ -259,6 +264,29 @@ describe('ambient-noise plugin', () => {
     expect(player(entities).status).toBe('playing');
     expect(player(entities).currentClipId).toBe(startId);
     expect(notify).toHaveBeenCalled();
+
+    for (const dispose of disposers) dispose();
+  });
+
+  it('does not cancel an in-flight play when pause is a no-op', async () => {
+    vi.useRealTimers();
+    const { context, entities, commands, disposers } = fakeContext();
+    await plugin.setup(context);
+
+    await commands.get('ambient-noise.pause')?.run();
+    expect(player(entities).status).toBe('paused');
+    await commands.get('ambient-noise.play')?.run();
+    expect(player(entities).status).toBe('playing');
+
+    for (const dispose of disposers) dispose();
+  });
+
+  it('marks the player unavailable when toggle cannot decode', async () => {
+    const { context, entities, commands, disposers } = fakeContext();
+    await plugin.setup(context);
+    loadGate.failNext = true;
+    await commands.get('ambient-noise.toggle')?.run();
+    expect(player(entities).status).toBe('unavailable');
 
     for (const dispose of disposers) dispose();
   });

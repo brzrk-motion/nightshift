@@ -1,12 +1,14 @@
 # Bundled ambient beds
 
 Nightshift source code is MIT. These files keep their original licenses.
+Shipped copies are ~60s loop excerpts (the mixer window), not the full source recordings.
 
 ## Rainy Day
 
 - File: `whitenoisesleepers-rainy-day-in-town-with-birds-singing-194011.mp3`
 - Author: WhiteNoiseSleeper
-- Source: [Freesound 725602](https://freesound.org/people/WhiteNoiseSleeper/sounds/725602/)
+- Distributed filename uses Pixabay id `194011` (`user-title-id.mp3`)
+- Same recording as [Freesound 725602](https://freesound.org/people/WhiteNoiseSleeper/sounds/725602/)
 - License: [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/)
 
 ## Soft Static

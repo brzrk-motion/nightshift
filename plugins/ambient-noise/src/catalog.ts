@@ -1,4 +1,4 @@
-import { readFile } from 'node:fs/promises';
+import { access, constants, readFile } from 'node:fs/promises';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { ClipPublic, ClipStatus } from './entity.js';
@@ -45,7 +45,7 @@ export async function loadCatalog(rootDir: string = defaultCatalogDir()): Promis
     if (!isInside(root, path)) continue;
     let status: ClipStatus = 'ok';
     try {
-      await readFile(path);
+      await access(path, constants.R_OK);
     } catch {
       status = 'unavailable';
     }

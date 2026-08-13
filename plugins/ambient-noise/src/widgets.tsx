@@ -11,7 +11,12 @@ import {
   useTheme,
   type WidgetProps,
 } from '@nightshift/sdk';
-import { PLAYER_ENTITY, type PlayerState, initialPlayerState } from './entity.js';
+import {
+  PLAYER_ENTITY,
+  type PlayerState,
+  initialPlayerState,
+  isTransportActive,
+} from './entity.js';
 import { resolveLayout, useCompactSkipGlyphs } from './scale.js';
 
 const PREVIOUS_GLYPH = '◀◀';
@@ -36,7 +41,7 @@ export function PlayerWidget({ width, height }: WidgetProps): ReactNode {
   const layout = resolveLayout(width, height);
   const compact = layout === 'compact';
   const skipGlyphs = useCompactSkipGlyphs(width, layout);
-  const playing = state.status === 'playing' || state.status === 'fading';
+  const playing = isTransportActive(state.status);
 
   if (state.status === 'empty') {
     return (
@@ -74,6 +79,9 @@ export function PlayerWidget({ width, height }: WidgetProps): ReactNode {
       <text fg={playing ? theme.colors.accent : theme.colors.text}>
         {clip(state.currentName || 'Ambient', nameWidth)}
       </text>
+      {state.status === 'loading' ? (
+        <text fg={theme.colors.muted}>{clip('Loading…', nameWidth)}</text>
+      ) : null}
       {state.output !== 'device' && state.outputMessage ? (
         <text fg={theme.colors.muted}>{clip(state.outputMessage, nameWidth)}</text>
       ) : null}

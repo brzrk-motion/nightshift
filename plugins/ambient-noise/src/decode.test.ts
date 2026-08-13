@@ -1,8 +1,9 @@
-import { readFile } from 'node:fs/promises';
+import { mkdtemp, readFile, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { loadClip, limitPcm } from './decode.js';
+import { loadClip, limitPcm, readClipBytes, MAX_MPEG_BYTES } from './decode.js';
 import { MIXER_CHANNELS, MIXER_SAMPLE_RATE } from './entity.js';
 import { encodePcm16Wav, toneBuffer } from './wav.js';
 
@@ -30,5 +31,16 @@ describe('loadClip', () => {
     const capped = limitPcm(long, MIXER_SAMPLE_RATE);
     expect(capped.frameCount).toBe(MIXER_SAMPLE_RATE);
     expect(capped.frames.length).toBe(MIXER_SAMPLE_RATE * MIXER_CHANNELS);
+  });
+
+  it('reads only the decode window from a long MPEG file', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'ambient-read-'));
+    const path = join(dir, 'long.mp3');
+    const body = Buffer.alloc(8 * 1024 * 1024, 0xff);
+    body[1] = 0xe3;
+    await writeFile(path, body);
+    const bytes = await readClipBytes(path);
+    expect(bytes.byteLength).toBeLessThanOrEqual(MAX_MPEG_BYTES);
+    expect(bytes.byteLength).toBeGreaterThan(0);
   });
 });

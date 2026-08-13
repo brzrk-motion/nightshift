@@ -1,8 +1,7 @@
-import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { definePlugin, type Json, type PluginContext } from '@nightshift/sdk';
 import { defaultCatalogDir, loadCatalog, toPublicClips, type CatalogEntry } from './catalog.js';
-import { loadClip } from './decode.js';
+import { loadClip, readClipBytes } from './decode.js';
 import {
   CHUNK_FRAMES,
   CROSSFADE_MS,
@@ -11,6 +10,7 @@ import {
   TICK_MS,
   hydrateSettings,
   initialPlayerState,
+  isTransportActive,
   selectClip,
   type ClipPublic,
   type OutputKind,
@@ -180,18 +180,30 @@ export default definePlugin({
       return next;
     };
 
+    const inflight = new Map<string, Promise<boolean>>();
+
     const ensureLoaded = async (clipId: string): Promise<boolean> => {
       if (mixer.has(clipId)) return true;
-      const entry = entries.find((item) => item.id === clipId);
-      if (!entry || entry.status !== 'ok') return false;
+      const pending = inflight.get(clipId);
+      if (pending) return pending;
+      const work = (async () => {
+        const entry = entries.find((item) => item.id === clipId);
+        if (!entry || entry.status !== 'ok') return false;
+        try {
+          mixer.load(clipId, await loadClip(await readClipBytes(entry.path)));
+          return true;
+        } catch (error: unknown) {
+          entry.status = 'unavailable';
+          refreshClips();
+          context.log.warn('Could not decode ambient clip', { id: entry.id, error: `${error}` });
+          return false;
+        }
+      })();
+      inflight.set(clipId, work);
       try {
-        mixer.load(clipId, await loadClip(await readFile(entry.path)));
-        return true;
-      } catch (error: unknown) {
-        entry.status = 'unavailable';
-        refreshClips();
-        context.log.warn('Could not decode ambient clip', { id: entry.id, error: `${error}` });
-        return false;
+        return await work;
+      } finally {
+        inflight.delete(clipId);
       }
     };
 
@@ -247,6 +259,7 @@ export default definePlugin({
           write({ ...current, status: 'unavailable', error: 'No playable clip.' });
           return;
         }
+        write({ ...current, status: 'loading', error: null });
         if (!(await ensureLoaded(clip.id))) {
           if (!isStale(token)) {
             write({ ...read(), clips, status: 'unavailable', error: 'No playable clip.' });
@@ -267,9 +280,9 @@ export default definePlugin({
       id: 'ambient-noise.pause',
       title: 'Pause ambient noise',
       run: () => {
-        beginOp();
         const current = read();
-        if (current.status !== 'playing' && current.status !== 'fading') return;
+        if (!isTransportActive(current.status)) return;
+        beginOp();
         mixer.pause();
         mixer.retainActive();
         stopTicks();
@@ -282,7 +295,7 @@ export default definePlugin({
       title: 'Play or pause ambient noise',
       run: async () => {
         const current = read();
-        if (current.status === 'playing' || current.status === 'fading') {
+        if (isTransportActive(current.status)) {
           beginOp();
           mixer.pause();
           mixer.retainActive();
@@ -293,7 +306,13 @@ export default definePlugin({
         const token = beginOp();
         const clip = selectClip(clips, current.currentClipId);
         if (!clip || clip.status !== 'ok') return;
-        if (!(await ensureLoaded(clip.id))) return;
+        write({ ...current, status: 'loading', error: null });
+        if (!(await ensureLoaded(clip.id))) {
+          if (!isStale(token)) {
+            write({ ...read(), clips, status: 'unavailable', error: 'No playable clip.' });
+          }
+          return;
+        }
         if (isStale(token)) return;
         await ensureSink();
         if (isStale(token)) return;
@@ -347,6 +366,12 @@ export default definePlugin({
       name: 'ambient-noise.pause-spotify',
       when: { type: 'entity', entity: PLAYER_ENTITY, key: 'status' },
       and: [{ type: 'equals', entity: PLAYER_ENTITY, key: 'status', value: 'playing' }],
+      then: [{ command: 'spotify.pause' }],
+    });
+    context.registerAutomation({
+      name: 'ambient-noise.pause-spotify-on-load',
+      when: { type: 'entity', entity: PLAYER_ENTITY, key: 'status' },
+      and: [{ type: 'equals', entity: PLAYER_ENTITY, key: 'status', value: 'loading' }],
       then: [{ command: 'spotify.pause' }],
     });
 

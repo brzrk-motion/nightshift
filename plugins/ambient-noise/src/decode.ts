@@ -1,3 +1,4 @@
+import { open } from 'node:fs/promises';
 import { MPEGDecoder } from 'mpg123-decoder';
 import { MIXER_CHANNELS, MIXER_SAMPLE_RATE } from './entity.js';
 import { loadWav, pcmFromChannels, type PcmBuffer } from './wav.js';
@@ -5,7 +6,7 @@ import { loadWav, pcmFromChannels, type PcmBuffer } from './wav.js';
 /** Resident PCM per clip. Long beds loop this window instead of the whole file. */
 export const MAX_DECODED_SECONDS = 60;
 
-const MAX_MPEG_BYTES = Math.ceil((320_000 / 8) * MAX_DECODED_SECONDS) + 64 * 1024;
+export const MAX_MPEG_BYTES = Math.ceil((320_000 / 8) * MAX_DECODED_SECONDS) + 64 * 1024;
 
 function isRiffWav(bytes: Uint8Array): boolean {
   return (
@@ -40,6 +41,31 @@ function mpegWindow(bytes: Uint8Array): Uint8Array {
   const start = Math.min(id3v2Size(bytes), bytes.length);
   const end = Math.min(bytes.length, start + MAX_MPEG_BYTES);
   return start === 0 && end === bytes.length ? bytes : bytes.subarray(start, end);
+}
+
+function readBudget(prefix: Uint8Array, fileSize: number): number {
+  if (isRiffWav(prefix)) {
+    return Math.min(fileSize, 44 + MIXER_SAMPLE_RATE * MAX_DECODED_SECONDS * MIXER_CHANNELS * 2);
+  }
+  return Math.min(fileSize, id3v2Size(prefix) + MAX_MPEG_BYTES);
+}
+
+/** Read only the bytes the decoder will use (ID3 + ~60s of MPEG, or 60s of WAV PCM). */
+export async function readClipBytes(path: string): Promise<Uint8Array> {
+  const file = await open(path, 'r');
+  try {
+    const { size } = await file.stat();
+    if (size < 1) throw new Error('Audio file is empty');
+    const head = Buffer.alloc(Math.min(12, size));
+    const { bytesRead: headRead } = await file.read(head, 0, head.length, 0);
+    const prefix = new Uint8Array(head.buffer, head.byteOffset, headRead);
+    const budget = readBudget(prefix, size);
+    const buf = Buffer.alloc(budget);
+    const { bytesRead } = await file.read(buf, 0, budget, 0);
+    return new Uint8Array(buf.buffer, buf.byteOffset, bytesRead);
+  } finally {
+    await file.close();
+  }
 }
 
 export function limitPcm(

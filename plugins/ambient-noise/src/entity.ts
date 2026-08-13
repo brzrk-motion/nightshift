@@ -10,7 +10,8 @@ export const CHUNK_FRAMES = 2205;
 export const TICK_MS = 50;
 
 export type ClipStatus = 'ok' | 'unavailable';
-export type PlayerStatus = 'idle' | 'playing' | 'paused' | 'fading' | 'unavailable' | 'empty';
+export type PlayerStatus =
+  'idle' | 'loading' | 'playing' | 'paused' | 'fading' | 'unavailable' | 'empty';
 export type OutputKind = 'device' | 'silent' | 'error';
 
 export interface ClipPublic {
@@ -61,6 +62,10 @@ export function initialPlayerState(
     levels: [],
     error: null,
   };
+}
+
+export function isTransportActive(status: PlayerStatus): boolean {
+  return status === 'playing' || status === 'fading' || status === 'loading';
 }
 
 export function selectClip(clips: ClipPublic[], id: string | null): ClipPublic | undefined {
