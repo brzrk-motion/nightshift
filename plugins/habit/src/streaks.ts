@@ -1,4 +1,4 @@
-import { addDays } from './window.js';
+import { addDays } from './layout.js';
 
 /**
  * Current streak (FR-006): walk backward from today if complete, else from

@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { HabitState } from './entity.js';
-import { compareDateKeys, isDateKey } from './window.js';
+import { compareDateKeys, isDateKey } from './layout.js';
 
 function sortDates(dates: readonly string[]): string[] {
   return [...dates].sort(compareDateKeys);

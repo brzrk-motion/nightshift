@@ -13,12 +13,13 @@ import {
   dayHeaderLabel,
   nameColumnWidth,
   resolveDensity,
+  rollingWindow,
+  todayKey,
   truncateName,
   type HabitDensity,
 } from './layout.js';
 import { isCompleted } from './habits.js';
 import { streakSummary } from './streaks.js';
-import { rollingWindow, todayKey } from './window.js';
 
 interface InlineEditorProps {
   initial: string;

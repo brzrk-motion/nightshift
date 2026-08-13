@@ -1,5 +1,5 @@
 import { initialState, type Habit, type HabitState } from './entity.js';
-import { isDateKey } from './window.js';
+import { isDateKey } from './layout.js';
 import type { Json } from '@nightshift/sdk';
 
 export const STORAGE_KEY = 'state' as const;

@@ -2,7 +2,7 @@ import { definePlugin, type Json, type PluginContext } from '@nightshift/sdk';
 import { HABIT_ENTITY, initialState, type HabitState } from './entity.js';
 import { addHabit, removeHabit, renameHabit, toggleCompletion } from './habits.js';
 import { parseStored, serializeState, STORAGE_KEY } from './storage.js';
-import { todayKey } from './window.js';
+import { todayKey } from './layout.js';
 import { HabitTrackerWidget } from './widgets.js';
 
 function stringArg(args: Record<string, Json> | undefined, key: string): string {
@@ -98,13 +98,16 @@ export default definePlugin({
 export { HABIT_ENTITY, initialState, type Habit, type HabitState } from './entity.js';
 export { addHabit, isCompleted, removeHabit, renameHabit, toggleCompletion } from './habits.js';
 export {
+  addDays,
   dayHeaderLabel,
+  isDateKey,
   nameColumnWidth,
   resolveDensity,
+  rollingWindow,
+  todayKey,
   truncateName,
   type HabitDensity,
 } from './layout.js';
 export { parseStored, serializeState, STORAGE_KEY, STORAGE_VERSION } from './storage.js';
 export { currentStreak, longestStreak, streakSummary } from './streaks.js';
-export { addDays, isDateKey, rollingWindow, todayKey } from './window.js';
 export { HabitTrackerWidget } from './widgets.js';
