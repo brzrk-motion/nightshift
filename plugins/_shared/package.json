@@ -1,8 +1,9 @@
 {
-  "name": "@nightshift/plugin-pomodoro",
+  "name": "@nightshift/plugin-shared",
   "version": "0.1.0",
-  "description": "Pomodoro timer — work intervals with short and long breaks.",
+  "description": "Shared helpers for Nightshift plugins (not a loadable plugin).",
   "license": "MIT",
+  "private": true,
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -22,16 +23,5 @@
     "lint": "eslint src",
     "test": "vitest run --passWithNoTests",
     "clean": "rm -rf dist *.tsbuildinfo"
-  },
-  "dependencies": {
-    "@nightshift/plugin-shared": "workspace:*",
-    "@nightshift/sdk": "workspace:*",
-    "@opentui/react": "^0.5.1",
-    "react": "^19.2.8"
-  },
-  "devDependencies": {
-    "@nightshift/entities": "workspace:*",
-    "@nightshift/ui": "workspace:*",
-    "@types/react": "^19.2.18"
   }
 }

@@ -246,6 +246,8 @@ importers:
         specifier: ^2.9.0
         version: 2.9.0
 
+  plugins/_shared: {}
+
   plugins/ambient-noise:
     dependencies:
       '@audio/speaker':
@@ -298,6 +300,9 @@ importers:
 
   plugins/habit:
     dependencies:
+      '@nightshift/plugin-shared':
+        specifier: workspace:*
+        version: link:../_shared
       '@nightshift/sdk':
         specifier: workspace:*
         version: link:../../packages/sdk
@@ -342,6 +347,9 @@ importers:
 
   plugins/pomodoro:
     dependencies:
+      '@nightshift/plugin-shared':
+        specifier: workspace:*
+        version: link:../_shared
       '@nightshift/sdk':
         specifier: workspace:*
         version: link:../../packages/sdk
