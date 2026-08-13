@@ -8,7 +8,7 @@
 
 **Input**: User description: "We want a fully featured app that plays and cycles through a few ambient sound clips, these clips should loop when they are finished, and cross fade into one another when the track is changed. The controls should be simple, we need play and pause, as well as the ability to cycle forward and backward to different clips. Some type of audio visualization is a nice to have but is optional given the TUI interface. We do however want to give each clip a simple name like "Rainy Day" or "White Noise" in the player interface. Audio samples live in the plugin's test-audio folder."
 
-## User Scenarios & Testing *(mandatory)*
+## User Scenarios & Testing _(mandatory)_
 
 ### User Story 1 - Play a looping named clip (Priority: P1)
 
@@ -92,7 +92,7 @@ When there is enough space and audio is playing, the widget may show a simple ac
 - Very short clips shorter than the crossfade window: fade duration is clamped so both clips can still be heard; never hang.
 - Click/pop at loop seam: a brief intra-clip seam fade is allowed; it is not the same as the track-change crossfade.
 
-## Requirements *(mandatory)*
+## Requirements _(mandatory)_
 
 ### Functional Requirements
 
@@ -109,13 +109,13 @@ When there is enough space and audio is playing, the widget may show a simple ac
 - **FR-011**: An activity visualization MAY be shown when space allows; it MUST NOT be required for play, pause, or cycling.
 - **FR-012**: Last selected clip id SHOULD persist across restarts via plugin storage; playback MUST NOT auto-start on launch.
 
-### Key Entities *(include if feature involves data)*
+### Key Entities _(include if feature involves data)_
 
 - **Clip catalog**: Bundled ambient clips — id, display name, file path, duration once decoded.
 - **Player state**: Current clip, playing/paused/unavailable, optional playhead, optional visualization samples, output health.
 - **Mixer internals**: In-memory playheads, gains, and crossfade progress (not persisted).
 
-## Success Criteria *(mandatory)*
+## Success Criteria _(mandatory)_
 
 ### Measurable Outcomes
 

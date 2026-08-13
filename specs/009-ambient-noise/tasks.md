@@ -1,5 +1,5 @@
 ---
-description: "Task list for Ambient Noise plugin"
+description: 'Task list for Ambient Noise plugin'
 ---
 
 # Tasks: Ambient Noise
@@ -179,12 +179,12 @@ description: "Task list for Ambient Noise plugin"
 
 ### User Story Dependencies
 
-| Story | Priority | Depends on | Notes |
-|-------|----------|------------|-------|
-| US1 | P1 | Foundational | Named looping play/pause — **MVP** |
-| US2 | P1 | US1 mixer + entity | Crossfade cycle; same player |
-| US3 | P2 | US1 widget (+ US2 skip buttons) | Layout only |
-| US4 | P3 | US3 wide breakpoint | Optional waveform |
+| Story | Priority | Depends on                      | Notes                              |
+| ----- | -------- | ------------------------------- | ---------------------------------- |
+| US1   | P1       | Foundational                    | Named looping play/pause — **MVP** |
+| US2   | P1       | US1 mixer + entity              | Crossfade cycle; same player       |
+| US3   | P2       | US1 widget (+ US2 skip buttons) | Layout only                        |
+| US4   | P3       | US3 wide breakpoint             | Optional waveform                  |
 
 ### Within Each User Story
 
@@ -282,16 +282,16 @@ Task T024: plugins/ambient-noise/src/index.test.ts (next/previous/select)
 
 ## Task Summary
 
-| Phase | Tasks | Story |
-|-------|-------|-------|
-| Setup | T001–T004 (4) | — |
-| Foundational | T005–T015 (11) | — |
-| US1 Play looping named clip | T016–T022 (7) | US1 |
-| US2 Cycle + crossfade | T023–T028 (6) | US2 |
-| US3 Compact/wide transport | T029–T033 (5) | US3 |
-| US4 Optional waveform | T034–T037 (4) | US4 |
-| Polish | T038–T043 (6) | — |
-| **Total** | **43 tasks** | |
+| Phase                       | Tasks          | Story |
+| --------------------------- | -------------- | ----- |
+| Setup                       | T001–T004 (4)  | —     |
+| Foundational                | T005–T015 (11) | —     |
+| US1 Play looping named clip | T016–T022 (7)  | US1   |
+| US2 Cycle + crossfade       | T023–T028 (6)  | US2   |
+| US3 Compact/wide transport  | T029–T033 (5)  | US3   |
+| US4 Optional waveform       | T034–T037 (4)  | US4   |
+| Polish                      | T038–T043 (6)  | —     |
+| **Total**                   | **43 tasks**   |       |
 
 **Suggested MVP scope**: Phase 1 + 2 + 3 (US1) for a looping named player; **recommended first release** adds Phase 4 (US2 crossfade cycle). US3 before putting the widget on dense dashboards. US4 is optional.
 

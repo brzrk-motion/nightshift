@@ -10,31 +10,31 @@ The clip catalog is bundled (files + names). Live transport lives on one player 
 
 ### Clip (catalog entry, not a Nightshift entity)
 
-| Field | Type | Rules |
-|-------|------|--------|
-| `id` | string | kebab-case, unique, stable |
-| `name` | string | Non-empty display name ("Rainy Day") |
-| `file` | string | Path relative to `test-audio/` |
-| `durationMs` | number \| null | Set after successful decode; null if not yet loaded |
-| `status` | `'ok' \| 'unavailable'` | File missing/corrupt → `unavailable` |
+| Field        | Type                    | Rules                                               |
+| ------------ | ----------------------- | --------------------------------------------------- |
+| `id`         | string                  | kebab-case, unique, stable                          |
+| `name`       | string                  | Non-empty display name ("Rainy Day")                |
+| `file`       | string                  | Path relative to `test-audio/`                      |
+| `durationMs` | number \| null          | Set after successful decode; null if not yet loaded |
+| `status`     | `'ok' \| 'unavailable'` | File missing/corrupt → `unavailable`                |
 
 Catalog is loaded at setup from `test-audio/clips.json` (or equivalent) plus the files on disk. Order in the file is cycle order.
 
 ### PlayerState (entity `ambient-noise.player`)
 
-| Field | Type | Default | Rules |
-|-------|------|---------|-------|
-| `clips` | `ClipPublic[]` | `[]` | Public view: `id`, `name`, `status` (no filesystem paths on the entity) |
-| `currentClipId` | string \| null | first ok clip or null | Must be an id in `clips` or null |
-| `currentName` | string | `''` | Denormalized display name for the widget |
-| `status` | `'idle' \| 'playing' \| 'paused' \| 'fading' \| 'unavailable' \| 'empty'` | `'empty'` if no clips | See transitions |
-| `output` | `'device' \| 'silent' \| 'error'` | `'silent'` until sink opens | `error` if device open failed after play |
-| `outputMessage` | string \| null | null | Short hint when silent/error |
-| `positionMs` | number | 0 | Playhead of the audible clip (incoming during fade) |
-| `durationMs` | number \| null | null | Current clip duration |
-| `crossfadeMs` | number | 1500 | Active fade length (constant in v1) |
-| `levels` | `number[]` | `[]` | Recent RMS/peak 0–1 for `ActivityWaveform`; cap ~48 |
-| `error` | string \| null | null | Decode/play error for current clip |
+| Field           | Type                                                                      | Default                     | Rules                                                                   |
+| --------------- | ------------------------------------------------------------------------- | --------------------------- | ----------------------------------------------------------------------- |
+| `clips`         | `ClipPublic[]`                                                            | `[]`                        | Public view: `id`, `name`, `status` (no filesystem paths on the entity) |
+| `currentClipId` | string \| null                                                            | first ok clip or null       | Must be an id in `clips` or null                                        |
+| `currentName`   | string                                                                    | `''`                        | Denormalized display name for the widget                                |
+| `status`        | `'idle' \| 'playing' \| 'paused' \| 'fading' \| 'unavailable' \| 'empty'` | `'empty'` if no clips       | See transitions                                                         |
+| `output`        | `'device' \| 'silent' \| 'error'`                                         | `'silent'` until sink opens | `error` if device open failed after play                                |
+| `outputMessage` | string \| null                                                            | null                        | Short hint when silent/error                                            |
+| `positionMs`    | number                                                                    | 0                           | Playhead of the audible clip (incoming during fade)                     |
+| `durationMs`    | number \| null                                                            | null                        | Current clip duration                                                   |
+| `crossfadeMs`   | number                                                                    | 1500                        | Active fade length (constant in v1)                                     |
+| `levels`        | `number[]`                                                                | `[]`                        | Recent RMS/peak 0–1 for `ActivityWaveform`; cap ~48                     |
+| `error`         | string \| null                                                            | null                        | Decode/play error for current clip                                      |
 
 `ClipPublic`: `{ id: string, name: string, status: 'ok' | 'unavailable' }`.
 
@@ -42,30 +42,30 @@ Index signature required so the state is `Json`.
 
 ### MixerInternals (in-memory only, not entity)
 
-| Field | Type | Rules |
-|-------|------|--------|
-| `buffers` | `Map<id, PcmBuffer>` | Decoded s16 stereo @ mixer sample rate |
-| `primary` | `{ clipId, frame }` \| null | Current/outgoing source |
-| `incoming` | `{ clipId, frame, gain }` \| null | Set only during track-change fade |
-| `fadeRemaining` | number (frames) | 0 when not fading |
-| `playing` | boolean | Master run flag |
-| `sink` | `AudioSink` | Device, null, or test capture |
-| `timer` | handle \| null | Owned via `context.own()` |
+| Field           | Type                              | Rules                                  |
+| --------------- | --------------------------------- | -------------------------------------- |
+| `buffers`       | `Map<id, PcmBuffer>`              | Decoded s16 stereo @ mixer sample rate |
+| `primary`       | `{ clipId, frame }` \| null       | Current/outgoing source                |
+| `incoming`      | `{ clipId, frame, gain }` \| null | Set only during track-change fade      |
+| `fadeRemaining` | number (frames)                   | 0 when not fading                      |
+| `playing`       | boolean                           | Master run flag                        |
+| `sink`          | `AudioSink`                       | Device, null, or test capture          |
+| `timer`         | handle \| null                    | Owned via `context.own()`              |
 
 ### PcmBuffer (in-memory)
 
-| Field | Type | Rules |
-|-------|------|--------|
-| `sampleRate` | number | Mixer master (44100) |
-| `channels` | 2 | Stereo interleaved |
-| `frames` | `Int16Array` | Interleaved L,R; length = frameCount × 2 |
+| Field        | Type         | Rules                                    |
+| ------------ | ------------ | ---------------------------------------- |
+| `sampleRate` | number       | Mixer master (44100)                     |
+| `channels`   | 2            | Stereo interleaved                       |
+| `frames`     | `Int16Array` | Interleaved L,R; length = frameCount × 2 |
 
 ### StoredSettings (plugin storage key `settings`)
 
-| Field | Type | Default | Rules |
-|-------|------|---------|-------|
-| `version` | `1` | `1` | Schema version |
-| `currentClipId` | string \| null | null | Last selected clip; hydrate if still in catalog |
+| Field           | Type           | Default | Rules                                           |
+| --------------- | -------------- | ------- | ----------------------------------------------- |
+| `version`       | `1`            | `1`     | Schema version                                  |
+| `currentClipId` | string \| null | null    | Last selected clip; hydrate if still in catalog |
 
 Do not persist `playing`.
 
@@ -116,18 +116,18 @@ Do not persist `playing`.
 
 ## Persistence mapping
 
-| Layer | Key / id | Contents |
-|-------|----------|----------|
-| Files | `plugins/ambient-noise/test-audio/*` | WAV clips + `clips.json` |
-| Storage | `settings` | `{ version: 1, currentClipId }` |
-| Entity | `ambient-noise.player` | `PlayerState` |
+| Layer   | Key / id                             | Contents                        |
+| ------- | ------------------------------------ | ------------------------------- |
+| Files   | `plugins/ambient-noise/test-audio/*` | WAV clips + `clips.json`        |
+| Storage | `settings`                           | `{ version: 1, currentClipId }` |
+| Entity  | `ambient-noise.player`               | `PlayerState`                   |
 
 ## Display mapping (widget)
 
-| Slot | What to draw |
-|------|----------------|
-| Compact | `currentName` + play/pause |
-| Regular | name + previous / play-pause / next |
-| Wide | regular + `ActivityWaveform` from `levels` when playing (P3) |
+| Slot    | What to draw                                                 |
+| ------- | ------------------------------------------------------------ |
+| Compact | `currentName` + play/pause                                   |
+| Regular | name + previous / play-pause / next                          |
+| Wide    | regular + `ActivityWaveform` from `levels` when playing (P3) |
 
 Empty → `EmptyState` ("No ambient clips"). Output error → `ErrorState` with hint, transport still shown if clips exist.

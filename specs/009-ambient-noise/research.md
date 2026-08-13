@@ -7,6 +7,7 @@
 **Rationale**: Nightshift rule — everything is a plugin; SDK-only Nightshift imports. Local looping clips with a dashboard widget match `focus` / `clock` / `system-monitor`. Spotify already occupies "control someone else's player"; this plugin owns **local** playback.
 
 **Alternatives considered**:
+
 - Host audio service in `packages/services` — rejected; not reusable by third parties and breaks "everything is a plugin".
 - Extend the Spotify plugin — rejected; Spotify does not stream and has a different auth/network model.
 
@@ -19,6 +20,7 @@
 - Headless/CI hosts never fail setup because the device is missing.
 
 **Alternatives considered**:
+
 - Drive two OS players (`aplay` × 2) and hope volumes cross — needs `shell` (not on `PluginContext`), hard to sync, poor fade control.
 - Web Audio API — not available in the OpenTUI/Node process.
 
@@ -29,6 +31,7 @@
 If files in `test-audio/` are not WAV at implementation time, convert them once (commit WAV) rather than adding mpg123/lame/ffmpeg as a runtime dependency.
 
 **Alternatives considered**:
+
 - MP3 via `lame` / `mpg123` — extra native decoder; YAGNI if we control the bundled assets.
 - Decode with FFmpeg child process — `shell` is declare-only on the SDK; also a capability bypass if spawned via `node:child_process`.
 
@@ -39,6 +42,7 @@ If files in `test-audio/` are not WAV at implementation time, convert them once 
 The dependency is **plugin-local** (`plugins/ambient-noise/package.json` only). Dynamic import so a missing native binary does not throw during `setup()`; fall back to `NullSink` and set player `output: 'silent'`.
 
 **Alternatives considered**:
+
 - `speaker` (TooTallNate) — mature but compiles mpg123 against `libasound2-dev`; no null backend; painful in cloud agents.
 - `naudiodon` / PortAudio — extra native stack; PulseAudio hang-on-exit reports.
 - New SDK `audio` capability + host sink — out of scope; would block the plugin on core work. Audio is local hardware analogous to `node:fs` (todo plugin) rather than network/shell.
@@ -57,6 +61,7 @@ Rapid skips cancel the current fade and start a new one to the latest target (ma
 Paused skip: change `currentClipId` only; do not open the device.
 
 **Alternatives considered**:
+
 - Linear amplitude ramp — quieter in the middle; worse for noise beds.
 - Gapless concat without overlap — audible cut, fails FR-007.
 - Crossfade on loop as well — different product; user asked for loop-when-finished and crossfade-when-changed.
@@ -77,6 +82,7 @@ Ids are kebab-case; names are what the widget draws. Implementation inspects wha
 Tests generate tiny valid WAV fixtures so CI does not depend on large binaries.
 
 **Alternatives considered**:
+
 - Infer names only from filenames — too easy to show `rain_loop_01.wav`.
 - User-editable playlist in storage — out of scope for v1.
 
@@ -87,6 +93,7 @@ Tests generate tiny valid WAV fixtures so CI does not depend on large binaries.
 Persist `currentClipId` in `context.storage`. Never persist `playing: true` as auto-play.
 
 **Alternatives considered**:
+
 - Widget-local `useState` for transport — breaks palette, vibes, and a second widget instance.
 - Stop audio on unmount — surprising if the user tiled another dashboard.
 
@@ -97,6 +104,7 @@ Persist `currentClipId` in `context.storage`. Never persist `playing: true` as a
 SDK `ActivityWaveform` is documented as a pulse strip for ambient activity — a natural fit. Mixer publishes a short RMS (or peak) ring buffer on the entity at ~10 Hz, not every sample. Compact layout omits it (P3).
 
 **Alternatives considered**:
+
 - ASCII spectrum FFT — heavy, easy to overflow a cell, not requested.
 - New UI primitive — 007 already shipped `ActivityWaveform`.
 
@@ -104,13 +112,13 @@ SDK `ActivityWaveform` is documented as a pulse strip for ambient activity — a
 
 **Rationale**:
 
-| Layer | How |
-|-------|-----|
-| WAV parse | Fixture buffers (header + a few frames); reject truncated/non-PCM |
-| Mixer | Deterministic: known buffers, assert loop wrap, equal-power mix during fade, pause zeros output |
-| Catalog | Temp dir with `clips.json` + wav; missing file → skip/unavailable |
-| `setup()` | Fake `PluginContext` (weather/focus pattern); mock sink; assert commands write entity |
-| Widget | `testRender` + FFI skipIf; assert name + play/pause labels at compact vs regular sizes |
+| Layer     | How                                                                                             |
+| --------- | ----------------------------------------------------------------------------------------------- |
+| WAV parse | Fixture buffers (header + a few frames); reject truncated/non-PCM                               |
+| Mixer     | Deterministic: known buffers, assert loop wrap, equal-power mix during fade, pause zeros output |
+| Catalog   | Temp dir with `clips.json` + wav; missing file → skip/unavailable                               |
+| `setup()` | Fake `PluginContext` (weather/focus pattern); mock sink; assert commands write entity           |
+| Widget    | `testRender` + FFI skipIf; assert name + play/pause labels at compact vs regular sizes          |
 
 No sleeps: mixer `tick(sampleCount)` is pull-based in tests; production uses sink backpressure/`setInterval` unref'd and owned.
 
@@ -119,4 +127,5 @@ No sleeps: mixer `tick(sampleCount)` is pull-based in tests; production uses sin
 **Rationale**: Same checklist as system-monitor: `apps/cli` workspace dep, `DEFAULT_CONFIG.plugins`, `CONFIG_VERSION` 9 → 10 + migrate, changeset, README bullet. No `pluginPermissions` entry.
 
 **Alternatives considered**:
+
 - Discover-only (drop in config `plugins/`) — user asked for a fully featured bundled app.

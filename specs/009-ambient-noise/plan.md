@@ -32,22 +32,22 @@ Ship a bundled `@nightshift/plugin-ambient-noise` app that plays a small catalog
 
 ## Constitution Check
 
-*GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
+_GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 
 `.specify/memory/constitution.md` is still the Speckit placeholder. Gates below follow `AGENTS.md` / README / create-nightshift-app:
 
-| Gate | Status | Notes |
-|------|--------|-------|
-| Everything is a plugin | PASS | `plugins/ambient-noise` |
-| Public SDK is the only plugin interface | PASS | Runtime Nightshift import: `@nightshift/sdk` only; speaker is a non-Nightshift audio sink |
-| Dashboards consume widgets | PASS | `ambient-noise.player` |
-| Entities provide shared state | PASS | `ambient-noise.player` |
-| Vibes orchestrate actions | PASS | play/pause/next/previous/select commands |
-| Never let one bad input break startup | PASS | Corrupt/missing clips → empty/unavailable; sink failure → silent/error UI |
-| Capability model honored | PASS | Auto-granted only; no network/shell; no new capability |
-| No console outside CLI | PASS | `context.log` |
-| Tests co-located; lint/typecheck/test before done | PASS | Mirror focus/weather |
-| Widget scales to its cells | PASS | Compact vs regular layout module |
+| Gate                                              | Status | Notes                                                                                     |
+| ------------------------------------------------- | ------ | ----------------------------------------------------------------------------------------- |
+| Everything is a plugin                            | PASS   | `plugins/ambient-noise`                                                                   |
+| Public SDK is the only plugin interface           | PASS   | Runtime Nightshift import: `@nightshift/sdk` only; speaker is a non-Nightshift audio sink |
+| Dashboards consume widgets                        | PASS   | `ambient-noise.player`                                                                    |
+| Entities provide shared state                     | PASS   | `ambient-noise.player`                                                                    |
+| Vibes orchestrate actions                         | PASS   | play/pause/next/previous/select commands                                                  |
+| Never let one bad input break startup             | PASS   | Corrupt/missing clips → empty/unavailable; sink failure → silent/error UI                 |
+| Capability model honored                          | PASS   | Auto-granted only; no network/shell; no new capability                                    |
+| No console outside CLI                            | PASS   | `context.log`                                                                             |
+| Tests co-located; lint/typecheck/test before done | PASS   | Mirror focus/weather                                                                      |
+| Widget scales to its cells                        | PASS   | Compact vs regular layout module                                                          |
 
 **Post-design re-check**: Still PASS — contracts are plugin entities/commands/widget plus an internal sink/mixer test API; CLI wiring is the usual default-plugin migrate; no host audio subsystem; visualization uses existing `ActivityWaveform`. Adding `@audio/speaker` is scoped to this plugin and must remain optional-at-runtime (dynamic import + NullSink).
 
