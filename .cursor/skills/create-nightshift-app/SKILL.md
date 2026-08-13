@@ -54,7 +54,7 @@ Decide and write down, before any code:
 
 ```
 plugins/<id>/
-  package.json          # @nightshift/plugin-<id>; only dependency: @nightshift/sdk (+ react, @opentui/react)
+  package.json          # @nightshift/plugin-<id>; deps: @nightshift/sdk (+ react, @opentui/react; optional @nightshift/plugin-shared)
   tsconfig.json         # extends ../../tsconfig.base.json, jsx: react-jsx, jsxImportSource: @opentui/react
   tsconfig.typecheck.json
   vitest.config.ts      # copy plugins/weather/vitest.config.ts verbatim — it gates the FFI renderer
@@ -73,6 +73,8 @@ Copy `plugins/weather/package.json`, `tsconfig.json`, `tsconfig.typecheck.json` 
 
 `@nightshift/entities` and `@nightshift/ui` may appear in `devDependencies` (for types in
 tests) but **never** in `dependencies` — a third-party plugin only gets the SDK.
+Bundled plugins may also depend on `@nightshift/plugin-shared` for duplicated pure
+helpers (`plugins/_shared`); that package is not a loadable plugin.
 
 ### 3. Pure logic first
 

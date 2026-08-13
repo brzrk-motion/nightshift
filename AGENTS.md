@@ -40,6 +40,7 @@ packages/vibes         The vibe engine
 packages/automations   Triggers, conditions and actions
 packages/services      Config, logging, and the plugin runtime/host
 mcp/context-mcp        Agent tooling: a tree-sitter code index served over MCP
+plugins/_shared        Shared pure helpers for bundled plugins (not loadable)
 plugins/clock          The time and date, with 12/24-hour and date format settings
 plugins/pomodoro       Work intervals with short and long breaks — the reference plugin
 plugins/habit          Rolling 7-day habit tracker
@@ -73,13 +74,16 @@ Concretely:
 - `vibes` depends on `core`, `entities`, `yaml`.
 - `services` depends on `core`, `entities`, `automations`, `sdk`.
 - `apps/cli` depends on everything above, plus `commander`.
-- `plugins/pomodoro` and `plugins/todo` depend only on `@nightshift/sdk` at
-  runtime (matching what a third-party plugin is allowed to depend on);
-  `@nightshift/entities` and `@nightshift/ui` appear only as
-  `devDependencies`, for types in tests. The same applies to `plugins/weather`
-  and `plugins/clock` (which additionally declare the `network` capability
-  and use `context.fetch` — weather to geocode+forecast, clock to geocode a
-  location into a timezone when the machine's own can't be detected).
+- Bundled plugins depend on `@nightshift/sdk` at runtime (matching what a
+  third-party plugin is allowed to depend on). They may also depend on
+  `@nightshift/plugin-shared` for duplicated pure helpers (countdown formatting,
+  date keys, pause/tick skeletons — see `plugins/_shared`). That package is
+  not a loadable plugin (no `definePlugin`); do not list it in `config.json`'s
+  `plugins` array. `@nightshift/entities` and `@nightshift/ui` appear only as
+  `devDependencies`, for types in tests. `plugins/weather` and `plugins/clock`
+  additionally declare the `network` capability and use `context.fetch` —
+  weather to geocode+forecast, clock to geocode a location into a timezone
+  when the machine's own can't be detected.
 
 `mcp/*` sits outside that diagram on purpose. It is developer tooling for the
 agents working on this repository, not part of the application: nothing in
@@ -318,10 +322,11 @@ and is optional — not configured in this repo.
 
 ## The plugin architecture
 
-### The SDK is the only import
+### The SDK is the only host import
 
-A plugin's only allowed import from Nightshift is `@nightshift/sdk`
-(`packages/sdk/src/index.ts`). That module does two things:
+A plugin's allowed imports from Nightshift are `@nightshift/sdk`
+(`packages/sdk/src/index.ts`) and, for shared pure helpers among bundled
+plugins only, `@nightshift/plugin-shared`. The SDK module does two things:
 
 1. **Defines the runtime contract**: `definePlugin()`, `PluginManifest`,
    `PluginContext`, `Capability`, `CAPABILITIES`, `isCompatible()`.
@@ -331,11 +336,13 @@ A plugin's only allowed import from Nightshift is `@nightshift/sdk`
    `useTheme`, `useToasts`) and types from `@nightshift/entities` /
    `@nightshift/automations` needed to write a widget or an automation.
 
-If you're adding something a plugin should be able to use, it goes through
-`packages/sdk/src/index.ts` — either as a new export re-exported from `ui`/
-`entities`/`automations`, or as a new field on `PluginContext`. A plugin must
-never reach past the SDK into `@nightshift/services`, `@nightshift/dashboard`,
-etc. directly; those are host internals.
+If you're adding something a plugin should be able to use from the host, it
+goes through `packages/sdk/src/index.ts` — either as a new export re-exported
+from `ui`/`entities`/`automations`, or as a new field on `PluginContext`.
+Duplicated pure logic shared by two or more bundled plugins belongs in
+`@nightshift/plugin-shared` instead of the SDK. A plugin must never reach past
+the SDK into `@nightshift/services`, `@nightshift/dashboard`, etc. directly;
+those are host internals.
 
 ### Anatomy of a plugin
 
@@ -484,7 +491,7 @@ re-open this exact bug for whatever the next text-entering widget is.
    `plugins/pomodoro`'s shape:
    ```
    plugins/<name>/
-     package.json       # name: @nightshift/plugin-<name>, deps: @nightshift/sdk only
+     package.json       # name: @nightshift/plugin-<name>, deps: @nightshift/sdk (+ optional plugin-shared)
      tsconfig.json       # extends ../../tsconfig.base.json
      src/
        index.ts          # default-exports definePlugin({...})
@@ -493,9 +500,10 @@ re-open this exact bug for whatever the next text-entering widget is.
        *.test.ts(x)       # co-located vitest specs
    ```
    Copy `plugins/pomodoro/package.json` and adjust the name/description; keep
-   `@nightshift/sdk` as the only runtime `dependencies` entry (put
-   `@nightshift/entities`/`@nightshift/ui` in `devDependencies` only if tests
-   need their types, as pomodoro does).
+   `@nightshift/sdk` as the runtime `dependencies` entry (add
+   `@nightshift/plugin-shared` only when reusing helpers from `plugins/_shared`;
+   put `@nightshift/entities`/`@nightshift/ui` in `devDependencies` only if
+   tests need their types, as pomodoro does).
 2. Register it with the workspace: `pnpm-workspace.yaml` already globs
    `plugins/*`, so `pnpm install` picks it up once the directory exists.
 3. Write `setup(context)`: register any entities the plugin owns, register
