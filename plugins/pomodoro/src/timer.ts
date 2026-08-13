@@ -2,6 +2,9 @@
  * Pomodoro reducers: work → short/long break → work cycles. Pure functions
  * with no interval or entity store, same split as the focus plugin's timer.
  */
+/** Entity id shared by index/widgets so widgets avoid importing setup(). */
+export const POMODORO_ENTITY = 'pomodoro.session' as const;
+
 export type PomodoroPhase = 'work' | 'shortBreak' | 'longBreak';
 export type PomodoroStatus = 'idle' | 'running' | 'paused' | 'phaseComplete';
 

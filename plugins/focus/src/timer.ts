@@ -4,6 +4,9 @@
  * here, with no interval or entity store in sight, is what makes them
  * testable without waiting on a clock.
  */
+/** Entity id shared by index/widgets so widgets avoid importing setup(). */
+export const FOCUS_ENTITY = 'timer.focus' as const;
+
 export type FocusStatus = 'idle' | 'running' | 'paused' | 'finished';
 
 export interface FocusState {

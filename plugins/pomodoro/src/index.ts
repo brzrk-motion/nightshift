@@ -1,7 +1,7 @@
 import { definePlugin, type Json, type PluginContext } from '@nightshift/sdk';
-import { POMODORO_ENTITY } from './entity.js';
 import {
   initialState,
+  POMODORO_ENTITY,
   pauseSession,
   resetSession,
   skipPhase,
@@ -173,7 +173,7 @@ export default definePlugin({
   },
 });
 
-export { POMODORO_ENTITY } from './entity.js';
+export { POMODORO_ENTITY } from './timer.js';
 export {
   DEFAULT_LONG_BREAK_MINUTES,
   DEFAULT_POMODOROS_PER_LONG_BREAK,

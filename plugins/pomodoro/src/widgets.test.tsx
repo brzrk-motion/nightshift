@@ -8,8 +8,7 @@ import {
   RuntimeProvider,
   ThemeProvider,
 } from '@nightshift/ui';
-import { POMODORO_ENTITY } from './entity.js';
-import { initialState, startSession } from './timer.js';
+import { POMODORO_ENTITY, initialState, startSession } from './timer.js';
 import { SessionWidget, TodayWidget } from './widgets.js';
 
 const renderable = detectRuntime().ffi;
