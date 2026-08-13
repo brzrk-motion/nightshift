@@ -77,8 +77,16 @@ export function loadWav(bytes: Uint8Array): PcmBuffer {
     const id = readFourCc(view, offset);
     const size = view.getUint32(offset + 4, true);
     const start = offset + 8;
-    if (start + size > view.byteLength) {
+    if (start > view.byteLength) {
       throw new Error('WAV chunk is truncated');
+    }
+    const available = view.byteLength - start;
+    if (size > available) {
+      if (id !== 'data') {
+        throw new Error('WAV chunk is truncated');
+      }
+      data = bytes.subarray(start, view.byteLength);
+      break;
     }
     if (id === 'fmt ') {
       if (size < 16) throw new Error('WAV fmt chunk is too small');

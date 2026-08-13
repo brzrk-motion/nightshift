@@ -44,4 +44,11 @@ describe('loadWav', () => {
     const decoded = loadWav(concat(encoded, new Uint8Array([1, 2, 3, 4])));
     expect(decoded.frameCount).toBe(16);
   });
+
+  it('decodes a data prefix when the header still claims a longer chunk', () => {
+    const encoded = encodePcm16Wav(toneBuffer(64, 180).frames);
+    const prefix = encoded.subarray(0, 44 + 40 * 4);
+    const decoded = loadWav(prefix);
+    expect(decoded.frameCount).toBe(40);
+  });
 });

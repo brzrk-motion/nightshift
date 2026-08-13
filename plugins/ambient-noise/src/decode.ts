@@ -45,7 +45,11 @@ function mpegWindow(bytes: Uint8Array): Uint8Array {
 
 function readBudget(prefix: Uint8Array, fileSize: number): number {
   if (isRiffWav(prefix)) {
-    return Math.min(fileSize, 44 + MIXER_SAMPLE_RATE * MAX_DECODED_SECONDS * MIXER_CHANNELS * 2);
+    const headerSlack = 8 * 1024;
+    return Math.min(
+      fileSize,
+      headerSlack + MIXER_SAMPLE_RATE * MAX_DECODED_SECONDS * MIXER_CHANNELS * 2,
+    );
   }
   return Math.min(fileSize, id3v2Size(prefix) + MAX_MPEG_BYTES);
 }

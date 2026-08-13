@@ -139,6 +139,8 @@ describe('Mixer', () => {
     expect(mixer.currentClipId()).toBe('b');
     expect(chunk[8 * 2]).toBe(2000);
     expect(chunk[11 * 2]).toBe(2000);
+    expect(mixer.has('a')).toBe(false);
+    expect(mixer.has('b')).toBe(true);
   });
 
   it('records 0–1 levels while playing', () => {

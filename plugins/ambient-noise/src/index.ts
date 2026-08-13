@@ -174,12 +174,6 @@ export default definePlugin({
 
     const okEntries = (): CatalogEntry[] => entries.filter((entry) => entry.status === 'ok');
 
-    const refreshClips = (): ClipPublic[] => {
-      const next = toPublicClips(entries);
-      clips.splice(0, clips.length, ...next);
-      return next;
-    };
-
     const inflight = new Map<string, Promise<boolean>>();
 
     const ensureLoaded = async (clipId: string): Promise<boolean> => {
@@ -193,8 +187,6 @@ export default definePlugin({
           mixer.load(clipId, await loadClip(await readClipBytes(entry.path)));
           return true;
         } catch (error: unknown) {
-          entry.status = 'unavailable';
-          refreshClips();
           context.log.warn('Could not decode ambient clip', { id: entry.id, error: `${error}` });
           return false;
         }

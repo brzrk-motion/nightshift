@@ -187,6 +187,7 @@ export class Mixer {
             this.primary = this.incoming;
             this.incoming = null;
             this.fadeRemaining = 0;
+            this.retainActive();
           }
         }
       }

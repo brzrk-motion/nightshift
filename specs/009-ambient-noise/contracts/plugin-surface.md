@@ -43,17 +43,17 @@ Invalid args soft-fail (log); must not throw to the host.
 
 No args. Starts or resumes the current clip. No-op if catalog empty or no `ok` clip.
 
-**Effect**: `status` → `playing` (or `unavailable` / keeps `empty`). Opens the audio sink lazily.
+**Effect**: `status` → `loading` while the clip decodes, then `playing` (or `unavailable` / keeps `empty`). Opens the audio sink lazily. Pause during `loading` cancels the in-flight play.
 
 ### `ambient-noise.pause`
 
-No args. Stops output. No-op if not playing.
+No args. Stops output. No-op if not `loading`, `playing`, or `fading`.
 
 **Effect**: `status` → `paused`.
 
 ### `ambient-noise.toggle`
 
-No args. Play if paused/idle; pause if playing/fading.
+No args. Play if paused/idle; pause if loading/playing/fading.
 
 ### `ambient-noise.next`
 
@@ -149,15 +149,16 @@ Key: `settings`
 
 ## Failure behavior
 
-| Condition                              | Behavior                                                             |
-| -------------------------------------- | -------------------------------------------------------------------- |
-| Missing `test-audio/` or empty catalog | `status: 'empty'`; EmptyState; commands no-op                        |
-| One corrupt WAV                        | that clip `unavailable`; others play                                 |
-| All clips unavailable                  | `status: 'unavailable'`                                              |
-| No audio device / silent backend       | play still updates state; `output: 'silent'` + hint                  |
-| Device open failure                    | `output: 'error'`; toast once (`key: 'output'`); Nightshift stays up |
-| Corrupt storage                        | first `ok` clip; not playing                                         |
-| Plugin unload                          | sink closed; timer cleared                                           |
+| Condition                              | Behavior                                                                               |
+| -------------------------------------- | -------------------------------------------------------------------------------------- |
+| Missing `test-audio/` or empty catalog | `status: 'empty'`; EmptyState; commands no-op                                          |
+| Missing clip file                      | that clip `unavailable` at catalog load; others play                                   |
+| Decode/play failure                    | current command fails (toast / `unavailable` player status); clip stays `ok` for retry |
+| All clips unavailable                  | `status: 'unavailable'`                                                                |
+| No audio device / silent backend       | play still updates state; `output: 'silent'` + hint                                    |
+| Device open failure                    | `output: 'error'`; toast once (`key: 'output'`); Nightshift stays up                   |
+| Corrupt storage                        | first `ok` clip; not playing                                                           |
+| Plugin unload                          | sink closed; timer cleared                                                             |
 
 ## SDK components used by widget
 

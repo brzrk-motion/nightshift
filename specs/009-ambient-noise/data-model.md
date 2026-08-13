@@ -22,19 +22,19 @@ Catalog is loaded at setup from `test-audio/clips.json` (or equivalent) plus the
 
 ### PlayerState (entity `ambient-noise.player`)
 
-| Field           | Type                                                                      | Default                     | Rules                                                                   |
-| --------------- | ------------------------------------------------------------------------- | --------------------------- | ----------------------------------------------------------------------- |
-| `clips`         | `ClipPublic[]`                                                            | `[]`                        | Public view: `id`, `name`, `status` (no filesystem paths on the entity) |
-| `currentClipId` | string \| null                                                            | first ok clip or null       | Must be an id in `clips` or null                                        |
-| `currentName`   | string                                                                    | `''`                        | Denormalized display name for the widget                                |
-| `status`        | `'idle' \| 'playing' \| 'paused' \| 'fading' \| 'unavailable' \| 'empty'` | `'empty'` if no clips       | See transitions                                                         |
-| `output`        | `'device' \| 'silent' \| 'error'`                                         | `'silent'` until sink opens | `error` if device open failed after play                                |
-| `outputMessage` | string \| null                                                            | null                        | Short hint when silent/error                                            |
-| `positionMs`    | number                                                                    | 0                           | Playhead of the audible clip (incoming during fade)                     |
-| `durationMs`    | number \| null                                                            | null                        | Current clip duration                                                   |
-| `crossfadeMs`   | number                                                                    | 1500                        | Active fade length (constant in v1)                                     |
-| `levels`        | `number[]`                                                                | `[]`                        | Recent RMS/peak 0–1 for `ActivityWaveform`; cap ~48                     |
-| `error`         | string \| null                                                            | null                        | Decode/play error for current clip                                      |
+| Field           | Type                                                                                   | Default                     | Rules                                                                   |
+| --------------- | -------------------------------------------------------------------------------------- | --------------------------- | ----------------------------------------------------------------------- |
+| `clips`         | `ClipPublic[]`                                                                         | `[]`                        | Public view: `id`, `name`, `status` (no filesystem paths on the entity) |
+| `currentClipId` | string \| null                                                                         | first ok clip or null       | Must be an id in `clips` or null                                        |
+| `currentName`   | string                                                                                 | `''`                        | Denormalized display name for the widget                                |
+| `status`        | `'idle' \| 'loading' \| 'playing' \| 'paused' \| 'fading' \| 'unavailable' \| 'empty'` | `'empty'` if no clips       | See transitions                                                         |
+| `output`        | `'device' \| 'silent' \| 'error'`                                                      | `'silent'` until sink opens | `error` if device open failed after play                                |
+| `outputMessage` | string \| null                                                                         | null                        | Short hint when silent/error                                            |
+| `positionMs`    | number                                                                                 | 0                           | Playhead of the audible clip (incoming during fade)                     |
+| `durationMs`    | number \| null                                                                         | null                        | Current clip duration                                                   |
+| `crossfadeMs`   | number                                                                                 | 1500                        | Active fade length (constant in v1)                                     |
+| `levels`        | `number[]`                                                                             | `[]`                        | Recent RMS/peak 0–1 for `ActivityWaveform`; cap ~48                     |
+| `error`         | string \| null                                                                         | null                        | Decode/play error for current clip                                      |
 
 `ClipPublic`: `{ id: string, name: string, status: 'ok' | 'unavailable' }`.
 
@@ -88,11 +88,13 @@ Do not persist `playing`.
   --> register sink factory (lazy)
 
 [play] (from paused/idle, has ok clip)
+  --> status loading while the clip decodes
   --> open sink if needed
   --> playing; start mixer ticks
   --> output device | silent | error
 
-[pause] (from playing | fading)
+[pause] (from loading | playing | fading)
+  --> cancel in-flight load if status was loading
   --> stop ticks; close or pause sink
   --> paused; keep currentClipId and position
 
