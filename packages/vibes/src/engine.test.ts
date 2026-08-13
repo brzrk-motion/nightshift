@@ -58,13 +58,13 @@ describe('createVibeEngine', () => {
     expect(engine.list().map((vibe) => vibe.name)).toEqual(['locked-in']);
   });
 
-  it('registers many at once', () => {
+  it('registers multiple vibes', () => {
     const engine = createVibeEngine({
       themes: themes(),
       entities: createEntityStore(),
       commands: commands(),
     });
-    engine.registerAll([lockedIn, { name: 'morning' }]);
+    for (const vibe of [lockedIn, { name: 'morning' }]) engine.register(vibe);
 
     expect(engine.list().map((vibe) => vibe.name)).toEqual(['locked-in', 'morning']);
   });
