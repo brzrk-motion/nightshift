@@ -2,27 +2,16 @@ import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_SHORT_BREAK_MINUTES,
   DEFAULT_WORK_MINUTES,
-  formatDuration,
   initialState,
   pauseSession,
   phaseLabel,
   resetSession,
-  sessionProgress,
   skipPhase,
   startSession,
   stopSession,
   tickSession,
-  todayKey,
   type PomodoroState,
 } from './timer.js';
-
-describe('formatDuration', () => {
-  it('pads minutes and seconds', () => {
-    expect(formatDuration(0)).toBe('00:00');
-    expect(formatDuration(65)).toBe('01:05');
-    expect(formatDuration(25 * 60)).toBe('25:00');
-  });
-});
 
 describe('phaseLabel', () => {
   it('names each phase for the widget', () => {
@@ -172,18 +161,5 @@ describe('resetSession', () => {
 describe('pauseSession', () => {
   it('pauses a running session', () => {
     expect(pauseSession(startSession(initialState())).status).toBe('paused');
-  });
-});
-
-describe('sessionProgress', () => {
-  it('is halfway at the halfway point', () => {
-    const running = startSession(initialState());
-    expect(sessionProgress(tickSession(running, DEFAULT_WORK_MINUTES * 30))).toBeCloseTo(0.5);
-  });
-});
-
-describe('todayKey', () => {
-  it('formats as YYYY-MM-DD in local time', () => {
-    expect(todayKey(new Date(2026, 2, 5))).toBe('2026-03-05');
   });
 });

@@ -1,3 +1,11 @@
+import {
+  formatDuration,
+  pauseIfRunning,
+  sessionProgress,
+  tickCountdown,
+  todayKey,
+} from '@nightshift/plugin-shared';
+
 /**
  * Pomodoro reducers: work → short/long break → work cycles. Pure functions
  * with no interval or entity store — the same testable split other timer
@@ -5,6 +13,8 @@
  * pulling in `setup()`.
  */
 export const POMODORO_ENTITY = 'pomodoro.session' as const;
+
+export { formatDuration, sessionProgress, todayKey };
 
 export type PomodoroPhase = 'work' | 'shortBreak' | 'longBreak';
 export type PomodoroStatus = 'idle' | 'running' | 'paused' | 'phaseComplete';
@@ -87,16 +97,6 @@ function beginPhase(state: PomodoroState, phase: PomodoroPhase, running: boolean
   };
 }
 
-/** Formats seconds as `MM:SS`, or `H:MM:SS` past an hour. */
-export function formatDuration(totalSeconds: number): string {
-  const seconds = Math.max(0, Math.floor(totalSeconds));
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  const rest = seconds % 60;
-  const pad = (value: number): string => String(value).padStart(2, '0');
-  return hours > 0 ? `${hours}:${pad(minutes)}:${pad(rest)}` : `${pad(minutes)}:${pad(rest)}`;
-}
-
 export function startSession(state: PomodoroState): PomodoroState {
   if (state.status === 'paused') return { ...state, status: 'running' };
   if (state.status === 'running') return state;
@@ -109,7 +109,7 @@ export function startSession(state: PomodoroState): PomodoroState {
 }
 
 export function pauseSession(state: PomodoroState): PomodoroState {
-  return state.status === 'running' ? { ...state, status: 'paused' } : state;
+  return pauseIfRunning(state, 'running', 'paused');
 }
 
 /** Ends the current phase early and returns to idle at a fresh work interval. */
@@ -168,22 +168,5 @@ function completePhase(state: PomodoroState): PomodoroState {
 }
 
 export function tickSession(state: PomodoroState, elapsedSeconds = 1): PomodoroState {
-  if (state.status !== 'running') return state;
-
-  const remainingSeconds = Math.max(0, state.remainingSeconds - elapsedSeconds);
-  if (remainingSeconds > 0) return { ...state, remainingSeconds };
-
-  return completePhase(state);
-}
-
-/** Progress through the current phase, from 0 to 1. */
-export function sessionProgress(state: PomodoroState): number {
-  if (state.durationSeconds <= 0) return 0;
-  return 1 - state.remainingSeconds / state.durationSeconds;
-}
-
-/** A stable per-day key, local time, for keying "pomodoros completed today". */
-export function todayKey(now: Date = new Date()): string {
-  const pad = (value: number): string => String(value).padStart(2, '0');
-  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  return tickCountdown(state, elapsedSeconds, 'running', completePhase);
 }

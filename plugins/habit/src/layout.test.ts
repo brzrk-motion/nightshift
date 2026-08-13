@@ -5,16 +5,8 @@ import {
   isDateKey,
   resolveDensity,
   rollingWindow,
-  todayKey,
   truncateName,
 } from './layout.js';
-
-describe('todayKey', () => {
-  it('formats local calendar dates as YYYY-MM-DD', () => {
-    expect(todayKey(new Date(2026, 2, 5))).toBe('2026-03-05');
-    expect(todayKey(new Date(2026, 0, 1))).toBe('2026-01-01');
-  });
-});
 
 describe('addDays', () => {
   it('shifts across month boundaries', () => {
