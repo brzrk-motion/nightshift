@@ -60,7 +60,7 @@ export const DEFAULT_DASHBOARD_REFRESH = 60;
 
 /**
  * The dashboard shipped with a fresh install. Beyond the built-ins, it draws
- * on every plugin Nightshift bundles by default — clock, focus, todo,
+ * on every plugin Nightshift bundles by default — clock, pomodoro, todo,
  * weather — so a first run already has something worth looking at.
  *
  * It carries no "getting started" widget of its own — that copy lives in the
@@ -81,7 +81,7 @@ export const DEFAULT_DASHBOARD: DashboardSpec = {
     {
       height: 2,
       widgets: [
-        { type: 'focus.session' },
+        { type: 'pomodoro.session' },
         { type: 'todo.list' },
         { type: 'weather.forecast', options: { location: 'home' } },
       ],

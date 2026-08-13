@@ -107,7 +107,7 @@ All re-exported from `@nightshift/sdk`. `tone` is
   — 3 rows minimum at `normal`. The dashboard already gives each widget one.
 - `Card { title?, value?, subtitle?, tone: 'default'|..., active? }` — a Panel around one
   headline value. Nests a second border inside a widget; deliberate for a single big
-  number (`focus.today`), wrong for anything else.
+  number (`pomodoro.today`), wrong for anything else.
 - `Modal { title?, open?, width?, height?, hint? }`
 - `Tabs { items: {id,label}[], value, onChange }` — one row of tabs plus its children
 - `Toolbar { orientation }` — lays out buttons/chips with gaps

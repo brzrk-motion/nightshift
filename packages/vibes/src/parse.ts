@@ -21,7 +21,7 @@ function fail(path: string, expected: string): never {
 }
 
 function parseAction(input: unknown, path: string): VibeAction {
-  // `- focus.start` is shorthand for `- command: focus.start`.
+  // `- pomodoro.start` is shorthand for `- command: pomodoro.start`.
   if (typeof input === 'string') {
     if (input.trim() === '') fail(path, 'a command id');
     return { command: input.trim() };

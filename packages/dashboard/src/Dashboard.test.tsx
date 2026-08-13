@@ -14,13 +14,13 @@ const renderable = detectRuntime().ffi;
 
 function registry() {
   const widgets = createWidgetRegistry(BUILT_IN_WIDGETS);
-  widgets.registerPlugin('focus', [
+  widgets.registerPlugin('pomodoro', [
     {
-      type: 'focus.session',
-      title: 'Focus session',
-      entities: ['timer.focus'],
+      type: 'pomodoro.session',
+      title: 'Pomodoro',
+      entities: ['pomodoro.session'],
       render: ({ width }) => {
-        const entity = useEntity<{ status: string }>('timer.focus');
+        const entity = useEntity<{ status: string }>('pomodoro.session');
         return <text>{`session ${entity?.state.status ?? 'unknown'} @${width}`}</text>;
       },
     },
@@ -45,7 +45,7 @@ name: home
 title: Home
 rows:
   - widgets:
-      - type: focus.session
+      - type: pomodoro.session
         span: 2
       - type: core.note
         title: Reminder
@@ -55,7 +55,7 @@ rows:
 describe.skipIf(!renderable)('Dashboard', () => {
   it('draws each widget in its own panel', async () => {
     const runtime = createAppRuntime({ entities: createEntityStore() });
-    runtime.entities.register('timer.focus', { status: 'running' });
+    runtime.entities.register('pomodoro.session', { status: 'running' });
 
     const setup = await testRender(
       <DashboardApp runtime={runtime} dashboards={[home]} registry={registry()} />,
@@ -224,7 +224,7 @@ describe.skipIf(!renderable)('Dashboard', () => {
 
   it('draws a plugin clock widget alongside the built-in entities widget', async () => {
     const entities = createEntityStore();
-    entities.register('timer.focus', { status: 'running' }, { owner: 'focus' });
+    entities.register('pomodoro.session', { status: 'running' }, { owner: 'pomodoro' });
     const runtime = createAppRuntime({ entities });
     const dashboard = parseDashboard('name: built\nrows:\n  - [clock.now, core.entities]');
 
@@ -239,7 +239,7 @@ describe.skipIf(!renderable)('Dashboard', () => {
       await setup.renderOnce();
       const frame = setup.captureCharFrame();
       expect(frame).toMatch(/\d\d:\d\d/);
-      expect(frame).toContain('timer.focus');
+      expect(frame).toContain('pomodoro.session');
       expect(frame).toContain('status=running');
     } finally {
       setup.renderer.destroy();

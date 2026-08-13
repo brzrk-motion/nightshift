@@ -5,7 +5,7 @@ import { pathToFileURL } from 'node:url';
 /**
  * Turning a plugin specifier into something `import()` can load.
  *
- * A bare specifier like `@nightshift/plugin-focus` would otherwise resolve
+ * A bare specifier like `@nightshift/plugin-pomodoro` would otherwise resolve
  * relative to *this* package, which does not depend on any plugin — so it
  * would never be found. Resolution therefore happens against bases the caller
  * chooses: the user's config directory first, so a plugin installed there

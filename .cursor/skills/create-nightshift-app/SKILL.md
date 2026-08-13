@@ -16,7 +16,7 @@ must change outside `plugins/` for the app to ship with the CLI.
 
 Two plugins are the references. Copy from them rather than inventing:
 
-- `plugins/focus` — the minimal shape: entity, commands, two widgets, one automation.
+- `plugins/pomodoro` — the minimal shape: entity, commands, two widgets, automations.
 - `plugins/weather` — the full shape: network, storage, per-slot options, in-widget
   configuration, and the responsive scaling ladder in `scale.ts`.
 
@@ -163,7 +163,7 @@ Rules this shape encodes:
 - **Re-export the public surface** at the bottom of `index.ts` (entity ids, state types,
   pure helpers, widgets) so tests and the CLI can import them.
 - Register an automation only for behaviour that should react to state rather than be
-  invoked: `focus.notify-finished` is the model. Actions reference command ids.
+  invoked: `pomodoro.notify-work-complete` is the model. Actions reference command ids.
 
 ### 5. `src/widgets.tsx`
 

@@ -37,7 +37,7 @@ export interface NightshiftConfig {
   onboarded: boolean;
 }
 
-export const CONFIG_VERSION = 10;
+export const CONFIG_VERSION = 11;
 
 export const DEFAULT_CONFIG: NightshiftConfig = {
   version: CONFIG_VERSION,
@@ -47,7 +47,6 @@ export const DEFAULT_CONFIG: NightshiftConfig = {
   logLevel: 'info',
   plugins: [
     '@nightshift/plugin-clock',
-    '@nightshift/plugin-focus',
     '@nightshift/plugin-habit',
     '@nightshift/plugin-home-assistant',
     '@nightshift/plugin-pomodoro',
@@ -82,6 +81,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 const WEATHER_PLUGIN = '@nightshift/plugin-weather';
 const CLOCK_PLUGIN = '@nightshift/plugin-clock';
 const SPOTIFY_PLUGIN = '@nightshift/plugin-spotify';
+const FOCUS_PLUGIN = '@nightshift/plugin-focus';
 const POMODORO_PLUGIN = '@nightshift/plugin-pomodoro';
 const HABIT_PLUGIN = '@nightshift/plugin-habit';
 const HOME_ASSISTANT_PLUGIN = '@nightshift/plugin-home-assistant';
@@ -166,8 +166,8 @@ const CONFIG_MIGRATIONS: ConfigMigration[] = [
  * needed once it can look up a location's timezone; v5 → v6 ships the pomodoro
  * plugin; v6 → v7 ships the habit tracker; v7 → v8 ships Home Assistant scenes
  * and its network grant; v8 → v9 ships the system monitor plugin; v9 → v10
- * ships the ambient noise player — so existing installs see the same defaults
- * as a fresh one.
+ * ships the ambient noise player; v10 → v11 drops the focus plugin (superseded
+ * by pomodoro) — so existing installs see the same defaults as a fresh one.
  */
 export function migrateConfig(config: NightshiftConfig): {
   config: NightshiftConfig;
@@ -185,6 +185,18 @@ export function migrateConfig(config: NightshiftConfig): {
       next = { ...apply(next), version: toVersion };
       migrated = true;
     }
+  }
+
+  if (next.version < 11) {
+    if (next.plugins.includes(FOCUS_PLUGIN)) {
+      next = {
+        ...next,
+        plugins: next.plugins.filter((plugin) => plugin !== FOCUS_PLUGIN),
+      };
+      migrated = true;
+    }
+    next = { ...next, version: 11 };
+    migrated = true;
   }
 
   return { config: next, migrated };

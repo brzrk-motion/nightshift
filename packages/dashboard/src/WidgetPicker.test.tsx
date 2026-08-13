@@ -11,11 +11,11 @@ const renderable = detectRuntime().ffi;
 
 function registry() {
   const widgets = createWidgetRegistry(BUILT_IN_WIDGETS);
-  widgets.registerPlugin('focus', [
+  widgets.registerPlugin('pomodoro', [
     {
-      type: 'focus.session',
-      title: 'Focus session',
-      entities: ['timer.focus'],
+      type: 'pomodoro.session',
+      title: 'Pomodoro',
+      entities: ['pomodoro.session'],
       description: 'The running timer.',
       render: () => null,
     },
@@ -113,7 +113,7 @@ describe.skipIf(!renderable)('WidgetPicker', () => {
       await setup.renderOnce();
       await press(() => setup.mockInput.pressEnter());
 
-      expect(onPick).toHaveBeenCalledWith(expect.objectContaining({ type: 'focus.session' }));
+      expect(onPick).toHaveBeenCalledWith(expect.objectContaining({ type: 'pomodoro.session' }));
       expect(onClose).toHaveBeenCalledOnce();
     } finally {
       setup.renderer.destroy();

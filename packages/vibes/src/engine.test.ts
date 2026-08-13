@@ -40,9 +40,9 @@ const lockedIn: VibeSpec = {
   name: 'locked-in',
   theme: 'midnight',
   dashboard: 'home',
-  entities: { 'timer.focus': { status: 'idle' } },
-  onActivate: [{ command: 'focus.start', args: { minutes: 50 } }],
-  onDeactivate: [{ command: 'focus.pause' }],
+  entities: { 'pomodoro.session': { status: 'idle' } },
+  onActivate: [{ command: 'pomodoro.start' }],
+  onDeactivate: [{ command: 'pomodoro.pause' }],
 };
 
 describe('createVibeEngine', () => {
@@ -99,7 +99,7 @@ describe('createVibeEngine', () => {
 
   it('activates the theme, the dashboard, the entities, and the actions', async () => {
     const entities = createEntityStore();
-    entities.register('timer.focus', { status: 'running' });
+    entities.register('pomodoro.session', { status: 'running' });
     const t = themes();
     const c = commands();
     const engine = createVibeEngine({ themes: t, entities, commands: c });
@@ -108,9 +108,8 @@ describe('createVibeEngine', () => {
     const result = await engine.activate('locked-in');
 
     expect(t.active).toEqual(['midnight']);
-    expect(entities.get('timer.focus')?.state).toEqual({ status: 'idle' });
-    expect(c.calls.map((call) => call.id)).toEqual(['dashboard.open.home', 'focus.start']);
-    expect(c.calls[1]?.args).toEqual({ minutes: 50 });
+    expect(entities.get('pomodoro.session')?.state).toEqual({ status: 'idle' });
+    expect(c.calls.map((call) => call.id)).toEqual(['dashboard.open.home', 'pomodoro.start']);
     expect(result.warnings).toEqual([]);
     expect(engine.current).toBe('locked-in');
   });
@@ -134,11 +133,11 @@ describe('createVibeEngine', () => {
       entities: createEntityStore(),
       commands: commands(),
     });
-    engine.register({ name: 'x', entities: { 'timer.focus': { status: 'idle' } } });
+    engine.register({ name: 'x', entities: { 'pomodoro.session': { status: 'idle' } } });
 
     const result = await engine.activate('x');
 
-    expect(result.warnings[0]).toMatch(/Could not update "timer.focus"/);
+    expect(result.warnings[0]).toMatch(/Could not update "pomodoro.session"/);
   });
 
   it('warns instead of throwing when the dashboard is unavailable', async () => {

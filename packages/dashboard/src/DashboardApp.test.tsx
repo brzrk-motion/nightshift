@@ -16,8 +16,8 @@ const renderable = detectRuntime().ffi;
 
 function registry() {
   const widgets = createWidgetRegistry(BUILT_IN_WIDGETS);
-  widgets.registerPlugin('focus', [
-    { type: 'focus.session', title: 'Focus session', entities: [], render: () => null },
+  widgets.registerPlugin('pomodoro', [
+    { type: 'pomodoro.session', title: 'Pomodoro', entities: [], render: () => null },
   ]);
   return widgets;
 }
@@ -308,14 +308,14 @@ describe.skipIf(!renderable)('DashboardApp edit mode', () => {
         'Add a widget',
       );
 
-      for (const char of 'focus.session') await press(() => setup.mockInput.pressKey(char));
+      for (const char of 'pomodoro.session') await press(() => setup.mockInput.pressKey(char));
       await press(() => setup.mockInput.pressEnter());
       await press(() => setup.mockInput.pressKey('s', { ctrl: true }));
 
       const saved = parseDashboard(await waitForDashboardFile(join(dir, 'home.yaml')), {
         name: 'home',
       });
-      expect(saved.rows[0]?.widgets.map((w) => w.type)).toContain('focus.session');
+      expect(saved.rows[0]?.widgets.map((w) => w.type)).toContain('pomodoro.session');
     } finally {
       setup.renderer.destroy();
     }
@@ -343,14 +343,14 @@ describe.skipIf(!renderable)('DashboardApp edit mode', () => {
         'Swap widget',
       );
 
-      for (const char of 'focus.session') await press(() => setup.mockInput.pressKey(char));
+      for (const char of 'pomodoro.session') await press(() => setup.mockInput.pressKey(char));
       await press(() => setup.mockInput.pressEnter());
       await press(() => setup.mockInput.pressKey('s', { ctrl: true }));
 
       const saved = parseDashboard(await waitForDashboardFile(join(dir, 'home.yaml')), {
         name: 'home',
       });
-      expect(saved.rows[0]?.widgets.map((w) => w.type)).toEqual(['focus.session', 'core.note']);
+      expect(saved.rows[0]?.widgets.map((w) => w.type)).toEqual(['pomodoro.session', 'core.note']);
     } finally {
       setup.renderer.destroy();
     }

@@ -29,7 +29,7 @@ refresh: 30
 rows:
   - height: 2
     widgets:
-      - type: focus.session
+      - type: pomodoro.session
         title: Deep work
         span: 2
         entities: [timer.focus]
@@ -55,7 +55,7 @@ describe('parseDashboard', () => {
     const widget = parseDashboard(HOME).rows[0]?.widgets[0];
 
     expect(widget).toEqual({
-      type: 'focus.session',
+      type: 'pomodoro.session',
       title: 'Deep work',
       span: 2,
       entities: ['timer.focus'],
@@ -139,7 +139,7 @@ describe('parseDashboard', () => {
     const widget = parseDashboard(
       `rows:
   - widgets:
-      - type: focus.session
+      - type: pomodoro.session
         minWidth: 40
         minHeight: 8
         when:
@@ -197,7 +197,7 @@ describe('serializeDashboard', () => {
         height: 2,
         widgets: [
           {
-            type: 'focus.session',
+            type: 'pomodoro.session',
             title: 'Deep work',
             span: 2,
             minWidth: 40,
@@ -347,8 +347,8 @@ describe('BUILT_IN_DASHBOARDS', () => {
       ...BUILT_IN_WIDGETS.map((widget) => widget.type),
       // Bundled plugins that the concept `home` dashboard may reference.
       'clock.now',
-      'focus.session',
-      'focus.today',
+      'pomodoro.session',
+      'pomodoro.today',
       'habit.tracker',
       'home-assistant.scenes',
       'todo.list',
@@ -403,24 +403,29 @@ describe('createWidgetRegistry', () => {
 
   it('adds a plugin’s widgets and tags them with their source', () => {
     const registry = createWidgetRegistry();
-    registry.registerPlugin('focus', [
-      { type: 'focus.session', title: 'Session', entities: ['timer.focus'], render: () => null },
+    registry.registerPlugin('pomodoro', [
+      {
+        type: 'pomodoro.session',
+        title: 'Session',
+        entities: ['pomodoro.session'],
+        render: () => null,
+      },
     ]);
 
-    expect(registry.get('focus.session')?.source).toBe('focus');
+    expect(registry.get('pomodoro.session')?.source).toBe('pomodoro');
   });
 
   it('skips a plugin widget with nothing to draw', () => {
     const registry = createWidgetRegistry();
-    registry.registerPlugin('focus', [{ type: 'focus.session', title: 'S', entities: [] }]);
+    registry.registerPlugin('pomodoro', [{ type: 'pomodoro.session', title: 'S', entities: [] }]);
 
     expect(registry.list()).toEqual([]);
   });
 
   it('removes a plugin’s widgets when it unloads', () => {
     const registry = createWidgetRegistry();
-    const dispose = registry.registerPlugin('focus', [
-      { type: 'focus.session', title: 'S', entities: [], render: () => null },
+    const dispose = registry.registerPlugin('pomodoro', [
+      { type: 'pomodoro.session', title: 'S', entities: [], render: () => null },
     ]);
 
     dispose();
@@ -431,8 +436,8 @@ describe('createWidgetRegistry', () => {
   it('lists the types a dashboard asks for that nothing provides', () => {
     const registry = createWidgetRegistry([definition('core.note')]);
 
-    expect(registry.missing(['core.note', 'focus.session', 'focus.session'])).toEqual([
-      'focus.session',
+    expect(registry.missing(['core.note', 'pomodoro.session', 'pomodoro.session'])).toEqual([
+      'pomodoro.session',
     ]);
   });
 });

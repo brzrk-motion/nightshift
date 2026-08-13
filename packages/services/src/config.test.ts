@@ -128,7 +128,7 @@ describe('migrateConfig', () => {
     });
 
     expect(result.migrated).toBe(true);
-    expect(result.config.version).toBe(10);
+    expect(result.config.version).toBe(11);
     expect(result.config.plugins).toContain('@nightshift/plugin-weather');
     expect(result.config.plugins).toContain('@nightshift/plugin-clock');
     expect(result.config.plugins).toContain('@nightshift/plugin-spotify');
@@ -140,7 +140,7 @@ describe('migrateConfig', () => {
     expect(result.config.pluginPermissions['weather']).toEqual(['network']);
     expect(result.config.pluginPermissions['spotify']).toEqual(['network']);
     expect(result.config.pluginPermissions['clock']).toEqual(['network']);
-    expect(result.config.pluginPermissions['home-assistant']).toEqual(['network']);
+    expect(result.config.plugins).not.toContain('@nightshift/plugin-focus');
   });
 
   it('adds the clock and spotify plugins when upgrading from v2', () => {
@@ -160,7 +160,7 @@ describe('migrateConfig', () => {
     });
 
     expect(result.migrated).toBe(true);
-    expect(result.config.version).toBe(10);
+    expect(result.config.version).toBe(11);
     expect(result.config.plugins).toContain('@nightshift/plugin-clock');
     expect(result.config.plugins).toContain('@nightshift/plugin-spotify');
     expect(result.config.plugins).toContain('@nightshift/plugin-habit');
@@ -186,7 +186,7 @@ describe('migrateConfig', () => {
     });
 
     expect(result.migrated).toBe(true);
-    expect(result.config.version).toBe(10);
+    expect(result.config.version).toBe(11);
     expect(result.config.plugins).toContain('@nightshift/plugin-spotify');
     expect(result.config.plugins).toContain('@nightshift/plugin-habit');
     expect(result.config.pluginPermissions['spotify']).toEqual(['network']);
@@ -212,7 +212,7 @@ describe('migrateConfig', () => {
     });
 
     expect(result.migrated).toBe(true);
-    expect(result.config.version).toBe(10);
+    expect(result.config.version).toBe(11);
     expect(result.config.pluginPermissions['clock']).toEqual(['network']);
     expect(result.config.plugins).toContain('@nightshift/plugin-habit');
   });
@@ -236,7 +236,7 @@ describe('migrateConfig', () => {
     });
 
     expect(result.migrated).toBe(true);
-    expect(result.config.version).toBe(10);
+    expect(result.config.version).toBe(11);
     expect(result.config.plugins).toContain('@nightshift/plugin-pomodoro');
     expect(result.config.plugins).toContain('@nightshift/plugin-habit');
     expect(result.config.plugins).toContain('@nightshift/plugin-home-assistant');
@@ -265,7 +265,7 @@ describe('migrateConfig', () => {
     });
 
     expect(result.migrated).toBe(true);
-    expect(result.config.version).toBe(10);
+    expect(result.config.version).toBe(11);
     expect(result.config.plugins).toContain('@nightshift/plugin-habit');
   });
 
@@ -290,7 +290,7 @@ describe('migrateConfig', () => {
     });
 
     expect(result.migrated).toBe(true);
-    expect(result.config.version).toBe(10);
+    expect(result.config.version).toBe(11);
     expect(result.config.plugins).toContain('@nightshift/plugin-home-assistant');
     expect(result.config.pluginPermissions['home-assistant']).toEqual(['network']);
   });
@@ -322,7 +322,7 @@ describe('migrateConfig', () => {
     });
 
     expect(result.migrated).toBe(true);
-    expect(result.config.version).toBe(10);
+    expect(result.config.version).toBe(11);
     expect(result.config.plugins).toContain('@nightshift/plugin-system-monitor');
   });
 
@@ -354,9 +354,43 @@ describe('migrateConfig', () => {
     });
 
     expect(result.migrated).toBe(true);
-    expect(result.config.version).toBe(10);
+    expect(result.config.version).toBe(11);
     expect(result.config.plugins).toContain('@nightshift/plugin-ambient-noise');
     expect(result.config.pluginPermissions['ambient-noise']).toBeUndefined();
+  });
+
+  it('removes the focus plugin when upgrading from v10', () => {
+    const result = migrateConfig({
+      version: 10,
+      defaultDashboard: 'home',
+      defaultVibe: null,
+      theme: 'midnight',
+      logLevel: 'info',
+      plugins: [
+        '@nightshift/plugin-clock',
+        '@nightshift/plugin-focus',
+        '@nightshift/plugin-habit',
+        '@nightshift/plugin-home-assistant',
+        '@nightshift/plugin-pomodoro',
+        '@nightshift/plugin-spotify',
+        '@nightshift/plugin-todo',
+        '@nightshift/plugin-weather',
+        '@nightshift/plugin-system-monitor',
+        '@nightshift/plugin-ambient-noise',
+      ],
+      pluginPermissions: {
+        weather: ['network'],
+        spotify: ['network'],
+        clock: ['network'],
+        'home-assistant': ['network'],
+      },
+      onboarded: true,
+    });
+
+    expect(result.migrated).toBe(true);
+    expect(result.config.version).toBe(11);
+    expect(result.config.plugins).not.toContain('@nightshift/plugin-focus');
+    expect(result.config.plugins).toContain('@nightshift/plugin-pomodoro');
   });
 
   it('is a no-op once the config is current', () => {
@@ -395,11 +429,13 @@ describe('migrateConfig', () => {
     expect(loaded.config.pluginPermissions['clock']).toEqual(['network']);
     expect(loaded.config.pluginPermissions['home-assistant']).toEqual(['network']);
 
+    expect(loaded.config.plugins).not.toContain('@nightshift/plugin-focus');
+
     const onDisk = JSON.parse(await readFile(join(dir, 'config.json'), 'utf8')) as {
       version: number;
       plugins: string[];
     };
-    expect(onDisk.version).toBe(10);
+    expect(onDisk.version).toBe(11);
     expect(onDisk.plugins).toContain('@nightshift/plugin-weather');
     expect(onDisk.plugins).toContain('@nightshift/plugin-clock');
     expect(onDisk.plugins).toContain('@nightshift/plugin-spotify');

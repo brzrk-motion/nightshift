@@ -63,7 +63,7 @@ function parseCondition(input: unknown, path: string): Condition {
 }
 
 function parseWidget(input: unknown, path: string): WidgetSpec {
-  // `- focus.session` is shorthand for `- type: focus.session`, which keeps
+  // `- pomodoro.session` is shorthand for `- type: pomodoro.session`, which keeps
   // the common dashboard readable.
   if (typeof input === 'string') {
     if (input.trim() === '') fail(path, 'a widget type');

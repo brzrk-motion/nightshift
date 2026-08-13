@@ -103,7 +103,7 @@ export type WidgetComponent = (props: WidgetProps) => ReactNode;
 
 /** A widget a plugin contributes to the dashboard widget registry. */
 export interface PluginWidget {
-  /** Widget type referenced from a dashboard file, e.g. `focus.session`. */
+  /** Widget type referenced from a dashboard file, e.g. `pomodoro.session`. */
   type: string;
   title: string;
   /** Entities the widget reads; the runtime re-renders when they change. */
