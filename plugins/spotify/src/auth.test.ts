@@ -16,6 +16,7 @@ import {
   SPOTIFY_SCOPES,
   STORED_AUTH_VERSION,
   isSpotifyStoredAuth,
+  parseStoredAuth,
   sessionFromStored,
 } from './entity.js';
 
@@ -204,9 +205,45 @@ describe('sessionFromStored', () => {
   });
 });
 
+describe('parseStoredAuth', () => {
+  it('accepts a versioned blob', () => {
+    const stored = {
+      version: STORED_AUTH_VERSION,
+      clientId: 'x',
+      clientSecret: 'y',
+    };
+    expect(parseStoredAuth(stored)).toEqual(stored);
+  });
+
+  it('upgrades legacy blobs that omit version', () => {
+    expect(parseStoredAuth({ clientId: 'x', clientSecret: 'y' })).toEqual({
+      version: STORED_AUTH_VERSION,
+      clientId: 'x',
+      clientSecret: 'y',
+    });
+  });
+
+  it('rejects wrong versions instead of coercing them to v1', () => {
+    expect(parseStoredAuth({ version: 2, clientId: 'x', clientSecret: 'y' })).toBeNull();
+  });
+
+  it('returns null for corrupt shapes', () => {
+    expect(parseStoredAuth(null)).toBeNull();
+    expect(parseStoredAuth({ clientId: '', clientSecret: 'y' })).toBeNull();
+    expect(parseStoredAuth({ version: STORED_AUTH_VERSION, clientId: 'x' })).toBeNull();
+  });
+});
+
 describe('isSpotifyStoredAuth', () => {
-  it('accepts objects with non-empty client id and secret', () => {
-    expect(isSpotifyStoredAuth({ clientId: 'x', clientSecret: 'y' })).toBe(true);
+  it('accepts only versioned blobs with non-empty client id and secret', () => {
+    expect(
+      isSpotifyStoredAuth({
+        version: STORED_AUTH_VERSION,
+        clientId: 'x',
+        clientSecret: 'y',
+      }),
+    ).toBe(true);
+    expect(isSpotifyStoredAuth({ clientId: 'x', clientSecret: 'y' })).toBe(false);
     expect(isSpotifyStoredAuth({ clientId: '', clientSecret: 'y' })).toBe(false);
     expect(isSpotifyStoredAuth(null)).toBe(false);
   });

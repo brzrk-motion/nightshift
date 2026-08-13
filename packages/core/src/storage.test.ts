@@ -17,7 +17,9 @@ describe('parseStoredVersion', () => {
     expect(parseStoredVersion(undefined, 1, isSampleBody)).toBeNull();
     expect(parseStoredVersion(null, 1, isSampleBody)).toBeNull();
     expect(parseStoredVersion('nope', 1, isSampleBody)).toBeNull();
+    expect(parseStoredVersion([{ version: 1, token: 'x' }], 1, isSampleBody)).toBeNull();
     expect(parseStoredVersion({ version: 2, token: 'x' }, 1, isSampleBody)).toBeNull();
+    expect(parseStoredVersion({ token: 'x' }, 1, isSampleBody)).toBeNull();
   });
 
   it('returns null when the guard rejects the body', () => {

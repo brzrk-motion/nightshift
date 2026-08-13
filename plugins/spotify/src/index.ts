@@ -621,6 +621,7 @@ export {
   initialLibraryState,
   initialPlayerState,
   initialSessionState,
+  isSpotifyStoredAuth,
   parseStoredAuth,
   sessionFromStored,
 } from './entity.js';

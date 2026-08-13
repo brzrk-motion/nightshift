@@ -168,15 +168,18 @@ function isSpotifyStoredAuthBody(
 export function parseStoredAuth(value: unknown): SpotifyStoredAuth | null {
   const parsed = parseStoredVersion(value, STORED_AUTH_VERSION, isSpotifyStoredAuthBody);
   if (parsed) return parsed;
-  // Legacy blobs written before the version field was added.
+  // Legacy blobs written before the version field was added. Only upgrade when
+  // `version` is absent — never coerce a future/wrong version into v1.
   if (typeof value !== 'object' || value === null || Array.isArray(value)) return null;
   const record = value as Record<string, unknown>;
+  if (record['version'] !== undefined) return null;
   if (!isSpotifyStoredAuthBody(record)) return null;
   return { ...record, version: STORED_AUTH_VERSION } as SpotifyStoredAuth;
 }
 
+/** True only for versioned blobs — use `parseStoredAuth` to accept legacy shapes. */
 export function isSpotifyStoredAuth(value: unknown): value is SpotifyStoredAuth {
-  return parseStoredAuth(value) !== null;
+  return parseStoredVersion(value, STORED_AUTH_VERSION, isSpotifyStoredAuthBody) !== null;
 }
 
 export function sessionFromStored(stored: SpotifyStoredAuth | undefined): SpotifySessionState {
