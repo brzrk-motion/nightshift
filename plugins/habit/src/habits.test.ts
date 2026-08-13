@@ -50,6 +50,17 @@ describe('toggleCompletion', () => {
     expect(toggleCompletion(state, 'missing', TODAY, TODAY)).toEqual(state);
     expect(toggleCompletion(state, 'h1', '2026-08-12', TODAY)).toEqual(state);
   });
+
+  it('keeps completions in chronological order when toggled out of order', () => {
+    let state = addHabit(initialState(), 'Water', {
+      id: 'h1',
+      createdAt: '2026-08-11T00:00:00.000Z',
+    });
+    state = toggleCompletion(state, 'h1', '2026-08-11', TODAY);
+    state = toggleCompletion(state, 'h1', '2026-08-09', TODAY);
+    state = toggleCompletion(state, 'h1', '2026-08-10', TODAY);
+    expect(state.completions['h1']).toEqual(['2026-08-09', '2026-08-10', '2026-08-11']);
+  });
 });
 
 describe('renameHabit / removeHabit', () => {

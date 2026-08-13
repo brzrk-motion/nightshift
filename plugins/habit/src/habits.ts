@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { HabitState } from './entity.js';
 import { isDateKey } from './window.js';
 
+/** Default lexicographic sort is chronological: `isDateKey` enforces zero-padded YYYY-MM-DD. */
 function sortDates(dates: readonly string[]): string[] {
   return [...dates].sort();
 }
