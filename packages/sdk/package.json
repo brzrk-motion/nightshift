@@ -10,6 +10,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./testing": {
+      "types": "./dist/testing.d.ts",
+      "default": "./dist/testing.js"
     }
   },
   "files": [
@@ -31,6 +35,7 @@
     "react": "^19.2.8"
   },
   "devDependencies": {
-    "@types/react": "^19.2.18"
+    "@types/react": "^19.2.18",
+    "vitest": "^3.2.4"
   }
 }

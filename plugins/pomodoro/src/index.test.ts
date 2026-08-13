@@ -1,84 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type {
-  AutomationSpec,
-  Disposable,
-  Entity,
-  EntityId,
-  Json,
-  PluginCommand,
-  PluginContext,
-  PluginWidget,
-} from '@nightshift/sdk';
+import { createPluginTestContext } from '@nightshift/sdk/testing';
 import plugin from './index.js';
 import { DEFAULT_WORK_MINUTES, POMODORO_ENTITY, todayKey } from './timer.js';
-
-function fakeContext() {
-  const entities = new Map<string, Json>();
-  const commands = new Map<string, PluginCommand>();
-  const widgets: PluginWidget[] = [];
-  const automations: AutomationSpec[] = [];
-  const disposers: (() => void)[] = [];
-  const storageData = new Map<string, Json>();
-  const notify = vi.fn();
-
-  const entity = (id: string): Entity | undefined =>
-    entities.has(id)
-      ? { id: id as EntityId, state: entities.get(id)!, meta: {}, updatedAt: 0 }
-      : undefined;
-
-  const context: PluginContext = {
-    manifest: {
-      id: 'pomodoro',
-      name: 'Pomodoro',
-      version: '0.1.0',
-      apiVersion: 1,
-      capabilities: [],
-    },
-    log: { error() {}, warn() {}, info() {}, debug() {} },
-    notify,
-    entities: {
-      get: <State extends Json = Json>(id: EntityId) => entity(id) as Entity<State> | undefined,
-      has: (id) => entities.has(id),
-      list: () => [...entities.keys()].map((id) => entity(id)!),
-      register: <State extends Json = Json>(id: EntityId, state: State) => {
-        entities.set(id, state);
-        return entity(id)! as Entity<State>;
-      },
-      update: <State extends Json = Json>(id: EntityId, patch: Partial<State>) => {
-        const next = { ...(entities.get(id) as Record<string, Json>), ...patch };
-        entities.set(id, next);
-        return entity(id)! as Entity<State>;
-      },
-      set: <State extends Json = Json>(id: EntityId, state: State) => {
-        entities.set(id, state);
-        return entity(id)! as Entity<State>;
-      },
-      remove: (id) => entities.delete(id),
-      subscribe: () => () => {},
-      subscribeAll: () => () => {},
-      events: undefined as never,
-      clear: () => entities.clear(),
-    },
-    storage: {
-      get: async (key) => storageData.get(key) as never,
-      set: async (key, value) => void storageData.set(key, value),
-      delete: async (key) => void storageData.delete(key),
-    },
-    fetch: async () => {
-      throw new Error('pomodoro tests do not use network');
-    },
-    registerCommand: (command) => void commands.set(command.id, command),
-    registerWidget: (widget) => void widgets.push(widget),
-    registerAutomation: (automation) => void automations.push(automation),
-    registerEntity: (id, state) => void entities.set(id, state),
-    own: (disposable: Disposable | (() => void)) =>
-      void disposers.push(
-        typeof disposable === 'function' ? disposable : () => disposable.dispose(),
-      ),
-  };
-
-  return { context, entities, commands, widgets, automations, storageData, disposers };
-}
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -104,7 +27,7 @@ describe('manifest', () => {
 
 describe('setup', () => {
   it('registers the entity with a fresh, idle session', async () => {
-    const { context, entities } = fakeContext();
+    const { context, entities } = createPluginTestContext({ manifest: plugin.manifest });
     await plugin.setup(context);
 
     expect(entities.get(POMODORO_ENTITY)).toMatchObject({
@@ -115,7 +38,9 @@ describe('setup', () => {
   });
 
   it('restores today’s count and cycle from storage', async () => {
-    const { context, entities, storageData } = fakeContext();
+    const { context, entities, storageData } = createPluginTestContext({
+      manifest: plugin.manifest,
+    });
     storageData.set('progress', { date: todayKey(), completedPomodorosToday: 2, cycleCount: 1 });
 
     await plugin.setup(context);
@@ -127,7 +52,7 @@ describe('setup', () => {
   });
 
   it('registers start, pause, stop, reset and skip commands', async () => {
-    const { context, commands } = fakeContext();
+    const { context, commands } = createPluginTestContext({ manifest: plugin.manifest });
     await plugin.setup(context);
 
     expect([...commands.keys()].sort()).toEqual([
@@ -140,7 +65,7 @@ describe('setup', () => {
   });
 
   it('pomodoro.start begins a work interval', async () => {
-    const { context, entities, commands } = fakeContext();
+    const { context, entities, commands } = createPluginTestContext({ manifest: plugin.manifest });
     await plugin.setup(context);
 
     await commands.get('pomodoro.start')?.run();
@@ -153,7 +78,9 @@ describe('setup', () => {
   });
 
   it('completing work queues a break and saves progress', async () => {
-    const { context, entities, commands, storageData } = fakeContext();
+    const { context, entities, commands, storageData } = createPluginTestContext({
+      manifest: plugin.manifest,
+    });
     await plugin.setup(context);
     await commands.get('pomodoro.start')?.run();
 
@@ -168,7 +95,7 @@ describe('setup', () => {
   });
 
   it('pomodoro.skip moves to a break without counting a pomodoro', async () => {
-    const { context, entities, commands } = fakeContext();
+    const { context, entities, commands } = createPluginTestContext({ manifest: plugin.manifest });
     await plugin.setup(context);
     await commands.get('pomodoro.start')?.run();
 
@@ -182,7 +109,7 @@ describe('setup', () => {
   });
 
   it('registers session and today widgets with renderers', async () => {
-    const { context, widgets } = fakeContext();
+    const { context, widgets } = createPluginTestContext({ manifest: plugin.manifest });
     await plugin.setup(context);
 
     expect(widgets.map((widget) => widget.type)).toEqual(['pomodoro.session', 'pomodoro.today']);
@@ -190,7 +117,7 @@ describe('setup', () => {
   });
 
   it('registers automations for work and break completion', async () => {
-    const { context, automations } = fakeContext();
+    const { context, automations } = createPluginTestContext({ manifest: plugin.manifest });
     await plugin.setup(context);
 
     expect(automations).toHaveLength(3);
@@ -202,7 +129,9 @@ describe('setup', () => {
   });
 
   it('cleans up the interval when torn down', async () => {
-    const { context, entities, commands, disposers } = fakeContext();
+    const { context, entities, commands, disposers } = createPluginTestContext({
+      manifest: plugin.manifest,
+    });
     await plugin.setup(context);
     await commands.get('pomodoro.start')?.run();
 

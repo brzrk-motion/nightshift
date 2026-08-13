@@ -1,14 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type {
-  AutomationSpec,
-  Disposable,
-  Entity,
-  EntityId,
-  Json,
-  PluginCommand,
-  PluginContext,
-  PluginWidget,
-} from '@nightshift/sdk';
+import { createPluginTestContext } from '@nightshift/sdk/testing';
+import type { Json } from '@nightshift/sdk';
 import { PLAYER_ENTITY, SETTINGS_STORAGE_KEY, type PlayerState } from './entity.js';
 import type { PcmBuffer } from './wav.js';
 
@@ -38,72 +30,12 @@ vi.mock('./decode.js', async (importOriginal) => {
 
 const { default: plugin } = await import('./index.js');
 
-function fakeContext(init?: { storageData?: Record<string, Json> }) {
-  const entities = new Map<string, Json>();
-  const commands = new Map<string, PluginCommand>();
-  const widgets: PluginWidget[] = [];
-  const automations: AutomationSpec[] = [];
-  const storageData = new Map<string, Json>(Object.entries(init?.storageData ?? {}));
-  const disposers: (() => void)[] = [];
-  const notify = vi.fn();
-
-  const entity = (id: string): Entity | undefined =>
-    entities.has(id)
-      ? { id: id as EntityId, state: entities.get(id)!, meta: {}, updatedAt: 0 }
-      : undefined;
-
-  const context: PluginContext = {
-    manifest: {
-      id: 'ambient-noise',
-      name: 'Ambient Noise',
-      version: '0.1.0',
-      apiVersion: 1,
-      capabilities: [],
-    },
-    log: { error() {}, warn() {}, info() {}, debug() {} },
-    notify,
-    entities: {
-      get: <State extends Json = Json>(id: EntityId) => entity(id) as Entity<State> | undefined,
-      has: (id) => entities.has(id),
-      list: () => [...entities.keys()].map((id) => entity(id)!),
-      register: <State extends Json = Json>(id: EntityId, state: State) => {
-        entities.set(id, state);
-        return entity(id)! as Entity<State>;
-      },
-      update: <State extends Json = Json>(id: EntityId, patch: Partial<State>) => {
-        const next = { ...(entities.get(id) as Record<string, Json>), ...patch };
-        entities.set(id, next);
-        return entity(id)! as Entity<State>;
-      },
-      set: <State extends Json = Json>(id: EntityId, state: State) => {
-        entities.set(id, state);
-        return entity(id)! as Entity<State>;
-      },
-      remove: (id) => entities.delete(id),
-      subscribe: () => () => {},
-      subscribeAll: () => () => {},
-      events: undefined as never,
-      clear: () => entities.clear(),
-    },
-    storage: {
-      get: async (key) => storageData.get(key) as never,
-      set: async (key, value) => void storageData.set(key, value),
-      delete: async (key) => void storageData.delete(key),
-    },
-    fetch: async () => {
-      throw new Error('ambient-noise tests do not use network');
-    },
-    registerCommand: (command) => void commands.set(command.id, command),
-    registerWidget: (widget) => void widgets.push(widget),
-    registerAutomation: (automation) => void automations.push(automation),
-    registerEntity: (id, state) => void entities.set(id, state),
-    own: (disposable: Disposable | (() => void)) =>
-      void disposers.push(
-        typeof disposable === 'function' ? disposable : () => disposable.dispose(),
-      ),
-  };
-
-  return { context, entities, commands, widgets, automations, storageData, disposers, notify };
+function ambientNoiseTestContext(storageData?: Record<string, Json>) {
+  return createPluginTestContext({
+    manifest: plugin.manifest,
+    ...(storageData ? { storageData } : {}),
+    fetchErrorMessage: 'ambient-noise tests do not use network',
+  });
 }
 
 function player(entities: Map<string, Json>): PlayerState {
@@ -127,7 +59,7 @@ describe('ambient-noise plugin', () => {
   });
 
   it('registers the player entity, commands, and widget without auto-playing', async () => {
-    const { context, entities, commands, widgets, disposers } = fakeContext();
+    const { context, entities, commands, widgets, disposers } = ambientNoiseTestContext();
     await plugin.setup(context);
 
     expect(plugin.manifest.id).toBe('ambient-noise');
@@ -146,10 +78,8 @@ describe('ambient-noise plugin', () => {
   });
 
   it('starts paused and can play when the stored clip id is missing', async () => {
-    const { context, entities, commands, disposers } = fakeContext({
-      storageData: {
-        [SETTINGS_STORAGE_KEY]: { version: 1, currentClipId: 'does-not-exist' },
-      },
+    const { context, entities, commands, disposers } = ambientNoiseTestContext({
+      [SETTINGS_STORAGE_KEY]: { version: 1, currentClipId: 'does-not-exist' },
     });
     await plugin.setup(context);
     const state = player(entities);
@@ -164,7 +94,7 @@ describe('ambient-noise plugin', () => {
   });
 
   it('pauses Spotify when ambient playback starts', async () => {
-    const { context, automations, disposers } = fakeContext();
+    const { context, automations, disposers } = ambientNoiseTestContext();
     await plugin.setup(context);
 
     expect(automations).toHaveLength(1);
@@ -182,7 +112,7 @@ describe('ambient-noise plugin', () => {
   });
 
   it('play, pause, and toggle mutate player status with a silent sink', async () => {
-    const { context, entities, commands, disposers } = fakeContext();
+    const { context, entities, commands, disposers } = ambientNoiseTestContext();
     await plugin.setup(context);
     expect(player(entities).clips.length).toBeGreaterThan(0);
     expect(player(entities).status).not.toBe('empty');
@@ -203,7 +133,7 @@ describe('ambient-noise plugin', () => {
   });
 
   it('wraps next/previous and ignores an unknown select id', async () => {
-    const { context, entities, commands, disposers } = fakeContext();
+    const { context, entities, commands, disposers } = ambientNoiseTestContext();
     await plugin.setup(context);
     const first = player(entities);
     expect(first.clips.filter((clip) => clip.status === 'ok').length).toBeGreaterThanOrEqual(2);
@@ -230,7 +160,7 @@ describe('ambient-noise plugin', () => {
   });
 
   it('crossfades when next runs during playback', async () => {
-    const { context, entities, commands, disposers } = fakeContext();
+    const { context, entities, commands, disposers } = ambientNoiseTestContext();
     await plugin.setup(context);
     expect(
       player(entities).clips.filter((clip) => clip.status === 'ok').length,
@@ -248,7 +178,7 @@ describe('ambient-noise plugin', () => {
 
   it('does not start playback if pause arrives while a clip is still loading', async () => {
     vi.useRealTimers();
-    const { context, entities, commands, disposers } = fakeContext();
+    const { context, entities, commands, disposers } = ambientNoiseTestContext();
     await plugin.setup(context);
     expect(player(entities).clips.length).toBeGreaterThan(0);
 
@@ -267,7 +197,7 @@ describe('ambient-noise plugin', () => {
   });
 
   it('keeps playing the current clip when a skip load fails', async () => {
-    const { context, entities, commands, notify, disposers } = fakeContext();
+    const { context, entities, commands, notify, disposers } = ambientNoiseTestContext();
     await plugin.setup(context);
     expect(
       player(entities).clips.filter((clip) => clip.status === 'ok').length,
@@ -286,7 +216,7 @@ describe('ambient-noise plugin', () => {
 
   it('does not cancel an in-flight play when pause is a no-op', async () => {
     vi.useRealTimers();
-    const { context, entities, commands, disposers } = fakeContext();
+    const { context, entities, commands, disposers } = ambientNoiseTestContext();
     await plugin.setup(context);
 
     await commands.get('ambient-noise.pause')?.run();
@@ -298,7 +228,7 @@ describe('ambient-noise plugin', () => {
   });
 
   it('stays paused and toasts when toggle cannot decode, then play can retry', async () => {
-    const { context, entities, commands, notify, disposers } = fakeContext();
+    const { context, entities, commands, notify, disposers } = ambientNoiseTestContext();
     await plugin.setup(context);
     loadGate.failNext = true;
     await commands.get('ambient-noise.toggle')?.run();
@@ -314,7 +244,7 @@ describe('ambient-noise plugin', () => {
   });
 
   it('teardown closes the mixer without throwing', async () => {
-    const { context, disposers } = fakeContext();
+    const { context, disposers } = ambientNoiseTestContext();
     await plugin.setup(context);
     expect(() => {
       for (const dispose of disposers) dispose();
