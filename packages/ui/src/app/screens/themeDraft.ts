@@ -57,7 +57,7 @@ export function mapCatalogActive(
  * a human-readable Error when validation fails — the screen turns that into a
  * toast without hitting the command.
  */
-export function draftToSaveArgs(draft: ThemeDraft): Record<string, unknown> {
+export function draftToSaveArgs(draft: ThemeDraft): Record<string, Json> {
   const name = draft.name.trim();
   if (name === '' || !THEME_NAME.test(name)) {
     throw new Error('Name must be lowercase letters, digits, and hyphens (e.g. forest).');

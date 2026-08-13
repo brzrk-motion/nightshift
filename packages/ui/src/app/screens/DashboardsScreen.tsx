@@ -1,8 +1,6 @@
-import { useState, type ReactNode } from 'react';
-import type { Json } from '@nightshift/core';
-import { ConfirmModal } from '../../components/ConfirmModal.js';
-import { EmptyState } from '../../components/States.js';
-import { useEntity, useRuntime, useToasts } from '../context.js';
+import { type ReactNode } from 'react';
+import { useRuntime } from '../context.js';
+import { CatalogScreen } from './CatalogScreen.js';
 import { DashboardEditor } from './DashboardEditor.js';
 import { DashboardsList } from './DashboardsList.js';
 import {
@@ -14,16 +12,6 @@ import {
   type DashboardDraft,
 } from './dashboardDraft.js';
 
-interface DashboardsCatalogState {
-  dashboards: DashboardCatalogRow[];
-  [key: string]: Json;
-}
-
-type View =
-  | { kind: 'list' }
-  | { kind: 'create'; draft: DashboardDraft }
-  | { kind: 'edit'; draft: DashboardDraft };
-
 /**
  * Dashboards catalog and in-screen metadata editor. Reads `nightshift.dashboards`
  * and persists through `dashboard.save` / `dashboard.delete` — never imports
@@ -31,107 +19,36 @@ type View =
  */
 export function DashboardsScreen(): ReactNode {
   const runtime = useRuntime();
-  const toasts = useToasts();
-  const catalog = useEntity<DashboardsCatalogState>('nightshift.dashboards');
-  const [view, setView] = useState<View>({ kind: 'list' });
-  const [pendingDelete, setPendingDelete] = useState<DashboardCatalogRow | null>(null);
-  const [pendingOverride, setPendingOverride] = useState<DashboardDraft | null>(null);
-
-  const dashboards = catalog?.state.dashboards ?? [];
-
-  const saveDraft = (draft: DashboardDraft): void => {
-    try {
-      const args = draftToSaveArgs(draft);
-      void runtime?.commands.run('dashboard.save', args).then(
-        () => setView({ kind: 'list' }),
-        () => {
-          // Failure is already toasted by AppShell's command listener.
-        },
-      );
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      toasts.push(message, { tone: 'danger' });
-    }
-  };
-
-  const requestSave = (draft: DashboardDraft): void => {
-    const builtIn = dashboards.find(
-      (row) => row.name === draft.name.trim() && row.source === 'built-in',
-    );
-    if (builtIn && view.kind === 'create') {
-      setPendingOverride(draft);
-      return;
-    }
-    saveDraft(draft);
-  };
 
   const openDashboard = (row: DashboardCatalogRow): void => {
     void runtime?.commands.run(`dashboard.open.${row.name}`);
     void runtime?.commands.run('nav.dashboard');
   };
 
-  if (!runtime) return <EmptyState message="No runtime available." />;
-
-  if (view.kind === 'create' || view.kind === 'edit') {
-    return (
-      <box
-        style={{
-          flexDirection: 'column',
-          flexGrow: 1,
-          height: '100%',
-        }}
-      >
-        <DashboardEditor
-          key={view.kind === 'edit' ? `edit-${view.draft.name}` : 'create'}
-          draft={view.draft}
-          nameLocked={view.kind === 'edit'}
-          onCancel={() => setView({ kind: 'list' })}
-          onSave={(draft) => requestSave(draft)}
-        />
-      </box>
-    );
-  }
-
   return (
-    <>
-      <DashboardsList
-        dashboards={dashboards}
-        onCreate={() => setView({ kind: 'create', draft: emptyDraft() })}
-        onEdit={(row) => setView({ kind: 'edit', draft: draftFromCatalog(row) })}
-        onDuplicate={(row) => setView({ kind: 'create', draft: duplicateDraft(row) })}
-        onDelete={(row) => setPendingDelete(row)}
-        onOpen={openDashboard}
-      />
-
-      <ConfirmModal
-        open={pendingDelete !== null}
-        title="Delete dashboard?"
-        message={`Delete user dashboard “${pendingDelete?.title ?? pendingDelete?.name}”? This removes dashboards/${pendingDelete?.name}.yaml.`}
-        confirmLabel="Delete"
-        width={48}
-        onConfirm={() => {
-          if (!pendingDelete) return;
-          void runtime.commands
-            .run('dashboard.delete', { name: pendingDelete.name })
-            .then(() => setPendingDelete(null));
-        }}
-        onCancel={() => setPendingDelete(null)}
-      />
-
-      <ConfirmModal
-        open={pendingOverride !== null}
-        title="Override built-in?"
-        message={`A built-in dashboard named “${pendingOverride?.name}” already exists. Saving will create a user file that overrides it.`}
-        confirmLabel="Save anyway"
-        width={52}
-        onConfirm={() => {
-          if (!pendingOverride) return;
-          const draft = pendingOverride;
-          setPendingOverride(null);
-          saveDraft(draft);
-        }}
-        onCancel={() => setPendingOverride(null)}
-      />
-    </>
+    <CatalogScreen<DashboardDraft, DashboardCatalogRow>
+      entityId="nightshift.dashboards"
+      itemsKey="dashboards"
+      saveCommand="dashboard.save"
+      deleteCommand="dashboard.delete"
+      resourceLabel="dashboard"
+      resourceFolder="dashboards"
+      emptyDraft={emptyDraft}
+      draftFromCatalog={draftFromCatalog}
+      duplicateDraft={duplicateDraft}
+      draftToSaveArgs={draftToSaveArgs}
+      getRowDisplayName={(row) => row.title ?? row.name}
+      Editor={DashboardEditor}
+      List={(props) => (
+        <DashboardsList
+          dashboards={props.rows}
+          onCreate={props.onCreate}
+          onEdit={props.onEdit}
+          onDuplicate={props.onDuplicate}
+          onDelete={props.onDelete}
+          onOpen={openDashboard}
+        />
+      )}
+    />
   );
 }
