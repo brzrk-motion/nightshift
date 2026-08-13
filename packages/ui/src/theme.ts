@@ -146,8 +146,6 @@ export interface ThemeEngine {
   unregister(name: string): void;
   /** Switches the active theme. Unknown names throw. */
   activate(name: string): Theme;
-  /** Applies an override on top of the active theme. */
-  override(override: ThemeOverride): Theme;
   subscribe(listener: (theme: Theme) => void): () => void;
 }
 
@@ -194,9 +192,6 @@ export function createThemeEngine(options: ThemeEngineOptions = {}): ThemeEngine
         });
       }
       return publish(theme);
-    },
-    override(override) {
-      return publish(extendTheme(current, override));
     },
     subscribe(listener) {
       listeners.add(listener);
