@@ -21,6 +21,8 @@ export interface NightshiftPaths {
   dashboardsDir: string;
   /** Directory holding vibe definitions. */
   vibesDir: string;
+  /** Directory holding user theme definitions. */
+  themesDir: string;
   /** Directory scanned for locally installed plugins. */
   pluginsDir: string;
 }
@@ -76,6 +78,7 @@ export function resolvePaths(options: ResolvePathsOptions = {}): NightshiftPaths
     configFile: join(configDir, 'config.json'),
     dashboardsDir: join(configDir, 'dashboards'),
     vibesDir: join(configDir, 'vibes'),
+    themesDir: join(configDir, 'themes'),
     pluginsDir: join(configDir, 'plugins'),
   };
 }

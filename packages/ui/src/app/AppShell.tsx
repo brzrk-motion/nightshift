@@ -137,18 +137,6 @@ export function AppShell({
           runtime.toasts.push(message, { tone });
         },
       }),
-      // One command per theme, for the Settings screen and the palette —
-      // mirrors how a dashboard or a vibe gets an `open.<name>`/`activate.<name>`.
-      ...runtime.themes.list().map((entry) =>
-        runtime.commands.register({
-          id: `theme.activate.${entry.name}`,
-          title: `Use the ${entry.name} theme`,
-          category: 'Theme',
-          run: () => {
-            runtime.themes.activate(entry.name);
-          },
-        }),
-      ),
     ];
 
     return () => {

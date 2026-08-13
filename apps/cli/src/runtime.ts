@@ -4,6 +4,7 @@ import {
   createPermissionPolicy,
   createPluginHost,
   discoverPlugins,
+  saveConfig,
   type PluginFailure,
   type PluginHost,
 } from '@nightshift/services';
@@ -36,7 +37,19 @@ import {
   type VibeEngine,
   type VibeSpec,
 } from '@nightshift/vibes';
-import { createAppRuntime, type AppRuntime } from '@nightshift/ui';
+import {
+  BUILT_IN_THEMES,
+  createAppRuntime,
+  createThemeEngine,
+  deleteTheme,
+  loadThemes,
+  parseTheme,
+  saveTheme,
+  serializeTheme,
+  type AppRuntime,
+  type ThemeColors,
+  type ThemeSpec,
+} from '@nightshift/ui';
 import type { CliContext } from './context.js';
 
 /**
@@ -76,6 +89,11 @@ function describe(failure: PluginFailure): string {
 
 const VIBE_NAME = /^[a-z][a-z0-9-]*$/;
 const DASHBOARD_NAME = /^[a-z][a-z0-9-]*$/;
+const THEME_NAME = /^[a-z][a-z0-9-]*$/;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
 
 function rowsFromJson(value: Json | undefined): RowSpec[] | undefined {
   if (value === undefined) return undefined;
@@ -131,6 +149,54 @@ function vibeFromArgs(args: Record<string, Json> | undefined): VibeSpec {
   // Round-trip through serialize/parse so the same rules hand-edited YAML
   // gets applied to the form — one validator, two entry points.
   return parseVibe(serializeVibe(args as unknown as VibeSpec), { source: 'vibe.save' });
+}
+
+/** Turns a command-args blob into a validated ThemeSpec. */
+function themeFromArgs(args: Record<string, Json> | undefined): ThemeSpec {
+  if (args === undefined || typeof args['name'] !== 'string' || !THEME_NAME.test(args['name'])) {
+    throw new NightshiftError(
+      'CONFIG_INVALID',
+      'theme.save needs a name like `forest` (lowercase letters, digits, hyphens).',
+    );
+  }
+  const appearance = args['appearance'];
+  if (appearance !== 'dark' && appearance !== 'light') {
+    throw new NightshiftError('CONFIG_INVALID', "theme.save appearance must be 'dark' or 'light'.");
+  }
+  const colorsInput = args['colors'];
+  if (!isRecord(colorsInput)) {
+    throw new NightshiftError('CONFIG_INVALID', 'theme.save needs a colors object.');
+  }
+  const draft: ThemeSpec = {
+    name: args['name'],
+    appearance,
+    colors: colorsInput as unknown as ThemeColors,
+  };
+  return parseTheme(serializeTheme(draft), { source: 'theme.save' });
+}
+
+function publishThemesCatalog(
+  entities: EntityStore,
+  themes: AppRuntime['themes'],
+  userThemeNames: ReadonlySet<string>,
+): void {
+  const activeName = themes.current.name;
+  const rows: Json[] = themes.list().map((theme) => ({
+    name: theme.name,
+    source: userThemeNames.has(theme.name) ? 'user' : 'built-in',
+    active: theme.name === activeName,
+    appearance: theme.appearance,
+    colors: theme.colors as unknown as Json,
+  }));
+  const state: Json = { themes: rows };
+  if (entities.get('nightshift.themes')) {
+    entities.set('nightshift.themes', state);
+  } else {
+    entities.register('nightshift.themes', state, {
+      owner: 'nightshift',
+      title: 'Registered themes',
+    });
+  }
 }
 
 function publishVibesCatalog(
@@ -215,13 +281,56 @@ export async function createNightshiftRuntime(
   const warnings: string[] = [];
   const entities = createEntityStore();
 
+  const foundThemes = await loadThemes(context.paths.themesDir);
+  warnings.push(
+    ...foundThemes.failed.map(
+      (entry) =>
+        `${entry.path} could not be read: ${
+          entry.error instanceof Error ? entry.error.message : String(entry.error)
+        }`,
+    ),
+  );
+  const userThemeNames = new Set(foundThemes.themes.map((theme) => theme.name));
+
   // Built before the plugins so a notification raised inside `setup` has a
   // toast stack to land in — the shell renders it as soon as it is up.
   const app = createAppRuntime({
     entities,
-    theme: context.config.theme,
+    themes: createThemeEngine({
+      initial: context.config.theme,
+      themes: foundThemes.themes,
+    }),
     ...(options.onQuit === undefined ? {} : { onQuit: options.onQuit }),
   });
+
+  const registeredThemeCommands = new Set<string>();
+
+  const refreshThemeActivateCommands = (): void => {
+    for (const name of registeredThemeCommands) {
+      app.commands.unregister(`theme.activate.${name}`);
+    }
+    registeredThemeCommands.clear();
+    for (const theme of app.themes.list()) {
+      registeredThemeCommands.add(theme.name);
+      app.commands.register({
+        id: `theme.activate.${theme.name}`,
+        title: `Use the ${theme.name} theme`,
+        category: 'Theme',
+        run: async () => {
+          app.themes.activate(theme.name);
+          await saveConfig(
+            { ...context.config, theme: theme.name },
+            { configDir: context.paths.configDir },
+          );
+          context.config.theme = theme.name;
+          publishThemesCatalog(entities, app.themes, userThemeNames);
+        },
+      });
+    }
+  };
+
+  refreshThemeActivateCommands();
+  publishThemesCatalog(entities, app.themes, userThemeNames);
 
   const plugins = createPluginHost({
     entities,
@@ -479,6 +588,68 @@ export async function createNightshiftRuntime(
       if (builtIn) installVibe(builtIn);
       publishVibesCatalog(entities, vibes, userVibeNames);
       app.toasts.push(`Deleted vibe "${name}"`, { tone: 'success' });
+    },
+  });
+
+  app.commands.register({
+    id: 'theme.save',
+    title: 'Save theme',
+    category: 'Theme',
+    hidden: true,
+    run: async (args) => {
+      const spec = themeFromArgs(args);
+      await saveTheme(context.paths.themesDir, spec);
+      app.themes.register(spec);
+      userThemeNames.add(spec.name);
+      refreshThemeActivateCommands();
+      publishThemesCatalog(entities, app.themes, userThemeNames);
+      if (app.themes.current.name === spec.name) {
+        app.themes.activate(spec.name);
+      }
+      app.toasts.push(`Saved theme "${spec.name}"`, { tone: 'success' });
+    },
+  });
+
+  app.commands.register({
+    id: 'theme.delete',
+    title: 'Delete theme',
+    category: 'Theme',
+    hidden: true,
+    run: async (args) => {
+      const name = args?.['name'];
+      if (typeof name !== 'string' || !THEME_NAME.test(name)) {
+        throw new NightshiftError(
+          'CONFIG_INVALID',
+          'theme.delete needs a theme name like `forest`.',
+        );
+      }
+      if (!userThemeNames.has(name)) {
+        throw new NightshiftError(
+          'CONFIG_INVALID',
+          `Built-in theme "${name}" cannot be deleted.`,
+          { hint: 'Only user theme files in your themes/ directory can be removed.' },
+        );
+      }
+      const wasActive = app.themes.current.name === name;
+      await deleteTheme(context.paths.themesDir, name);
+      userThemeNames.delete(name);
+      app.themes.unregister(name);
+      refreshThemeActivateCommands();
+      if (wasActive) {
+        const fallback =
+          (app.themes.resolve(context.config.theme)?.name === context.config.theme &&
+          context.config.theme !== name
+            ? context.config.theme
+            : undefined) ?? 'midnight';
+        app.themes.activate(fallback);
+        await saveConfig(
+          { ...context.config, theme: fallback },
+          { configDir: context.paths.configDir },
+        );
+        context.config.theme = fallback;
+      }
+      publishThemesCatalog(entities, app.themes, userThemeNames);
+      app.toasts.push(`Deleted theme "${name}"`, { tone: 'success' });
     },
   });
 

@@ -5,6 +5,25 @@ import { NightshiftError } from '@nightshift/core';
  * else. Keeping them declarative means a dashboard, a vibe or a plugin can
  * switch the whole look by naming one.
  */
+/** Lowercase `#rrggbb` hex color. */
+export const HEX_COLOR = /^#[0-9a-f]{6}$/;
+
+export const THEME_COLOR_KEYS = [
+  'background',
+  'surface',
+  'border',
+  'borderMuted',
+  'text',
+  'muted',
+  'accent',
+  'accentSecondary',
+  'success',
+  'warning',
+  'danger',
+] as const;
+
+export type ThemeColorKey = (typeof THEME_COLOR_KEYS)[number];
+
 export interface ThemeColors {
   background: string;
   surface: string;
@@ -123,6 +142,8 @@ export interface ThemeEngine {
   list(): Theme[];
   resolve(name: string): Theme | undefined;
   register(theme: Theme): void;
+  /** Removes a user theme or restores the built-in of the same name. */
+  unregister(name: string): void;
   /** Switches the active theme. Unknown names throw. */
   activate(name: string): Theme;
   /** Applies an override on top of the active theme. */
@@ -159,6 +180,11 @@ export function createThemeEngine(options: ThemeEngineOptions = {}): ThemeEngine
     register(theme) {
       registry.set(theme.name, theme);
       if (theme.name === current.name) publish(theme);
+    },
+    unregister(name) {
+      const builtIn = BUILT_IN_THEMES.find((theme) => theme.name === name);
+      if (builtIn) registry.set(name, builtIn);
+      else registry.delete(name);
     },
     activate(name) {
       const theme = registry.get(name);

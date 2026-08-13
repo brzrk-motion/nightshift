@@ -379,6 +379,7 @@ export async function ensureConfigDirs(
     paths.logDir,
     paths.dashboardsDir,
     paths.vibesDir,
+    paths.themesDir,
     paths.pluginsDir,
   ];
   try {

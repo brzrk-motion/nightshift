@@ -144,8 +144,16 @@ describe.skipIf(!renderable)('AppShell shell', () => {
     }
   });
 
-  it('registers an activate command for every theme', async () => {
+  it('runs runtime-registered theme activate commands', async () => {
     const runtime = createAppRuntime();
+    runtime.commands.register({
+      id: 'theme.activate.ember',
+      title: 'Use the ember theme',
+      category: 'Theme',
+      run: () => {
+        runtime.themes.activate('ember');
+      },
+    });
     const setup = await testRender(
       <AppShell runtime={runtime}>
         <text>Body</text>
@@ -213,7 +221,7 @@ describe.skipIf(!renderable)('AppShell shell', () => {
     }
   });
 
-  it('defaults to the six built-in screens when none are given', async () => {
+  it('defaults to the built-in screens when none are given', async () => {
     const runtime = createAppRuntime();
     const setup = await testRender(
       <AppShell runtime={runtime}>
@@ -225,7 +233,15 @@ describe.skipIf(!renderable)('AppShell shell', () => {
     try {
       await setup.renderOnce();
       const frame = setup.captureCharFrame();
-      for (const label of ['Dashboards', 'Vibes', 'Apps', 'Entities', 'Automations', 'Settings']) {
+      for (const label of [
+        'Dashboards',
+        'Vibes',
+        'Themes',
+        'Apps',
+        'Entities',
+        'Automations',
+        'Settings',
+      ]) {
         expect(frame, label).toContain(label);
       }
     } finally {

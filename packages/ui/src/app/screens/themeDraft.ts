@@ -1,0 +1,90 @@
+import { MIDNIGHT_THEME, THEME_COLOR_KEYS, type ThemeColorKey } from '../../theme.js';
+import type { Json } from '@nightshift/core';
+import { themeFromMidnight } from '../../theme/schema.js';
+
+/** One row from the `nightshift.themes` catalog entity. */
+export interface ThemeCatalogRow {
+  name: string;
+  source: 'built-in' | 'user';
+  active: boolean;
+  appearance: 'dark' | 'light';
+  colors: Record<ThemeColorKey, string>;
+  [key: string]: Json;
+}
+
+export interface ThemeDraft {
+  name: string;
+  appearance: 'dark' | 'light';
+  colors: Record<ThemeColorKey, string>;
+}
+
+export const THEME_NAME = /^[a-z][a-z0-9-]*$/;
+
+export function emptyDraft(): ThemeDraft {
+  const template = themeFromMidnight();
+  return {
+    name: '',
+    appearance: template.appearance,
+    colors: { ...template.colors },
+  };
+}
+
+export function draftFromCatalog(row: ThemeCatalogRow): ThemeDraft {
+  return {
+    name: row.name,
+    appearance: row.appearance,
+    colors: { ...row.colors },
+  };
+}
+
+/** Prefill a create draft from an existing catalog row (duplicate flow). */
+export function duplicateDraft(row: ThemeCatalogRow): ThemeDraft {
+  const draft = draftFromCatalog(row);
+  draft.name = '';
+  return draft;
+}
+
+/** Maps catalog rows with an explicit active theme name (for tests). */
+export function mapCatalogActive(
+  rows: readonly ThemeCatalogRow[],
+  active: string | null,
+): ThemeCatalogRow[] {
+  return rows.map((row) => ({ ...row, active: row.name === active }));
+}
+
+/**
+ * Turns the editor draft into the args blob `theme.save` expects. Throws
+ * a human-readable Error when validation fails — the screen turns that into a
+ * toast without hitting the command.
+ */
+export function draftToSaveArgs(draft: ThemeDraft): Record<string, unknown> {
+  const name = draft.name.trim();
+  if (name === '' || !THEME_NAME.test(name)) {
+    throw new Error('Name must be lowercase letters, digits, and hyphens (e.g. forest).');
+  }
+
+  const colors: Record<string, string> = {};
+  for (const key of THEME_COLOR_KEYS) {
+    const value = draft.colors[key].trim();
+    if (!/^#[0-9a-f]{6}$/.test(value)) {
+      throw new Error(`${key} must be a lowercase hex color like #7aa2ff.`);
+    }
+    colors[key] = value;
+  }
+
+  return { name, appearance: draft.appearance, colors };
+}
+
+/** Validates a single hex field while typing (for ColorField hints). */
+export function isValidHex(value: string): boolean {
+  return /^#[0-9a-f]{6}$/.test(value.trim());
+}
+
+/** Midnight accent for tests that need a known catalog row. */
+export const SAMPLE_CATALOG_ROW: ThemeCatalogRow = {
+  name: MIDNIGHT_THEME.name,
+  source: 'built-in',
+  active: true,
+  appearance: MIDNIGHT_THEME.appearance,
+  colors: { ...MIDNIGHT_THEME.colors },
+};

@@ -10,6 +10,7 @@ import type { ReactNode } from 'react';
 export const ICONS = {
   dashboard: '▦',
   vibes: '◈',
+  themes: '◐',
   apps: '▣',
   entities: '◆',
   automations: '⚡',

@@ -346,7 +346,7 @@ describe('ensureConfigDirs', () => {
     const paths = await ensureConfigDirs({ configDir: dir });
     await ensureConfigDirs({ configDir: dir });
     const { stat } = await import('node:fs/promises');
-    for (const target of [paths.dashboardsDir, paths.vibesDir, paths.pluginsDir, paths.logDir]) {
+    for (const target of [paths.dashboardsDir, paths.vibesDir, paths.themesDir, paths.pluginsDir, paths.logDir]) {
       expect((await stat(target)).isDirectory()).toBe(true);
     }
   });

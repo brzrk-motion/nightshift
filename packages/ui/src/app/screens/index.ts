@@ -6,12 +6,15 @@
  * runtime wiring can produce (which plugins are loaded, which vibes and
  * dashboards exist, which vibe is active), it reads it from a well-known entity
  * id (`nightshift.plugins`, `nightshift.vibes`, `nightshift.vibe`,
- * `nightshift.dashboards`, `nightshift.dashboard`, …) and simply shows less if
- * nothing has published one — see `apps/cli/src/runtime.ts`.
+ * `nightshift.dashboards`, `nightshift.dashboard`, `nightshift.themes`, …)
+ * and simply shows less if nothing has published one — see `apps/cli/src/runtime.ts`.
  *
  * Dashboards flow: `DashboardsScreen` list ↔ `DashboardEditor` metadata forms
  * call `dashboard.save` / `dashboard.delete`; Open runs `dashboard.open.<name>`
  * and switches to Home via `nav.dashboard`.
+ *
+ * Themes flow: `ThemesScreen` list ↔ `ThemeEditor` call `theme.save` /
+ * `theme.delete`; Activate runs `theme.activate.<name>`.
  */
 
 import type { Screen } from '../screen.js';
@@ -20,11 +23,13 @@ import { AutomationsScreen } from './AutomationsScreen.js';
 import { DashboardsScreen } from './DashboardsScreen.js';
 import { EntitiesScreen } from './EntitiesScreen.js';
 import { SettingsScreen } from './SettingsScreen.js';
+import { ThemesScreen } from './ThemesScreen.js';
 import { VibesScreen } from './VibesScreen.js';
 
 export const DEFAULT_SCREENS: readonly Screen[] = [
   { id: 'dashboards', label: 'Dashboards', icon: 'dashboard', render: DashboardsScreen },
   { id: 'vibes', label: 'Vibes', icon: 'vibes', render: VibesScreen },
+  { id: 'themes', label: 'Themes', icon: 'themes', render: ThemesScreen },
   { id: 'apps', label: 'Apps', icon: 'apps', render: AppsScreen },
   { id: 'entities', label: 'Entities', icon: 'entities', render: EntitiesScreen },
   { id: 'automations', label: 'Automations', icon: 'automations', render: AutomationsScreen },
@@ -37,5 +42,6 @@ export {
   DashboardsScreen,
   EntitiesScreen,
   SettingsScreen,
+  ThemesScreen,
   VibesScreen,
 };

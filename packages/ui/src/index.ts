@@ -5,13 +5,29 @@ export {
   EMBER_THEME,
   extendTheme,
   getTheme,
+  HEX_COLOR,
   MIDNIGHT_THEME,
+  THEME_COLOR_KEYS,
   type Theme,
+  type ThemeColorKey,
   type ThemeColors,
   type ThemeEngine,
   type ThemeEngineOptions,
   type ThemeOverride,
 } from './theme.js';
+
+export {
+  deleteTheme,
+  loadThemes,
+  mergeThemes,
+  parseTheme,
+  saveTheme,
+  serializeTheme,
+  type ParseThemeOptions,
+  type ThemeLoadResult,
+} from './theme/parse.js';
+
+export { themeFromMidnight, type ThemeSpec } from './theme/schema.js';
 
 export { BORDERS, SPACING, type BorderToken, type SpacingToken } from './tokens.js';
 
@@ -118,6 +134,7 @@ export {
   DEFAULT_SCREENS,
   EntitiesScreen,
   SettingsScreen,
+  ThemesScreen,
   VibesScreen,
 } from './app/screens/index.js';
 export {

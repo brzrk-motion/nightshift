@@ -7,6 +7,7 @@ export {
   type TextInputProps,
   type ToggleProps,
 } from './controls.js';
+export { ColorField, type ColorFieldProps } from './ColorField.js';
 export {
   SelectField,
   type SelectFieldProps,

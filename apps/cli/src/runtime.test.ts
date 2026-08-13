@@ -3,7 +3,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { NIGHTSHIFT_API_VERSION } from '@nightshift/core';
-import { createNullLogger, DEFAULT_CONFIG, resolvePaths } from '@nightshift/services';
+import { MIDNIGHT_THEME, serializeTheme } from '@nightshift/ui';
+import { createNullLogger, DEFAULT_CONFIG, loadConfig, resolvePaths } from '@nightshift/services';
 import type { CliContext } from './context.js';
 import { createNightshiftRuntime } from './runtime.js';
 
@@ -55,6 +56,7 @@ beforeEach(async () => {
   await mkdir(join(dir, 'plugins'), { recursive: true });
   await mkdir(join(dir, 'dashboards'), { recursive: true });
   await mkdir(join(dir, 'vibes'), { recursive: true });
+  await mkdir(join(dir, 'themes'), { recursive: true });
 });
 
 afterEach(async () => {
@@ -340,5 +342,84 @@ describe('createNightshiftRuntime', () => {
     await runtime.dispose();
 
     expect(spy).toHaveBeenCalledWith('demo.go', undefined);
+  });
+
+  it('registers theme activate commands for every theme', async () => {
+    const runtime = await createNightshiftRuntime(contextFor());
+
+    try {
+      expect(runtime.app.commands.get('theme.activate.midnight')).toBeTruthy();
+      expect(runtime.app.commands.get('theme.activate.ember')).toBeTruthy();
+    } finally {
+      await runtime.dispose();
+    }
+  });
+
+  it('persists config when activating a theme', async () => {
+    const runtime = await createNightshiftRuntime(contextFor());
+
+    try {
+      await runtime.app.commands.run('theme.activate.ember');
+      expect(runtime.app.themes.current.name).toBe('ember');
+
+      const loaded = await loadConfig({ configDir: dir });
+      expect(loaded.config.theme).toBe('ember');
+    } finally {
+      await runtime.dispose();
+    }
+  });
+
+  it('publishes nightshift.themes catalog entity', async () => {
+    const runtime = await createNightshiftRuntime(contextFor());
+
+    try {
+      const catalog = runtime.entities.get<{ themes: Array<{ name: string; active: boolean }> }>(
+        'nightshift.themes',
+      );
+      expect(catalog?.state.themes.map((row) => row.name)).toEqual([
+        'midnight',
+        'ember',
+        'daylight',
+      ]);
+      expect(catalog?.state.themes.find((row) => row.name === 'midnight')?.active).toBe(true);
+    } finally {
+      await runtime.dispose();
+    }
+  });
+
+  it('saves a user theme via theme.save', async () => {
+    const runtime = await createNightshiftRuntime(contextFor());
+    const forest = { ...MIDNIGHT_THEME, name: 'forest', colors: { ...MIDNIGHT_THEME.colors } };
+
+    try {
+      await runtime.app.commands.run('theme.save', {
+        name: 'forest',
+        appearance: 'dark',
+        colors: forest.colors as unknown as Record<string, string>,
+      });
+      expect(runtime.app.themes.list().some((theme) => theme.name === 'forest')).toBe(true);
+      expect(runtime.app.commands.get('theme.activate.forest')).toBeTruthy();
+    } finally {
+      await runtime.dispose();
+    }
+  });
+
+  it('deletes a user theme and falls back when deleting the active theme', async () => {
+    const forest = { ...MIDNIGHT_THEME, name: 'forest' };
+    await writeFile(join(dir, 'themes', 'forest.yaml'), serializeTheme(forest));
+    const runtime = await createNightshiftRuntime(
+      contextFor({ config: { ...DEFAULT_CONFIG, plugins: [], theme: 'forest' } }),
+    );
+
+    try {
+      expect(runtime.app.themes.current.name).toBe('forest');
+      await runtime.app.commands.run('theme.delete', { name: 'forest' });
+      expect(runtime.app.themes.current.name).toBe('midnight');
+      const loaded = await loadConfig({ configDir: dir });
+      expect(loaded.config.theme).toBe('midnight');
+      expect(runtime.app.themes.list().some((theme) => theme.name === 'forest')).toBe(false);
+    } finally {
+      await runtime.dispose();
+    }
   });
 });
