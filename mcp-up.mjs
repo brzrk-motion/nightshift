@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 // Builds and runs every MCP server in mcp/, then supervises them.
 //
-//   ./mcp-up.sh                      # build, launch, print the endpoint table
-//   ./mcp-up.sh --check              # build, verify each server answers, exit
-//   ./mcp-up.sh --write-cursor-config
-//   ./mcp-up.sh --only context --no-build
+//   pnpm mcp:up                      # build, launch, print the endpoint table
+//   pnpm mcp:up --check              # build, verify each server answers, exit
+//   pnpm mcp:up --write-cursor-config
+//   pnpm mcp:up --only context --no-build
 //
 // A server is anything under mcp/ whose package.json carries an "mcp" block:
 //
@@ -30,7 +30,9 @@ const HEALTH_INTERVAL_MS = 200;
 const CRASH_WINDOW_MS = 5_000;
 const MAX_RESTARTS = 3;
 
-const USAGE = `Usage: ./mcp-up.sh [options]
+const MIN_NODE_MAJOR = 22;
+
+const USAGE = `Usage: pnpm mcp:up [options]
 
   --check                Verify every server starts and answers, then exit
   --only <id>            Run just one server (repeatable)
@@ -378,7 +380,18 @@ function writeCursorConfig(servers) {
   process.stderr.write(`mcp-up: wrote ${servers.length} endpoint(s) to .cursor/mcp.json\n`);
 }
 
+function checkNode() {
+  const major = Number.parseInt(process.versions.node.split('.')[0] ?? '0', 10);
+  if (major >= MIN_NODE_MAJOR) return true;
+  process.stderr.write(
+    `mcp-up: Node ${MIN_NODE_MAJOR}+ required (found v${process.versions.node}).\n`,
+  );
+  return false;
+}
+
 async function main() {
+  if (!checkNode()) return 1;
+
   const options = parseArgs(process.argv.slice(2));
   if (options === null) return 1;
   if (options === 'help') {

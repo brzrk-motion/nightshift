@@ -10,7 +10,7 @@ supported file reparses that file and nothing else.
 ## Running it
 
 ```bash
-./mcp-up.sh                      # from the repository root: build + run every MCP server
+pnpm mcp:up                      # from the repository root: build + run every MCP server
 node dist/bin.js                 # stdio, for a client that spawns the server itself
 node dist/bin.js --http --port 7411
 ```

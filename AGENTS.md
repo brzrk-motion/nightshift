@@ -29,7 +29,7 @@ pnpm workspaces + Turborepo. Workspace globs (`pnpm-workspace.yaml`):
 
 ```
 nightshift.mjs         Build-and-launch script for local development
-mcp-up.sh/.mjs         Build-and-launch script for the MCP servers in mcp/
+mcp-up.mjs             Build-and-launch script for the MCP servers in mcp/
 apps/cli               The nightshift command line interface (entry point)
 packages/core          Runtime primitives: errors, versions, events, disposables
 packages/entities      Shared observable state — the contract for plugin state
