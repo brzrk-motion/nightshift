@@ -3,7 +3,6 @@
   "version": "0.1.0",
   "description": "Shared helpers for Nightshift plugins (not a loadable plugin).",
   "license": "MIT",
-  "private": true,
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
