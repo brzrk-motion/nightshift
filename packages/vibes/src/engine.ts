@@ -30,7 +30,6 @@ export interface VibeEngineEvents extends Record<string, unknown[]> {
 
 export interface VibeEngine {
   register(vibe: VibeSpec): () => void;
-  registerAll(vibes: readonly VibeSpec[]): void;
   get(name: string): VibeSpec | undefined;
   list(): VibeSpec[];
   /** Name of the active vibe, or `undefined` when none is. */
@@ -81,10 +80,6 @@ export function createVibeEngine(options: VibeEngineOptions): VibeEngine {
         vibes.delete(vibe.name);
         if (current === vibe.name) current = undefined;
       };
-    },
-
-    registerAll(list) {
-      for (const vibe of list) engine.register(vibe);
     },
 
     get: (name) => vibes.get(name),

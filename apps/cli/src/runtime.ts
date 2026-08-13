@@ -653,7 +653,7 @@ export async function createNightshiftRuntime(
   });
 
   const automations = createAutomationEngine({ entities, commands: app.commands });
-  automations.registerAll(plugins.automations());
+  for (const automation of plugins.automations()) automations.register(automation);
   automations.events.on('fired', (result) => {
     for (const warning of result.warnings) app.toasts.push(warning, { tone: 'warning' });
   });

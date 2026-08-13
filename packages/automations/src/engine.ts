@@ -23,7 +23,6 @@ export interface AutomationEngineEvents extends Record<string, unknown[]> {
 export interface AutomationEngine {
   /** Registers an automation. Wires it up immediately if the engine is running. */
   register(automation: AutomationSpec): Unsubscribe;
-  registerAll(automations: readonly AutomationSpec[]): void;
   unregister(name: string): boolean;
   get(name: string): AutomationSpec | undefined;
   list(): AutomationSpec[];
@@ -142,10 +141,6 @@ export function createAutomationEngine(options: AutomationEngineOptions): Automa
           void fire(automation);
       }
       return () => void engine.unregister(automation.name);
-    },
-
-    registerAll(list) {
-      for (const automation of list) engine.register(automation);
     },
 
     unregister(name) {
