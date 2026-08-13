@@ -1,4 +1,4 @@
-import { MIDNIGHT_THEME, THEME_COLOR_KEYS, type ThemeColorKey } from '../../theme.js';
+import { HEX_COLOR, MIDNIGHT_THEME, THEME_COLOR_KEYS, type ThemeColorKey } from '../../theme.js';
 import type { Json } from '@nightshift/core';
 import { themeFromMidnight } from '../../theme/schema.js';
 
@@ -66,7 +66,7 @@ export function draftToSaveArgs(draft: ThemeDraft): Record<string, unknown> {
   const colors: Record<string, string> = {};
   for (const key of THEME_COLOR_KEYS) {
     const value = draft.colors[key].trim();
-    if (!/^#[0-9a-f]{6}$/.test(value)) {
+    if (!HEX_COLOR.test(value)) {
       throw new Error(`${key} must be a lowercase hex color like #7aa2ff.`);
     }
     colors[key] = value;
@@ -74,9 +74,6 @@ export function draftToSaveArgs(draft: ThemeDraft): Record<string, unknown> {
 
   return { name, appearance: draft.appearance, colors };
 }
-
-/** Validates a single hex field while typing (for ColorField hints). */
-export { isValidHex } from '../../theme/validate.js';
 
 /** Midnight accent for tests that need a known catalog row. */
 export const SAMPLE_CATALOG_ROW: ThemeCatalogRow = {
