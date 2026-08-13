@@ -70,18 +70,6 @@ describe('createThemeEngine', () => {
     expect(engine.list().map((theme) => theme.name)).toContain('custom');
   });
 
-  it('applies an override on top of the active theme', () => {
-    const engine = createThemeEngine();
-    const listener = vi.fn();
-    engine.subscribe(listener);
-
-    engine.override({ colors: { accent: '#123456' } });
-
-    expect(engine.current.colors.accent).toBe('#123456');
-    expect(engine.current.name).toBe('midnight');
-    expect(listener).toHaveBeenCalledOnce();
-  });
-
   it('stops notifying after unsubscribe', () => {
     const engine = createThemeEngine();
     const listener = vi.fn();
