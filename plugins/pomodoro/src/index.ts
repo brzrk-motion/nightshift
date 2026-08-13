@@ -9,6 +9,7 @@ import {
   stopSession,
   tickSession,
   todayKey,
+  type PomodoroPhase,
   type PomodoroState,
 } from './timer.js';
 import { SessionWidget, TodayWidget } from './widgets.js';
@@ -28,6 +29,29 @@ function isStoredProgress(value: unknown): value is StoredProgress {
     typeof (value as StoredProgress).completedPomodorosToday === 'number' &&
     typeof (value as StoredProgress).cycleCount === 'number'
   );
+}
+
+const PHASE_NOTIFY_SLUG: Record<PomodoroPhase, string> = {
+  work: 'work',
+  shortBreak: 'short-break',
+  longBreak: 'long-break',
+};
+
+function notifyOnPhaseComplete(
+  context: PluginContext,
+  phase: PomodoroPhase,
+  message: string,
+  tone: 'success' | 'accent',
+): void {
+  context.registerAutomation({
+    name: `pomodoro.notify-${PHASE_NOTIFY_SLUG[phase]}-complete`,
+    when: { type: 'entity', entity: POMODORO_ENTITY, key: 'status' },
+    and: [
+      { type: 'equals', entity: POMODORO_ENTITY, key: 'status', value: 'phaseComplete' },
+      { type: 'equals', entity: POMODORO_ENTITY, key: 'phase', value: phase },
+    ],
+    then: [{ command: 'app.notify', args: { message, tone } }],
+  });
 }
 
 export default definePlugin({
@@ -126,48 +150,9 @@ export default definePlugin({
       render: TodayWidget,
     });
 
-    context.registerAutomation({
-      name: 'pomodoro.notify-work-complete',
-      when: { type: 'entity', entity: POMODORO_ENTITY, key: 'status' },
-      and: [
-        { type: 'equals', entity: POMODORO_ENTITY, key: 'status', value: 'phaseComplete' },
-        { type: 'equals', entity: POMODORO_ENTITY, key: 'phase', value: 'work' },
-      ],
-      then: [
-        {
-          command: 'app.notify',
-          args: { message: 'Pomodoro complete — time for a break.', tone: 'success' },
-        },
-      ],
-    });
-    context.registerAutomation({
-      name: 'pomodoro.notify-short-break-complete',
-      when: { type: 'entity', entity: POMODORO_ENTITY, key: 'status' },
-      and: [
-        { type: 'equals', entity: POMODORO_ENTITY, key: 'status', value: 'phaseComplete' },
-        { type: 'equals', entity: POMODORO_ENTITY, key: 'phase', value: 'shortBreak' },
-      ],
-      then: [
-        {
-          command: 'app.notify',
-          args: { message: 'Break over — ready to focus?', tone: 'accent' },
-        },
-      ],
-    });
-    context.registerAutomation({
-      name: 'pomodoro.notify-long-break-complete',
-      when: { type: 'entity', entity: POMODORO_ENTITY, key: 'status' },
-      and: [
-        { type: 'equals', entity: POMODORO_ENTITY, key: 'status', value: 'phaseComplete' },
-        { type: 'equals', entity: POMODORO_ENTITY, key: 'phase', value: 'longBreak' },
-      ],
-      then: [
-        {
-          command: 'app.notify',
-          args: { message: 'Long break over — ready to focus?', tone: 'accent' },
-        },
-      ],
-    });
+    notifyOnPhaseComplete(context, 'work', 'Pomodoro complete — time for a break.', 'success');
+    notifyOnPhaseComplete(context, 'shortBreak', 'Break over — ready to focus?', 'accent');
+    notifyOnPhaseComplete(context, 'longBreak', 'Long break over — ready to focus?', 'accent');
 
     context.log.info('Pomodoro plugin ready');
   },
