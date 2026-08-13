@@ -140,6 +140,7 @@ describe('migrateConfig', () => {
     expect(result.config.pluginPermissions['weather']).toEqual(['network']);
     expect(result.config.pluginPermissions['spotify']).toEqual(['network']);
     expect(result.config.pluginPermissions['clock']).toEqual(['network']);
+    expect(result.config.pluginPermissions['home-assistant']).toEqual(['network']);
     expect(result.config.plugins).not.toContain('@nightshift/plugin-focus');
   });
 

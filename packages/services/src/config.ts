@@ -95,6 +95,13 @@ function ensurePlugin(config: NightshiftConfig, plugin: string): NightshiftConfi
   return { ...config, plugins: [...config.plugins, plugin] };
 }
 
+function removePlugin(config: NightshiftConfig, plugin: string): NightshiftConfig {
+  if (!config.plugins.includes(plugin)) {
+    return config;
+  }
+  return { ...config, plugins: config.plugins.filter((entry) => entry !== plugin) };
+}
+
 function ensureNetworkGrant(config: NightshiftConfig, pluginId: string): NightshiftConfig {
   const grant = config.pluginPermissions[pluginId];
   if (grant === 'all' || (Array.isArray(grant) && grant.includes('network'))) {
@@ -157,6 +164,10 @@ const CONFIG_MIGRATIONS: ConfigMigration[] = [
     toVersion: 10,
     apply: (config) => ensurePlugin(config, AMBIENT_NOISE_PLUGIN),
   },
+  {
+    toVersion: 11,
+    apply: (config) => removePlugin(config, FOCUS_PLUGIN),
+  },
 ];
 
 /**
@@ -185,18 +196,6 @@ export function migrateConfig(config: NightshiftConfig): {
       next = { ...apply(next), version: toVersion };
       migrated = true;
     }
-  }
-
-  if (next.version < 11) {
-    if (next.plugins.includes(FOCUS_PLUGIN)) {
-      next = {
-        ...next,
-        plugins: next.plugins.filter((plugin) => plugin !== FOCUS_PLUGIN),
-      };
-      migrated = true;
-    }
-    next = { ...next, version: 11 };
-    migrated = true;
   }
 
   return { config: next, migrated };

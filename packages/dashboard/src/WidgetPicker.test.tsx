@@ -46,7 +46,7 @@ describe.skipIf(!renderable)('WidgetPicker', () => {
     try {
       await setup.renderOnce();
       const frame = setup.captureCharFrame();
-      expect(frame).toContain('Focus session');
+      expect(frame).toContain('Pomodoro');
       expect(frame).toContain('core.entities');
     } finally {
       setup.renderer.destroy();
@@ -73,11 +73,11 @@ describe.skipIf(!renderable)('WidgetPicker', () => {
 
     try {
       await setup.renderOnce();
-      for (const char of 'focus') await press(() => setup.mockInput.pressKey(char));
+      for (const char of 'pomodoro') await press(() => setup.mockInput.pressKey(char));
       await setup.renderOnce();
 
       const frame = setup.captureCharFrame();
-      expect(frame).toContain('Focus session');
+      expect(frame).toContain('Pomodoro');
       expect(frame).not.toContain('core.entities');
     } finally {
       setup.renderer.destroy();
@@ -109,7 +109,7 @@ describe.skipIf(!renderable)('WidgetPicker', () => {
 
     try {
       await setup.renderOnce();
-      for (const char of 'focus') await press(() => setup.mockInput.pressKey(char));
+      for (const char of 'pomodoro') await press(() => setup.mockInput.pressKey(char));
       await setup.renderOnce();
       await press(() => setup.mockInput.pressEnter());
 
@@ -159,7 +159,7 @@ describe.skipIf(!renderable)('WidgetPicker', () => {
 
     try {
       await setup.renderOnce();
-      for (const char of 'focus') await press(() => setup.mockInput.pressKey(char));
+      for (const char of 'pomodoro') await press(() => setup.mockInput.pressKey(char));
       await setup.renderOnce();
       expect(setup.captureCharFrame()).not.toContain('core.entities');
 
