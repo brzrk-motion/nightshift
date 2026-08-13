@@ -45,6 +45,7 @@ export class Mixer {
   private fadeRemaining = 0;
   private fadeTotal = 0;
   playing = false;
+  writeError: string | null = null;
   readonly levels: number[] = [];
 
   constructor(sink: AudioSink = new NullSink()) {
@@ -103,7 +104,10 @@ export class Mixer {
 
   pause(): void {
     this.playing = false;
-    this.incoming = null;
+    if (this.incoming) {
+      this.primary = this.incoming;
+      this.incoming = null;
+    }
     this.fadeRemaining = 0;
   }
 
@@ -142,13 +146,18 @@ export class Mixer {
       return chunk;
     }
 
-    const outBuf = this.buffers.get(this.primary.clipId);
-    if (!outBuf) {
+    if (!this.buffers.has(this.primary.clipId)) {
       this.pushLevel(0);
       return chunk;
     }
 
     for (let i = 0; i < frameCount; i += 1) {
+      const outBuf = this.buffers.get(this.primary.clipId);
+      if (!outBuf) {
+        chunk[i * 2] = 0;
+        chunk[i * 2 + 1] = 0;
+        continue;
+      }
       let left = readFrame(outBuf, this.primary.frame, 0);
       let right = readFrame(outBuf, this.primary.frame, 1);
       this.primary.frame = (this.primary.frame + 1) % durationFrames(outBuf);
@@ -178,13 +187,32 @@ export class Mixer {
     }
 
     this.pushLevel(rms(chunk));
-    void this.sink.write(toBuffer(chunk));
+    this.writeChunk(chunk);
     return chunk;
   }
 
   close(): void {
     this.playing = false;
     this.sink.close();
+  }
+
+  private writeChunk(chunk: Int16Array): void {
+    try {
+      const result = this.sink.write(toBuffer(chunk));
+      if (result !== undefined && typeof result.then === 'function') {
+        void result.catch((error: unknown) => this.failSink(error));
+      }
+    } catch (error: unknown) {
+      this.failSink(error);
+    }
+  }
+
+  private failSink(error: unknown): void {
+    if (this.writeError === null) {
+      this.writeError = error instanceof Error ? error.message : String(error);
+    }
+    if (this.sink.backend === 'silent') return;
+    this.setSink(new NullSink());
   }
 
   private pushLevel(value: number): void {

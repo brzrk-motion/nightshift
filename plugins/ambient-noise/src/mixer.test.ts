@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { Mixer } from './mixer.js';
-import { CaptureSink } from './sink.js';
-import { toneBuffer } from './wav.js';
+import { CaptureSink, type AudioSink } from './sink.js';
+import { toneBuffer, type PcmBuffer } from './wav.js';
+
+function filled(frameCount: number, sample: number): PcmBuffer {
+  const frames = new Int16Array(frameCount * 2);
+  frames.fill(sample);
+  return { sampleRate: 44100, channels: 2, frames, frameCount };
+}
 
 function maxAbs(chunk: Int16Array): number {
   let max = 0;
@@ -89,6 +95,50 @@ describe('Mixer', () => {
     mixer.tick(32);
     expect(mixer.currentClipId() === 'b' || mixer.currentClipId() === 'c').toBe(true);
     expect(mixer.fading()).toBe(true);
+  });
+
+  it('keeps the incoming clip when paused mid-crossfade', () => {
+    const mixer = new Mixer();
+    mixer.load('a', toneBuffer(44100, 220));
+    mixer.load('b', toneBuffer(44100, 880));
+    mixer.play('a');
+    mixer.skipTo('b', { fade: true });
+    mixer.tick(32);
+    expect(mixer.fading()).toBe(true);
+    mixer.pause();
+    expect(mixer.fading()).toBe(false);
+    expect(mixer.currentClipId()).toBe('b');
+    mixer.play();
+    expect(mixer.currentClipId()).toBe('b');
+  });
+
+  it('falls back to a silent sink when device writes reject', async () => {
+    const sink: AudioSink = {
+      backend: 'device',
+      write: () => Promise.reject(new Error('disconnected')),
+      close() {},
+    };
+    const mixer = new Mixer(sink);
+    mixer.load('a', toneBuffer(32, 100));
+    mixer.play('a');
+    mixer.tick(4);
+    await Promise.resolve();
+    expect(mixer.sinkBackend).toBe('silent');
+    expect(mixer.writeError).toMatch(/disconnected/);
+    expect(() => mixer.tick(4)).not.toThrow();
+  });
+
+  it('uses the incoming buffer for the rest of a chunk after a fade completes', () => {
+    const mixer = new Mixer();
+    mixer.load('a', filled(8, 1000));
+    mixer.load('b', filled(8, 2000));
+    mixer.play('a');
+    mixer.skipTo('b', { fade: true });
+    const chunk = mixer.tick(12);
+    expect(mixer.fading()).toBe(false);
+    expect(mixer.currentClipId()).toBe('b');
+    expect(chunk[8 * 2]).toBe(2000);
+    expect(chunk[11 * 2]).toBe(2000);
   });
 
   it('records 0–1 levels while playing', () => {

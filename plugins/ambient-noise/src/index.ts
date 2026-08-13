@@ -119,6 +119,19 @@ export default definePlugin({
       if (timer !== undefined) return;
       timer = setInterval(() => {
         mixer.tick(CHUNK_FRAMES);
+        if (mixer.writeError) {
+          output = 'silent';
+          outputError = mixer.writeError;
+          mixer.writeError = null;
+          if (announcedOutput !== outputError) {
+            announcedOutput = outputError;
+            context.notify('Audio output failed.', { tone: 'warning', key: 'output' });
+          }
+          const current = read();
+          if (current.status === 'playing' || current.status === 'fading') {
+            write(snapshot(mixer.fading() ? 'fading' : 'playing'));
+          }
+        }
         levelsTick += 1;
         const current = read();
         if (current.status !== 'playing' && current.status !== 'fading') return;
