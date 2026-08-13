@@ -8,7 +8,6 @@ export {
   toRelative,
 } from './files.js';
 export { grammarPath, LANGUAGE_IDS, languageForPath } from './languages.js';
-export { createLogger, type Logger, silentLogger } from './log.js';
 export {
   DEFAULT_REFERENCE_LIMIT,
   DEFAULT_SYMBOL_LIMIT,
