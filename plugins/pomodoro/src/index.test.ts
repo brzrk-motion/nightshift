@@ -10,8 +10,7 @@ import type {
   PluginWidget,
 } from '@nightshift/sdk';
 import plugin from './index.js';
-import { POMODORO_ENTITY } from './entity.js';
-import { DEFAULT_WORK_MINUTES, todayKey } from './timer.js';
+import { DEFAULT_WORK_MINUTES, POMODORO_ENTITY, todayKey } from './timer.js';
 
 function fakeContext() {
   const entities = new Map<string, Json>();

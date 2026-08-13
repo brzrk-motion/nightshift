@@ -487,7 +487,7 @@ re-open this exact bug for whatever the next text-entering widget is.
      tsconfig.json       # extends ../../tsconfig.base.json
      src/
        index.ts          # default-exports definePlugin({...})
-       *.ts, *.tsx        # state/logic, split out like focus's entity.ts/timer.ts
+       *.ts, *.tsx        # state/logic, split out like focus's timer.ts (types, reducers, entity id)
        widgets.tsx        # render functions for any widgets it registers
        *.test.ts(x)       # co-located vitest specs
    ```

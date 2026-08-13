@@ -9,8 +9,8 @@ import {
   type BadgeTone,
   type WidgetProps,
 } from '@nightshift/sdk';
-import { POMODORO_ENTITY } from './entity.js';
 import {
+  POMODORO_ENTITY,
   formatDuration,
   initialState,
   phaseLabel,

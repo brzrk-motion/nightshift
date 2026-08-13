@@ -9,8 +9,8 @@ import {
   type BadgeTone,
   type WidgetProps,
 } from '@nightshift/sdk';
-import { FOCUS_ENTITY } from './entity.js';
 import {
+  FOCUS_ENTITY,
   formatDuration,
   initialState,
   sessionProgress,

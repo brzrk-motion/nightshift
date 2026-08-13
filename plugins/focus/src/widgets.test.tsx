@@ -8,8 +8,7 @@ import {
   RuntimeProvider,
   ThemeProvider,
 } from '@nightshift/ui';
-import { FOCUS_ENTITY } from './entity.js';
-import { initialState, startSession } from './timer.js';
+import { FOCUS_ENTITY, initialState, startSession } from './timer.js';
 import { SessionWidget, TodayWidget } from './widgets.js';
 
 /**

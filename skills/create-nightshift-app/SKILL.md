@@ -60,8 +60,8 @@ plugins/<id>/
   vitest.config.ts      # copy plugins/weather/vitest.config.ts verbatim — it gates the FFI renderer
   src/
     index.ts            # definePlugin
-    entity.ts           # entity ids, state types, initial state, hydration guards
-    <domain>.ts         # pure reducers / formatting / client
+    entity.ts           # optional: state types, initial state, hydration guards (weather/habit/todo)
+    <domain>.ts         # pure reducers / formatting / client; colocate entity id here when that's all you need (focus/pomodoro)
     widgets.tsx         # render functions
     scale.ts            # only if the widget has a hero that must shrink
     *.test.ts(x)        # co-located

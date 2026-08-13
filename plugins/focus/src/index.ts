@@ -1,7 +1,7 @@
 import { definePlugin, type Json, type PluginContext } from '@nightshift/sdk';
-import { FOCUS_ENTITY } from './entity.js';
 import {
   DEFAULT_SESSION_MINUTES,
+  FOCUS_ENTITY,
   initialState,
   pauseSession,
   resetSession,
@@ -145,7 +145,7 @@ export default definePlugin({
   },
 });
 
-export { FOCUS_ENTITY } from './entity.js';
+export { FOCUS_ENTITY } from './timer.js';
 export {
   DEFAULT_SESSION_MINUTES,
   formatDuration,
