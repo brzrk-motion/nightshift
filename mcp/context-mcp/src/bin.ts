@@ -16,7 +16,6 @@ import { localhostHostValidation, toNodeHandler } from '@modelcontextprotocol/no
 
 import { createExtractor } from './extract.js';
 import { ideOriginValidation } from './httpGuards.js';
-import { createLogger } from './log.js';
 import { type QueryContext } from './query.js';
 import { createContextServer, SERVER_NAME, SERVER_VERSION } from './server.js';
 import { createCodeIndex } from './store.js';
@@ -31,7 +30,7 @@ Usage: nightshift-context-mcp [options]
   --port <n>      HTTP port (default: 7411)
   --host <host>   HTTP host (default: 127.0.0.1)
   --no-watch      Index once and do not follow file changes
-  --quiet         Suppress log output on stderr
+  --quiet         Suppress info-level log output on stderr
   --help          Show this message
 `;
 
@@ -110,7 +109,15 @@ async function main(): Promise<number> {
   }
 
   const root = parsed.root === '' ? repositoryRoot(process.cwd()) : resolve(parsed.root);
-  const log = createLogger(SERVER_NAME, !parsed.quiet);
+
+  // Stderr only — under stdio transport stdout carries JSON-RPC frames.
+  const logInfo = (message: string): void => {
+    if (parsed.quiet) return;
+    process.stderr.write(`${new Date().toISOString()} info ${SERVER_NAME}: ${message}\n`);
+  };
+  const logWarn = (message: string): void => {
+    process.stderr.write(`${new Date().toISOString()} warn ${SERVER_NAME}: ${message}\n`);
+  };
 
   const index = createCodeIndex({ root, extractor: await createExtractor() });
   const context: QueryContext = {
@@ -120,7 +127,7 @@ async function main(): Promise<number> {
 
   const started = Date.now();
   const summary = await index.reindexAll();
-  log.info(
+  logInfo(
     `indexed ${summary.indexed} files (${index.stats().symbols} symbols, ${summary.failed} failed) ` +
       `in ${Date.now() - started}ms from ${root}`,
   );
@@ -128,8 +135,8 @@ async function main(): Promise<number> {
   const watcher = parsed.watch
     ? watchIndex({
         index,
-        onError: (error) => log.warn(`watch: ${error.message}`),
-        onFlush: (files) => log.info(`reindexed ${files.length} changed file(s)`),
+        onError: (error) => logWarn(`watch: ${error.message}`),
+        onFlush: (files) => logInfo(`reindexed ${files.length} changed file(s)`),
       })
     : undefined;
 
@@ -139,9 +146,9 @@ async function main(): Promise<number> {
 
   if (!parsed.http) {
     const handle = serveStdio(() => createContextServer(context), {
-      onerror: (error) => log.warn(`stdio: ${error.message}`),
+      onerror: (error) => logWarn(`stdio: ${error.message}`),
     });
-    log.info('serving on stdio');
+    logInfo('serving on stdio');
     await onSignal();
     await handle.close();
     await stop();
@@ -149,10 +156,10 @@ async function main(): Promise<number> {
   }
 
   const handler = createMcpHandler(() => createContextServer(context), {
-    onerror: (error) => log.warn(`http: ${error.message}`),
+    onerror: (error) => logWarn(`http: ${error.message}`),
   });
   const respond = toNodeHandler(handler, {
-    onerror: (error) => log.warn(`http: ${error.message}`),
+    onerror: (error) => logWarn(`http: ${error.message}`),
   });
   const validateHost = localhostHostValidation();
   const validateOrigin = ideOriginValidation();
@@ -192,7 +199,7 @@ async function main(): Promise<number> {
     server.once('error', fail);
     server.listen(parsed.port, parsed.host, ready);
   });
-  log.info(`serving on http://${parsed.host}:${parsed.port}/mcp`);
+  logInfo(`serving on http://${parsed.host}:${parsed.port}/mcp`);
 
   await onSignal();
   await new Promise<void>((closed) => server.close(() => closed()));

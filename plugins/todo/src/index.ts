@@ -1,6 +1,6 @@
 import { definePlugin, type Json, type PluginContext } from '@nightshift/sdk';
 import { initialState, TODO_ENTITY, type TodoState } from './entity.js';
-import { createTodoFile, DEFAULT_TODO_PATH, type TodoFile } from './file.js';
+import { DEFAULT_TODO_PATH, loadTodos, saveTodos } from './file.js';
 import { addTodo, editTodo, toggleTodo } from './todos.js';
 import { TodoWidget } from './widgets.js';
 
@@ -36,8 +36,7 @@ export default definePlugin({
   ],
 
   async setup(context: PluginContext) {
-    const file: TodoFile = createTodoFile();
-    const items = await file.load().catch((error: unknown) => {
+    const items = await loadTodos().catch((error: unknown) => {
       context.log.warn('Could not read todo.md; starting with an empty list', {
         error: `${error}`,
       });
@@ -50,7 +49,7 @@ export default definePlugin({
       context.entities.get<TodoState>(TODO_ENTITY)?.state ?? initialState();
     const write = (next: TodoState): void => {
       context.entities.set(TODO_ENTITY, next);
-      file.save(next.items).catch((error: unknown) => {
+      saveTodos(next.items).catch((error: unknown) => {
         context.log.warn('Could not save todo.md', { error: `${error}` });
       });
     };
@@ -101,7 +100,7 @@ export default definePlugin({
 });
 
 export { initialState, TODO_ENTITY, type TodoItem, type TodoState } from './entity.js';
-export { createTodoFile, DEFAULT_TODO_PATH } from './file.js';
+export { DEFAULT_TODO_PATH, loadTodos, saveTodos } from './file.js';
 export { parseTodoMarkdown, serializeTodoMarkdown } from './markdown.js';
 export { addTodo, editTodo, toggleTodo, visibleTodos } from './todos.js';
 export { TodoWidget } from './widgets.js';

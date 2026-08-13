@@ -15,26 +15,21 @@ import { parseTodoMarkdown, serializeTodoMarkdown } from './markdown.js';
  */
 export const DEFAULT_TODO_PATH = join(homedir(), 'todo.md');
 
-export interface TodoFile {
-  /** The file does not exist yet on a fresh install; that reads as no todos. */
-  load(): Promise<TodoItem[]>;
-  save(items: readonly TodoItem[]): Promise<void>;
+/** The file does not exist yet on a fresh install; that reads as no todos. */
+export async function loadTodos(path: string = DEFAULT_TODO_PATH): Promise<TodoItem[]> {
+  try {
+    return parseTodoMarkdown(await readFile(path, 'utf8'));
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return [];
+    throw error;
+  }
 }
 
-export function createTodoFile(path: string = DEFAULT_TODO_PATH): TodoFile {
-  return {
-    async load() {
-      try {
-        return parseTodoMarkdown(await readFile(path, 'utf8'));
-      } catch (error) {
-        if ((error as NodeJS.ErrnoException).code === 'ENOENT') return [];
-        throw error;
-      }
-    },
-
-    async save(items) {
-      await mkdir(dirname(path), { recursive: true });
-      await writeFile(path, serializeTodoMarkdown(items), 'utf8');
-    },
-  };
+/** `path` defaults to `DEFAULT_TODO_PATH` and is the second argument (`items` first). */
+export async function saveTodos(
+  items: readonly TodoItem[],
+  path: string = DEFAULT_TODO_PATH,
+): Promise<void> {
+  await mkdir(dirname(path), { recursive: true });
+  await writeFile(path, serializeTodoMarkdown(items), 'utf8');
 }

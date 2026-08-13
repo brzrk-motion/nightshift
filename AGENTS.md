@@ -91,8 +91,8 @@ today — see [Agent tooling (MCP)](#agent-tooling-mcp) below
 and `mcp/context-mcp/README.md` for flags and layout.
 
 Two rules that are easy to break there: **an MCP server over stdio must never
-write to stdout** (stdout is the JSON-RPC channel — logging goes to stderr via
-`createLogger`), and `mcp-up` finds servers by scanning `mcp/*/package.json` for
+write to stdout** (stdout is the JSON-RPC channel — log to stderr only, e.g. the
+inline helpers in `mcp/context-mcp/src/bin.ts`), and `mcp-up` finds servers by scanning `mcp/*/package.json` for
 an `mcp` block plus a `bin` entry, so a new server needs no launcher changes but
 does need both fields.
 

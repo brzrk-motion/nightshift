@@ -26,11 +26,6 @@ export function rollingWindow(today: string): string[] {
   return Array.from({ length: 7 }, (_, index) => addDays(today, index - 6));
 }
 
-/** Lexicographic compare works for zero-padded YYYY-MM-DD keys. */
-export function compareDateKeys(a: string, b: string): number {
-  return a < b ? -1 : a > b ? 1 : 0;
-}
-
 export type HabitDensity = 'compact' | 'normal' | 'wide';
 
 /** Content width heuristics for day labels / streak columns. */
