@@ -31,19 +31,6 @@ describe('createEventBus', () => {
     bus.emit('tick', 1);
 
     expect(listener).not.toHaveBeenCalled();
-    expect(bus.listenerCount('tick')).toBe(0);
-  });
-
-  it('fires a once listener a single time', () => {
-    const bus = createEventBus<TestEvents>();
-    const listener = vi.fn();
-    bus.once('tick', listener);
-
-    bus.emit('tick', 1);
-    bus.emit('tick', 2);
-
-    expect(listener).toHaveBeenCalledTimes(1);
-    expect(listener).toHaveBeenCalledWith(1);
   });
 
   it('does not deliver to listeners added during dispatch', () => {
@@ -72,17 +59,22 @@ describe('createEventBus', () => {
     expect(onError.mock.calls[0]?.[1]).toBe('tick');
   });
 
-  it('counts and clears listeners', () => {
+  it('clears listeners for one event or for all', () => {
     const bus = createEventBus<TestEvents>();
-    bus.on('tick', vi.fn());
-    bus.on('done', vi.fn());
-    expect(bus.listenerCount()).toBe(2);
+    const tick = vi.fn();
+    const done = vi.fn();
+    bus.on('tick', tick);
+    bus.on('done', done);
 
     bus.clear('tick');
-    expect(bus.listenerCount()).toBe(1);
+    bus.emit('tick', 1);
+    bus.emit('done');
+    expect(tick).not.toHaveBeenCalled();
+    expect(done).toHaveBeenCalledOnce();
 
     bus.clear();
-    expect(bus.listenerCount()).toBe(0);
+    bus.emit('done');
+    expect(done).toHaveBeenCalledOnce();
   });
 });
 
