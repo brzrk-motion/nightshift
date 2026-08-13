@@ -147,6 +147,9 @@ export {
   ThemesScreen,
   VibesScreen,
 } from './app/screens/index.js';
+export { DASHBOARD_NAME } from './app/screens/dashboardDraft.js';
+export { VIBE_NAME } from './app/screens/vibeDraft.js';
+export { THEME_NAME } from './app/screens/themeDraft.js';
 export {
   assertRenderable,
   detectRuntime,

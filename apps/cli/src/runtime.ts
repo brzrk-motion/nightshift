@@ -42,12 +42,14 @@ import {
   createAppRuntime,
   createThemeEngine,
   deleteTheme,
+  DASHBOARD_NAME,
   loadThemes,
   parseTheme,
   saveTheme,
   serializeTheme,
+  THEME_NAME,
+  VIBE_NAME,
   type AppRuntime,
-  type ThemeColors,
   type ThemeSpec,
 } from '@nightshift/ui';
 import type { CliContext } from './context.js';
@@ -85,98 +87,6 @@ export interface CreateRuntimeOptions {
 function describe(failure: PluginFailure): string {
   const reason = failure.error instanceof Error ? failure.error.message : String(failure.error);
   return `Plugin "${failure.source.id}" did not load: ${reason}`;
-}
-
-const VIBE_NAME = /^[a-z][a-z0-9-]*$/;
-const DASHBOARD_NAME = /^[a-z][a-z0-9-]*$/;
-const THEME_NAME = /^[a-z][a-z0-9-]*$/;
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function rowsFromJson(value: Json | undefined): RowSpec[] | undefined {
-  if (value === undefined) return undefined;
-  if (!Array.isArray(value)) {
-    throw new NightshiftError('CONFIG_INVALID', 'dashboard.save rows must be a list.');
-  }
-  return value as unknown as RowSpec[];
-}
-
-/** Turns a command-args blob into a validated DashboardSpec. */
-function dashboardFromArgs(
-  args: Record<string, Json> | undefined,
-  existingRows?: RowSpec[],
-): DashboardSpec {
-  if (
-    args === undefined ||
-    typeof args['name'] !== 'string' ||
-    !DASHBOARD_NAME.test(args['name'])
-  ) {
-    throw new NightshiftError(
-      'CONFIG_INVALID',
-      'dashboard.save needs a name like `work-board` (lowercase letters, digits, hyphens).',
-    );
-  }
-  const name = args['name'];
-  const title = typeof args['title'] === 'string' ? args['title'] : undefined;
-  const theme = typeof args['theme'] === 'string' ? args['theme'] : undefined;
-  const refresh = args['refresh'];
-  const rowsArg = rowsFromJson(args['rows']);
-  const rows = rowsArg ?? existingRows ?? BLANK_DASHBOARD(name, title).rows;
-
-  const draft: DashboardSpec = {
-    version: 1,
-    name,
-    rows,
-    ...(title === undefined || title === '' ? {} : { title }),
-    ...(theme === undefined || theme === '' ? {} : { theme }),
-  };
-  if (refresh !== undefined) {
-    if (typeof refresh !== 'number' || !Number.isFinite(refresh) || refresh < 0) {
-      throw new NightshiftError('CONFIG_INVALID', 'dashboard.save refresh must be a number.');
-    }
-    draft.refresh = refresh;
-  }
-
-  return parseDashboard(serializeDashboard(draft), { source: 'dashboard.save' });
-}
-
-/** Turns a command-args blob into a validated VibeSpec. */
-function vibeFromArgs(args: Record<string, Json> | undefined): VibeSpec {
-  if (args === undefined || typeof args['name'] !== 'string' || !VIBE_NAME.test(args['name'])) {
-    throw new NightshiftError(
-      'CONFIG_INVALID',
-      'vibe.save needs a name like `locked-in` (lowercase letters, digits, hyphens).',
-    );
-  }
-  // Round-trip through serialize/parse so the same rules hand-edited YAML
-  // gets applied to the form — one validator, two entry points.
-  return parseVibe(serializeVibe(args as unknown as VibeSpec), { source: 'vibe.save' });
-}
-
-/** Turns a command-args blob into a validated ThemeSpec. */
-function themeFromArgs(args: Record<string, Json> | undefined): ThemeSpec {
-  if (args === undefined || typeof args['name'] !== 'string' || !THEME_NAME.test(args['name'])) {
-    throw new NightshiftError(
-      'CONFIG_INVALID',
-      'theme.save needs a name like `forest` (lowercase letters, digits, hyphens).',
-    );
-  }
-  const appearance = args['appearance'];
-  if (appearance !== 'dark' && appearance !== 'light') {
-    throw new NightshiftError('CONFIG_INVALID', "theme.save appearance must be 'dark' or 'light'.");
-  }
-  const colorsInput = args['colors'];
-  if (!isRecord(colorsInput)) {
-    throw new NightshiftError('CONFIG_INVALID', 'theme.save needs a colors object.');
-  }
-  const draft: ThemeSpec = {
-    name: args['name'],
-    appearance,
-    colors: colorsInput as unknown as ThemeColors,
-  };
-  return parseTheme(serializeTheme(draft), { source: 'theme.save' });
 }
 
 function publishCatalog(
@@ -510,7 +420,26 @@ export async function createNightshiftRuntime(
       const existing = dashboards.find(
         (dashboard) => dashboard.name === (typeof args?.['name'] === 'string' ? args['name'] : ''),
       );
-      const spec = dashboardFromArgs(args, existing?.rows);
+      const name = typeof args?.['name'] === 'string' ? args['name'] : '';
+      const rows =
+        args?.['rows'] !== undefined
+          ? (args['rows'] as unknown as RowSpec[])
+          : (existing?.rows ?? BLANK_DASHBOARD(name).rows);
+      const spec = parseDashboard(
+        serializeDashboard({
+          version: 1,
+          name,
+          rows,
+          ...(typeof args?.['title'] === 'string' && args['title'] !== ''
+            ? { title: args['title'] }
+            : {}),
+          ...(typeof args?.['theme'] === 'string' && args['theme'] !== ''
+            ? { theme: args['theme'] }
+            : {}),
+          ...(args?.['refresh'] !== undefined ? { refresh: args['refresh'] as number } : {}),
+        }),
+        { source: 'dashboard.save' },
+      );
       await saveDashboard(context.paths.dashboardsDir, spec);
       userDashboardNames.add(spec.name);
       const exists = dashboards.some((dashboard) => dashboard.name === spec.name);
@@ -577,7 +506,7 @@ export async function createNightshiftRuntime(
     category: 'Vibes',
     hidden: true,
     run: async (args) => {
-      const spec = vibeFromArgs(args);
+      const spec = parseVibe(serializeVibe(args as unknown as VibeSpec), { source: 'vibe.save' });
       await saveVibe(context.paths.vibesDir, spec);
       installVibe(spec);
       userVibeNames.add(spec.name);
@@ -624,7 +553,9 @@ export async function createNightshiftRuntime(
     category: 'Theme',
     hidden: true,
     run: async (args) => {
-      const spec = themeFromArgs(args);
+      const spec = parseTheme(serializeTheme(args as unknown as ThemeSpec), {
+        source: 'theme.save',
+      });
       await saveTheme(context.paths.themesDir, spec);
       app.themes.register(spec);
       userThemeNames.add(spec.name);
