@@ -298,6 +298,7 @@ export function mergeDashboards(
   );
 }
 
+/** Removes `dashboards/<name>.yaml`. Refused when the file does not exist. */
 export async function deleteDashboard(directory: string, name: string): Promise<void> {
   return deleteYamlResource(directory, name, {
     notFoundCode: 'DASHBOARD_NOT_FOUND',

@@ -3,12 +3,32 @@ import { extname, join } from 'node:path';
 import { NightshiftError, type NightshiftErrorCode } from './errors.js';
 
 /** File extensions treated as YAML resources in a config directory. */
-export const YAML_EXTENSIONS = new Set(['.yaml', '.yml']);
+export const YAML_EXTENSIONS: ReadonlySet<string> = new Set(['.yaml', '.yml']);
 
 export interface YamlDirLoadResult<T> {
   items: T[];
   /** Files that failed to parse, so the app can report them and carry on. */
   failed: { path: string; error: unknown }[];
+}
+
+/**
+ * Builds `<directory>/<name>.yaml`, refusing names that could escape the
+ * target directory (`../`, slashes, NUL, `.`, `..`, or empty).
+ */
+function yamlResourcePath(directory: string, name: string): string {
+  if (
+    name.length === 0 ||
+    name === '.' ||
+    name === '..' ||
+    name.includes('/') ||
+    name.includes('\\') ||
+    name.includes('\0')
+  ) {
+    throw new NightshiftError('CONFIG_INVALID', `Invalid resource name "${name}".`, {
+      hint: 'Resource names must be a single path segment (no slashes).',
+    });
+  }
+  return join(directory, `${name}.yaml`);
 }
 
 /**
@@ -51,7 +71,7 @@ export async function saveYamlResource(
   name: string,
   content: string,
 ): Promise<string> {
-  const path = join(directory, `${name}.yaml`);
+  const path = yamlResourcePath(directory, name);
   try {
     await mkdir(directory, { recursive: true });
     await writeFile(path, content, 'utf8');
@@ -73,7 +93,7 @@ export async function deleteYamlResource(
   name: string,
   options: DeleteYamlResourceOptions,
 ): Promise<void> {
-  const path = join(directory, `${name}.yaml`);
+  const path = yamlResourcePath(directory, name);
   try {
     await unlink(path);
   } catch (error) {

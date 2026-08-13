@@ -55,7 +55,15 @@ describe('deleteYamlResource', () => {
   });
 
   it('errors when the file is missing', async () => {
-    await expect(deleteYamlResource(dir, 'nope', options)).rejects.toThrowError(/No user file/);
+    await expect(deleteYamlResource(dir, 'nope', options)).rejects.toMatchObject({
+      code: 'DASHBOARD_NOT_FOUND',
+    });
+  });
+
+  it('rejects names that could escape the directory', async () => {
+    await expect(deleteYamlResource(dir, '../escape', options)).rejects.toMatchObject({
+      code: 'CONFIG_INVALID',
+    });
   });
 });
 
@@ -100,5 +108,24 @@ describe('loadYamlDir', () => {
       items: [],
       failed: [],
     });
+  });
+});
+
+describe('resource name validation', () => {
+  let dir: string;
+
+  beforeEach(async () => {
+    dir = await mkdtemp(join(tmpdir(), 'nightshift-yaml-name-'));
+  });
+
+  afterEach(async () => {
+    await rm(dir, { recursive: true, force: true });
+  });
+
+  it('refuses save names with path separators', async () => {
+    await expect(saveYamlResource(dir, 'nested/focus', 'x\n')).rejects.toMatchObject({
+      code: 'CONFIG_INVALID',
+    });
+    await expect(readFile(join(dir, 'nested', 'focus.yaml'), 'utf8')).rejects.toThrow();
   });
 });

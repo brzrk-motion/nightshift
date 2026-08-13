@@ -31,7 +31,7 @@ pnpm workspaces + Turborepo. Workspace globs (`pnpm-workspace.yaml`):
 nightshift.mjs         Build-and-launch script for local development
 mcp-up.mjs             Build-and-launch script for the MCP servers in mcp/
 apps/cli               The nightshift command line interface (entry point)
-packages/core          Runtime primitives: errors, versions, events, disposables
+packages/core          Runtime primitives: errors, versions, events, disposables, YAML dir I/O
 packages/entities      Shared observable state — the contract for plugin state
 packages/sdk           The public interface plugins are written against
 packages/ui            Application shell, component library and themes
@@ -301,9 +301,10 @@ and is optional — not configured in this repo.
 
 - `core` provides `NightshiftError` (typed error code + optional `cause`/
   `hint`), a monomorphic `EventBus<T>`, `Disposable`/`Unsubscribe` types and a
-  disposable bag (`createDisposableBag`), and `NIGHTSHIFT_API_VERSION` — the
-  SDK contract version plugins are checked against (`isCompatible` in the
-  SDK, enforced by the plugin host).
+  disposable bag (`createDisposableBag`), shared YAML directory helpers
+  (`loadYamlDir` / `saveYamlResource` / `deleteYamlResource`), and
+  `NIGHTSHIFT_API_VERSION` — the SDK contract version plugins are checked
+  against (`isCompatible` in the SDK, enforced by the plugin host).
 - `entities` is the one piece of state that's shared across the whole app: a
   keyed, observable store (`EntityStore`) of small JSON blobs (`register`,
   `get`, `set`, `update`, `remove`, `subscribe`). Nothing about dashboards,
