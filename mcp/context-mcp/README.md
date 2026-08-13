@@ -15,14 +15,14 @@ node dist/bin.js                 # stdio, for a client that spawns the server it
 node dist/bin.js --http --port 7411
 ```
 
-| Option          | Meaning                                                    |
-| --------------- | ---------------------------------------------------------- |
-| `--root <path>` | Repository to index. Defaults to the git root above `cwd`. |
-| `--http`        | Serve streamable HTTP instead of stdio.                    |
-| `--port <n>`    | HTTP port. Defaults to `7411`.                             |
-| `--host <host>` | HTTP host. Defaults to `127.0.0.1`.                        |
-| `--no-watch`    | Index once; do not follow file changes.                    |
-| `--quiet`       | Suppress the stderr log.                                   |
+| Option          | Meaning                                                       |
+| --------------- | ------------------------------------------------------------- |
+| `--root <path>` | Repository to index. Defaults to the git root above `cwd`.    |
+| `--http`        | Serve streamable HTTP instead of stdio.                       |
+| `--port <n>`    | HTTP port. Defaults to `7411`.                                |
+| `--host <host>` | HTTP host. Defaults to `127.0.0.1`.                           |
+| `--no-watch`    | Index once; do not follow file changes.                       |
+| `--quiet`       | Suppress info-level stderr log output (warnings still print). |
 
 Under `--http` the MCP endpoint is `/mcp` and `GET /health` returns the current
 index statistics — that is what `mcp-up` polls. Logs always go to stderr,

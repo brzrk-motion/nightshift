@@ -30,7 +30,7 @@ Usage: nightshift-context-mcp [options]
   --port <n>      HTTP port (default: 7411)
   --host <host>   HTTP host (default: 127.0.0.1)
   --no-watch      Index once and do not follow file changes
-  --quiet         Suppress log output on stderr
+  --quiet         Suppress info-level log output on stderr
   --help          Show this message
 `;
 
@@ -116,7 +116,6 @@ async function main(): Promise<number> {
     process.stderr.write(`${new Date().toISOString()} info ${SERVER_NAME}: ${message}\n`);
   };
   const logWarn = (message: string): void => {
-    if (parsed.quiet) return;
     process.stderr.write(`${new Date().toISOString()} warn ${SERVER_NAME}: ${message}\n`);
   };
 
