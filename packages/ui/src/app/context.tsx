@@ -70,10 +70,6 @@ export function useRequiredRuntime(): AppRuntime {
   return runtime;
 }
 
-export function useEntityStore(): EntityStore {
-  return useRequiredRuntime().entities;
-}
-
 export function useCommands(): CommandRegistry {
   return useRequiredRuntime().commands;
 }

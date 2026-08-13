@@ -122,7 +122,6 @@ export {
   useCommands,
   useEntities,
   useEntity,
-  useEntityStore,
   useRequiredRuntime,
   useRuntime,
   useTheme,
