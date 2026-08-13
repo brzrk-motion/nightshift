@@ -42,12 +42,7 @@ export {
   type PermissionPolicyOptions,
   type PluginGrant,
 } from './plugins/permissions.js';
-export {
-  clearPluginStorage,
-  createPluginStorage,
-  storagePath,
-  type PluginStorageOptions,
-} from './plugins/storage.js';
+export { createPluginStorage, storagePath, type PluginStorageOptions } from './plugins/storage.js';
 export { resolvePluginSpecifier, type ResolveBase } from './plugins/resolve.js';
 export {
   createPluginHost,
