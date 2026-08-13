@@ -43,6 +43,26 @@ async function waitForDashboardFile(path: string): Promise<string> {
   throw new Error(`dashboard file was not written: ${path}`);
 }
 
+/**
+ * `waitForFrame` only samples native renderer ticks. Async save/reload does
+ * not produce those ticks until React flushes, so poll `renderOnce` instead.
+ */
+async function waitUntilFrame(
+  setup: Awaited<ReturnType<typeof testRender>>,
+  predicate: (frame: string) => boolean,
+  timeoutMs = 5000,
+): Promise<string> {
+  const deadline = Date.now() + timeoutMs;
+  let last = setup.captureCharFrame();
+  while (Date.now() < deadline) {
+    await setup.renderOnce();
+    last = setup.captureCharFrame();
+    if (predicate(last)) return last;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  throw new Error(`timed out waiting for frame. last:\n${last}`);
+}
+
 const twoWidgets: DashboardSpec = parseDashboard(
   `name: home
 title: Home
@@ -410,12 +430,12 @@ describe.skipIf(!renderable)('DashboardApp edit mode', () => {
       await press(() => setup.mockInput.pressKey('d'));
       await press(() => setup.mockInput.pressKey('s', { ctrl: true }));
 
-      const frame = await setup.waitForFrame((f) => !f.includes('editing'));
-      expect(frame).not.toContain('editing');
-      expect(frame).not.toContain('core.note');
-
       const written = await waitForDashboardFile(join(dir, 'home.yaml'));
       expect(written).toContain('core.note');
+
+      const frame = await waitUntilFrame(setup, (f) => !f.includes('editing'));
+      expect(frame).not.toContain('editing');
+      expect(frame).not.toContain('core.note');
     } finally {
       setup.renderer.destroy();
     }
@@ -437,14 +457,14 @@ describe.skipIf(!renderable)('DashboardApp edit mode', () => {
       await setup.renderOnce();
       await press(() => setup.mockInput.pressKey('e'));
       await press(() => setup.mockInput.pressKey('s', { ctrl: true }));
+      await waitForDashboardFile(join(dir, 'home.yaml'));
       expect(runtime.commands.get('dashboard.open.home')).toBeTruthy();
 
       await act(async () => {
         await runtime.commands.run('dashboard.reload');
       });
-      await setup.renderOnce();
-
-      expect(setup.captureCharFrame()).toContain('nightshift · Home');
+      const frame = await waitUntilFrame(setup, (f) => f.includes('nightshift · Home'));
+      expect(frame).toContain('nightshift · Home');
     } finally {
       setup.renderer.destroy();
     }

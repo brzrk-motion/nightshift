@@ -82,6 +82,7 @@ function HabitRow({
   today,
   nameWidth,
   showStreaks,
+  density,
 }: {
   habit: Habit;
   state: HabitState;
@@ -89,11 +90,13 @@ function HabitRow({
   today: string;
   nameWidth: number;
   showStreaks: boolean;
+  density: HabitDensity;
 }): ReactNode {
   const theme = useTheme();
   const commands = useCommands();
   const [editing, setEditing] = useState(false);
   const streaks = streakSummary(state.completions[habit.id] ?? [], today);
+  const compact = density === 'compact';
 
   if (editing) {
     return (
@@ -109,26 +112,35 @@ function HabitRow({
   }
 
   return (
-    <box style={{ flexDirection: 'row', gap: 1, alignItems: 'center' }}>
+    <box style={{ flexDirection: 'row', gap: 1, alignItems: 'center', overflow: 'hidden' }}>
       <text fg={theme.colors.text}>
         {truncateName(habit.name, nameWidth).padEnd(Math.min(nameWidth, habit.name.length + 1))}
       </text>
       {dates.map((date) => {
         const done = isCompleted(state, habit.id, date);
-        return (
-          <Button
-            key={date}
-            label={done ? '[x]' : '[ ]'}
-            onPress={() => void commands.run('habit.toggle', { id: habit.id, date })}
-          />
-        );
+        const label = done ? '[x]' : '[ ]';
+        const toggle = () => void commands.run('habit.toggle', { id: habit.id, date });
+        // Bordered Button is 3 rows × ~7 cols — seven of them overflow a
+        // compact cell. Compact day marks are one-row text so the name fits.
+        if (compact) {
+          return (
+            <box key={date} onMouseDown={toggle} style={{ height: 1, flexShrink: 0 }}>
+              <text fg={done ? theme.colors.accent : theme.colors.text}>{label}</text>
+            </box>
+          );
+        }
+        return <Button key={date} label={label} onPress={toggle} />;
       })}
       {showStreaks ? (
         <text fg={theme.colors.accentSecondary}>{` ${streaks.current}/${streaks.longest}`}</text>
       ) : null}
-      <box style={{ flexGrow: 1 }} />
-      <Button label="Edit" onPress={() => setEditing(true)} />
-      <Button label="Del" onPress={() => void commands.run('habit.remove', { id: habit.id })} />
+      {compact ? null : (
+        <>
+          <box style={{ flexGrow: 1 }} />
+          <Button label="Edit" onPress={() => setEditing(true)} />
+          <Button label="Del" onPress={() => void commands.run('habit.remove', { id: habit.id })} />
+        </>
+      )}
     </box>
   );
 }
@@ -183,6 +195,7 @@ export function HabitTrackerWidget({ width }: WidgetProps): ReactNode {
                 today={today}
                 nameWidth={nameWidth}
                 showStreaks={showStreaks}
+                density={density}
               />
             ))}
           </scrollbox>
