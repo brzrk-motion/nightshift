@@ -358,7 +358,10 @@ export default definePlugin({
     context.registerAutomation({
       name: 'ambient-noise.pause-spotify',
       when: { type: 'entity', entity: PLAYER_ENTITY, key: 'status' },
-      and: [{ type: 'equals', entity: PLAYER_ENTITY, key: 'status', value: 'playing' }],
+      and: [
+        { type: 'equals', entity: PLAYER_ENTITY, key: 'status', value: 'playing' },
+        { type: 'equals', entity: PLAYER_ENTITY, key: 'output', value: 'device' },
+      ],
       then: [{ command: 'spotify.pause' }],
     });
 

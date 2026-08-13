@@ -71,7 +71,7 @@ export function isTransportActive(status: PlayerStatus): boolean {
 export function selectClip(clips: ClipPublic[], id: string | null): ClipPublic | undefined {
   if (id) {
     const match = clips.find((clip) => clip.id === id);
-    if (match) return match;
+    if (match?.status === 'ok') return match;
   }
   return clips.find((clip) => clip.status === 'ok') ?? clips[0];
 }

@@ -47,6 +47,7 @@ export class Mixer {
   playing = false;
   writeError: string | null = null;
   readonly levels: number[] = [];
+  private writePending = false;
 
   constructor(sink: AudioSink = new NullSink()) {
     this.sink = sink;
@@ -57,6 +58,7 @@ export class Mixer {
   }
 
   setSink(sink: AudioSink): void {
+    this.writePending = false;
     this.sink.close();
     this.sink = sink;
   }
@@ -203,14 +205,25 @@ export class Mixer {
 
   close(): void {
     this.playing = false;
+    this.writePending = false;
     this.sink.close();
   }
 
   private writeChunk(chunk: Int16Array): void {
+    if (this.writePending) return;
     try {
       const result = this.sink.write(toBuffer(chunk));
-      if (result !== undefined && typeof result.then === 'function') {
-        void result.catch((error: unknown) => this.failSink(error));
+      if (result instanceof Promise) {
+        this.writePending = true;
+        void result.then(
+          () => {
+            this.writePending = false;
+          },
+          (error: unknown) => {
+            this.writePending = false;
+            this.failSink(error);
+          },
+        );
       }
     } catch (error: unknown) {
       this.failSink(error);

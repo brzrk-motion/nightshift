@@ -6,11 +6,11 @@
 
 ## Plugin manifest
 
-| Field        | Value                                                                                 |
-| ------------ | ------------------------------------------------------------------------------------- |
-| `id`         | `ambient-noise`                                                                       |
-| Package      | `@nightshift/plugin-ambient-noise`                                                    |
-| Capabilities | `entities:read`, `entities:write`, `widgets:register`, `commands:register`, `storage` |
+| Field        | Value                                                                                                         |
+| ------------ | ------------------------------------------------------------------------------------------------------------- |
+| `id`         | `ambient-noise`                                                                                               |
+| Package      | `@nightshift/plugin-ambient-noise`                                                                            |
+| Capabilities | `entities:read`, `entities:write`, `widgets:register`, `commands:register`, `automations:register`, `storage` |
 
 No `network` or `shell` grant. Bundled with CLI defaults (same pattern as `focus` / `clock` / `system-monitor`).
 
@@ -43,7 +43,7 @@ Invalid args soft-fail (log); must not throw to the host.
 
 No args. Starts or resumes the current clip. No-op if catalog empty or no `ok` clip.
 
-**Effect**: `status` → `loading` while the clip decodes, then `playing` (or `unavailable` / keeps `empty`). Opens the audio sink lazily. Pause during `loading` cancels the in-flight play.
+**Effect**: `status` → `loading` while the clip decodes, then `playing`. Decode failure → `paused` + toast (clip stays `ok`). `unavailable` only if no `ok` clip; empty catalog stays `empty`. Opens the audio sink lazily. Pause during `loading` cancels the in-flight play.
 
 ### `ambient-noise.pause`
 

@@ -112,6 +112,33 @@ describe('Mixer', () => {
     expect(mixer.currentClipId()).toBe('b');
   });
 
+  it('skips ticks while a device write is still in flight', async () => {
+    let writes = 0;
+    let release!: () => void;
+    const firstWrite = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const sink: AudioSink = {
+      backend: 'device',
+      write: () => {
+        writes += 1;
+        return writes === 1 ? firstWrite : Promise.resolve();
+      },
+      close() {},
+    };
+    const mixer = new Mixer(sink);
+    mixer.load('a', toneBuffer(32, 100));
+    mixer.play('a');
+    mixer.tick(4);
+    mixer.tick(4);
+    mixer.tick(4);
+    expect(writes).toBe(1);
+    release();
+    await firstWrite;
+    mixer.tick(4);
+    expect(writes).toBe(2);
+  });
+
   it('falls back to a silent sink when device writes reject', async () => {
     const sink: AudioSink = {
       backend: 'device',

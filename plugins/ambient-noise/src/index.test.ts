@@ -9,7 +9,7 @@ import type {
   PluginContext,
   PluginWidget,
 } from '@nightshift/sdk';
-import { PLAYER_ENTITY, type PlayerState } from './entity.js';
+import { PLAYER_ENTITY, SETTINGS_STORAGE_KEY, type PlayerState } from './entity.js';
 import type { PcmBuffer } from './wav.js';
 
 const loadGate = vi.hoisted(() => ({
@@ -38,12 +38,12 @@ vi.mock('./decode.js', async (importOriginal) => {
 
 const { default: plugin } = await import('./index.js');
 
-function fakeContext() {
+function fakeContext(init?: { storageData?: Record<string, Json> }) {
   const entities = new Map<string, Json>();
   const commands = new Map<string, PluginCommand>();
   const widgets: PluginWidget[] = [];
   const automations: AutomationSpec[] = [];
-  const storageData = new Map<string, Json>();
+  const storageData = new Map<string, Json>(Object.entries(init?.storageData ?? {}));
   const disposers: (() => void)[] = [];
   const notify = vi.fn();
 
@@ -145,6 +145,24 @@ describe('ambient-noise plugin', () => {
     for (const dispose of disposers) dispose();
   });
 
+  it('starts paused and can play when the stored clip id is missing', async () => {
+    const { context, entities, commands, disposers } = fakeContext({
+      storageData: {
+        [SETTINGS_STORAGE_KEY]: { version: 1, currentClipId: 'does-not-exist' },
+      },
+    });
+    await plugin.setup(context);
+    const state = player(entities);
+    expect(state.status).toBe('paused');
+    expect(state.currentClipId).not.toBe('does-not-exist');
+    expect(state.clips.find((clip) => clip.id === state.currentClipId)?.status).toBe('ok');
+
+    await commands.get('ambient-noise.play')?.run();
+    expect(player(entities).status).toBe('playing');
+
+    for (const dispose of disposers) dispose();
+  });
+
   it('pauses Spotify when ambient playback starts', async () => {
     const { context, automations, disposers } = fakeContext();
     await plugin.setup(context);
@@ -153,7 +171,10 @@ describe('ambient-noise plugin', () => {
     expect(automations[0]).toMatchObject({
       name: 'ambient-noise.pause-spotify',
       when: { type: 'entity', entity: PLAYER_ENTITY, key: 'status' },
-      and: [{ type: 'equals', entity: PLAYER_ENTITY, key: 'status', value: 'playing' }],
+      and: [
+        { type: 'equals', entity: PLAYER_ENTITY, key: 'status', value: 'playing' },
+        { type: 'equals', entity: PLAYER_ENTITY, key: 'output', value: 'device' },
+      ],
       then: [{ command: 'spotify.pause' }],
     });
 
