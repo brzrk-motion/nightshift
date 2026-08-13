@@ -149,4 +149,25 @@ describe('Mixer', () => {
     expect(mixer.levels.length).toBeGreaterThan(0);
     expect(mixer.levels.every((value) => value >= 0 && value <= 1)).toBe(true);
   });
+
+  it('drops inactive clip buffers', () => {
+    const mixer = new Mixer();
+    mixer.load('a', toneBuffer(16, 220));
+    mixer.load('b', toneBuffer(16, 440));
+    mixer.play('a');
+    mixer.retainActive();
+    expect(mixer.has('a')).toBe(true);
+    expect(mixer.has('b')).toBe(false);
+  });
+
+  it('keeps both buffers while a crossfade is in progress', () => {
+    const mixer = new Mixer();
+    mixer.load('a', toneBuffer(44100, 220));
+    mixer.load('b', toneBuffer(44100, 880));
+    mixer.play('a');
+    mixer.skipTo('b', { fade: true });
+    mixer.retainActive();
+    expect(mixer.has('a')).toBe(true);
+    expect(mixer.has('b')).toBe(true);
+  });
 });

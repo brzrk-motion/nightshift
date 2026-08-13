@@ -129,4 +129,24 @@ describe.skipIf(!renderable)('PlayerWidget', () => {
       setup.renderer.destroy();
     }
   });
+
+  it('hints at clips.json when the catalog is empty', async () => {
+    const setup = await testRender(
+      <ThemeProvider theme={MIDNIGHT_THEME}>
+        <RuntimeProvider runtime={runtimeWith(initialPlayerState())}>
+          <PlayerWidget options={{}} width={72} height={12} />
+        </RuntimeProvider>
+      </ThemeProvider>,
+      { width: 76, height: 14 },
+    );
+
+    try {
+      await setup.renderOnce();
+      const frame = setup.captureCharFrame();
+      expect(frame).toContain('No ambient clips');
+      expect(frame).toMatch(/clips\.\s*json/);
+    } finally {
+      setup.renderer.destroy();
+    }
+  });
 });

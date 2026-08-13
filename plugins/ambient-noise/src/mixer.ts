@@ -79,6 +79,15 @@ export class Mixer {
     return this.incoming?.clipId ?? this.primary?.clipId ?? null;
   }
 
+  retainActive(): void {
+    const keep = new Set<string>();
+    if (this.primary) keep.add(this.primary.clipId);
+    if (this.incoming) keep.add(this.incoming.clipId);
+    for (const id of this.buffers.keys()) {
+      if (!keep.has(id)) this.buffers.delete(id);
+    }
+  }
+
   positionMs(): number {
     const source = this.incoming ?? this.primary;
     if (!source) return 0;

@@ -42,7 +42,7 @@ export function PlayerWidget({ width, height }: WidgetProps): ReactNode {
     return (
       <EmptyState
         message="No ambient clips"
-        hint="Add WAV files to the plugin test-audio folder."
+        hint="Add WAV or MP3 files to test-audio and list them in clips.json."
       />
     );
   }

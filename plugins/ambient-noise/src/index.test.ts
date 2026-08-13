@@ -9,8 +9,34 @@ import type {
   PluginContext,
   PluginWidget,
 } from '@nightshift/sdk';
-import plugin from './index.js';
 import { PLAYER_ENTITY, type PlayerState } from './entity.js';
+import type { PcmBuffer } from './wav.js';
+
+const loadGate = vi.hoisted(() => ({
+  entered: 0,
+  failNext: false,
+  wait: null as Promise<void> | null,
+}));
+
+vi.mock('./decode.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as {
+    loadClip: (bytes: Uint8Array) => Promise<PcmBuffer>;
+  };
+  return {
+    ...actual,
+    loadClip: async (bytes: Uint8Array) => {
+      loadGate.entered += 1;
+      if (loadGate.wait) await loadGate.wait;
+      if (loadGate.failNext) {
+        loadGate.failNext = false;
+        throw new Error('decode failed');
+      }
+      return actual.loadClip(bytes);
+    },
+  };
+});
+
+const { default: plugin } = await import('./index.js');
 
 function fakeContext() {
   const entities = new Map<string, Json>();
@@ -86,6 +112,9 @@ function player(entities: Map<string, Json>): PlayerState {
 
 beforeEach(() => {
   vi.useFakeTimers();
+  loadGate.entered = 0;
+  loadGate.failNext = false;
+  loadGate.wait = null;
 });
 
 afterEach(() => {
@@ -134,10 +163,8 @@ describe('ambient-noise plugin', () => {
   it('play, pause, and toggle mutate player status with a silent sink', async () => {
     const { context, entities, commands, disposers } = fakeContext();
     await plugin.setup(context);
-    if (player(entities).status === 'empty') {
-      for (const dispose of disposers) dispose();
-      return;
-    }
+    expect(player(entities).clips.length).toBeGreaterThan(0);
+    expect(player(entities).status).not.toBe('empty');
 
     await commands.get('ambient-noise.play')?.run();
     expect(player(entities).status).toBe('playing');
@@ -158,12 +185,7 @@ describe('ambient-noise plugin', () => {
     const { context, entities, commands, disposers } = fakeContext();
     await plugin.setup(context);
     const first = player(entities);
-    if (first.clips.filter((clip) => clip.status === 'ok').length < 2) {
-      await commands.get('ambient-noise.next')?.run();
-      expect(player(entities).currentClipId).toBe(first.currentClipId);
-      for (const dispose of disposers) dispose();
-      return;
-    }
+    expect(first.clips.filter((clip) => clip.status === 'ok').length).toBeGreaterThanOrEqual(2);
 
     const startId = first.currentClipId;
     await commands.get('ambient-noise.next')?.run();
@@ -182,6 +204,61 @@ describe('ambient-noise plugin', () => {
     }
     await commands.get('ambient-noise.select')?.run({ id: 'does-not-exist' });
     expect(player(entities).currentClipId).toBe(last?.id ?? startId);
+
+    for (const dispose of disposers) dispose();
+  });
+
+  it('crossfades when next runs during playback', async () => {
+    const { context, entities, commands, disposers } = fakeContext();
+    await plugin.setup(context);
+    expect(
+      player(entities).clips.filter((clip) => clip.status === 'ok').length,
+    ).toBeGreaterThanOrEqual(2);
+
+    await commands.get('ambient-noise.play')?.run();
+    const startId = player(entities).currentClipId;
+    await commands.get('ambient-noise.next')?.run();
+    const after = player(entities);
+    expect(after.currentClipId).not.toBe(startId);
+    expect(after.status === 'fading' || after.status === 'playing').toBe(true);
+
+    for (const dispose of disposers) dispose();
+  });
+
+  it('does not start playback if pause arrives while a clip is still loading', async () => {
+    vi.useRealTimers();
+    const { context, entities, commands, disposers } = fakeContext();
+    await plugin.setup(context);
+    expect(player(entities).clips.length).toBeGreaterThan(0);
+
+    let release!: () => void;
+    loadGate.wait = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const playRun = commands.get('ambient-noise.play')?.run() ?? Promise.resolve();
+    await vi.waitFor(() => expect(loadGate.entered).toBeGreaterThan(0));
+    await commands.get('ambient-noise.pause')?.run();
+    release();
+    await playRun;
+    expect(player(entities).status).toBe('paused');
+
+    for (const dispose of disposers) dispose();
+  });
+
+  it('keeps playing the current clip when a skip load fails', async () => {
+    const { context, entities, commands, notify, disposers } = fakeContext();
+    await plugin.setup(context);
+    expect(
+      player(entities).clips.filter((clip) => clip.status === 'ok').length,
+    ).toBeGreaterThanOrEqual(2);
+
+    await commands.get('ambient-noise.play')?.run();
+    const startId = player(entities).currentClipId;
+    loadGate.failNext = true;
+    await commands.get('ambient-noise.next')?.run();
+    expect(player(entities).status).toBe('playing');
+    expect(player(entities).currentClipId).toBe(startId);
+    expect(notify).toHaveBeenCalled();
 
     for (const dispose of disposers) dispose();
   });

@@ -64,6 +64,14 @@ export default definePlugin({
     let sinkReady = false;
     let timer: ReturnType<typeof setInterval> | undefined;
     let levelsTick = 0;
+    let generation = 0;
+
+    const beginOp = (): number => {
+      generation += 1;
+      return generation;
+    };
+
+    const isStale = (token: number): boolean => token !== generation;
 
     const clips: ClipPublic[] = toPublicClips(entries);
     const stored = hydrateSettings(await context.storage.get(SETTINGS_STORAGE_KEY));
@@ -202,17 +210,23 @@ export default definePlugin({
     const selectClipId = async (clipId: string, fade: boolean): Promise<void> => {
       const clip = clips.find((item) => item.id === clipId);
       if (!clip || clip.status !== 'ok') return;
-      persist(clipId);
+      const token = beginOp();
       const playing = read().status === 'playing' || read().status === 'fading';
       if (playing) {
         if (!(await ensureLoaded(clipId))) {
-          write({ ...read(), clips, status: 'unavailable', error: 'No playable clip.' });
+          if (isStale(token)) return;
+          context.notify('Could not load that clip.', { tone: 'warning', key: 'clip' });
+          write(snapshot(mixer.fading() ? 'fading' : 'playing'));
           return;
         }
+        if (isStale(token)) return;
+        persist(clipId);
         mixer.skipTo(clipId, { fade });
+        mixer.retainActive();
         write(snapshot(mixer.fading() ? 'fading' : 'playing'));
         return;
       }
+      persist(clipId);
       write({
         ...snapshot('paused'),
         currentClipId: clip.id,
@@ -225,6 +239,7 @@ export default definePlugin({
       id: 'ambient-noise.play',
       title: 'Play ambient noise',
       run: async () => {
+        const token = beginOp();
         const current = read();
         if (current.status === 'empty') return;
         const clip = selectClip(clips, current.currentClipId);
@@ -233,11 +248,16 @@ export default definePlugin({
           return;
         }
         if (!(await ensureLoaded(clip.id))) {
-          write({ ...read(), clips, status: 'unavailable', error: 'No playable clip.' });
+          if (!isStale(token)) {
+            write({ ...read(), clips, status: 'unavailable', error: 'No playable clip.' });
+          }
           return;
         }
+        if (isStale(token)) return;
         await ensureSink();
+        if (isStale(token)) return;
         mixer.play(clip.id);
+        mixer.retainActive();
         startTicks();
         write(snapshot('playing'));
       },
@@ -247,9 +267,11 @@ export default definePlugin({
       id: 'ambient-noise.pause',
       title: 'Pause ambient noise',
       run: () => {
+        beginOp();
         const current = read();
         if (current.status !== 'playing' && current.status !== 'fading') return;
         mixer.pause();
+        mixer.retainActive();
         stopTicks();
         write(snapshot('paused'));
       },
@@ -261,16 +283,22 @@ export default definePlugin({
       run: async () => {
         const current = read();
         if (current.status === 'playing' || current.status === 'fading') {
+          beginOp();
           mixer.pause();
+          mixer.retainActive();
           stopTicks();
           write(snapshot('paused'));
           return;
         }
+        const token = beginOp();
         const clip = selectClip(clips, current.currentClipId);
         if (!clip || clip.status !== 'ok') return;
         if (!(await ensureLoaded(clip.id))) return;
+        if (isStale(token)) return;
         await ensureSink();
+        if (isStale(token)) return;
         mixer.play(clip.id);
+        mixer.retainActive();
         startTicks();
         write(snapshot('playing'));
       },

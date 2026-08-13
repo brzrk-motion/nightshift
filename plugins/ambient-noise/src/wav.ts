@@ -33,10 +33,14 @@ function sampleAt(mono: Float32Array, frame: number): number {
   return a + (b - a) * frac;
 }
 
-export function pcmFromChannels(channels: Float32Array[], sampleRate: number): PcmBuffer {
+export function pcmFromChannels(
+  channels: Float32Array[],
+  sampleRate: number,
+  maxFrameCount = Number.POSITIVE_INFINITY,
+): PcmBuffer {
   const frameCountIn = channels[0]?.length ?? 0;
   const ratio = MIXER_SAMPLE_RATE / sampleRate;
-  const frameCount = Math.max(1, Math.round(frameCountIn * ratio));
+  const frameCount = Math.max(1, Math.min(Math.round(frameCountIn * ratio), maxFrameCount));
   const frames = new Int16Array(frameCount * MIXER_CHANNELS);
   const left = channels[0] ?? new Float32Array(frameCountIn);
   const right = channels[1] ?? left;

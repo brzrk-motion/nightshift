@@ -2,7 +2,8 @@ import { readFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { loadClip } from './decode.js';
+import { loadClip, limitPcm } from './decode.js';
+import { MIXER_CHANNELS, MIXER_SAMPLE_RATE } from './entity.js';
 import { encodePcm16Wav, toneBuffer } from './wav.js';
 
 describe('loadClip', () => {
@@ -22,5 +23,12 @@ describe('loadClip', () => {
 
   it('rejects an unknown format', async () => {
     await expect(loadClip(new Uint8Array([1, 2, 3, 4]))).rejects.toThrow(/unsupported/i);
+  });
+
+  it('caps resident PCM to a loop window', () => {
+    const long = toneBuffer(MIXER_SAMPLE_RATE * 2, 180);
+    const capped = limitPcm(long, MIXER_SAMPLE_RATE);
+    expect(capped.frameCount).toBe(MIXER_SAMPLE_RATE);
+    expect(capped.frames.length).toBe(MIXER_SAMPLE_RATE * MIXER_CHANNELS);
   });
 });
