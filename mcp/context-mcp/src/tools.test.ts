@@ -35,6 +35,14 @@ beforeAll(async () => {
   tools = new Map(createTools(context).map((tool) => [tool.name, tool]));
 });
 
+async function call(name: string, input: unknown = {}): Promise<unknown> {
+  const tool = tools.get(name);
+  if (!tool) throw new Error(`no such tool: ${name}`);
+  const result = await tool.handler(input);
+  expect(result.isError).toBeUndefined();
+  return JSON.parse(result.content[0]?.text ?? 'null');
+}
+
 describe('createTools', () => {
   it('exposes exactly the documented tool set', () => {
     expect([...tools.keys()]).toEqual([
@@ -55,11 +63,25 @@ describe('createTools', () => {
     }
   });
 
+  it('explains an unindexed file instead of failing', async () => {
+    // Tool-layer only: query.fileOutline returns undefined; the adapter maps that
+    // to a structured error payload agents can act on.
+    expect(await call('file_outline', { file: 'src/missing.ts' })).toMatchObject({
+      file: 'src/missing.ts',
+      error: expect.stringContaining('Not indexed'),
+    });
+  });
+
   it('rejects invalid arguments with a readable message', async () => {
     const result = await tools.get('read_lines')?.handler({ file: 'src/timer.ts', startLine: 0 });
 
     expect(result?.isError).toBe(true);
     expect(result?.content[0]?.text).toContain('Invalid arguments');
+  });
+
+  it('reports when reindex cannot pick up a path', async () => {
+    // Tool-layer only: index.update returns undefined; the adapter shapes the miss.
+    expect(await call('reindex', { file: 'src/nope.ts' })).toMatchObject({ indexed: false });
   });
 });
 
