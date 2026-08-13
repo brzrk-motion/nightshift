@@ -10,12 +10,15 @@ import { readFile } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import { resolve } from 'node:path';
 
-import { createMcpHandler } from '@modelcontextprotocol/server';
+import {
+  createMcpHandler,
+  localhostAllowedOrigins,
+  validateOriginHeader,
+} from '@modelcontextprotocol/server';
 import { serveStdio } from '@modelcontextprotocol/server/stdio';
 import { localhostHostValidation, toNodeHandler } from '@modelcontextprotocol/node';
 
 import { createExtractor } from './extract.js';
-import { ideOriginValidation } from './httpGuards.js';
 import { type QueryContext } from './query.js';
 import { createContextServer, SERVER_NAME, SERVER_VERSION } from './server.js';
 import { createCodeIndex } from './store.js';
@@ -162,10 +165,33 @@ async function main(): Promise<number> {
     onerror: (error) => logWarn(`http: ${error.message}`),
   });
   const validateHost = localhostHostValidation();
-  const validateOrigin = ideOriginValidation();
+
+  /** Desktop MCP clients (Cursor, VS Code) send non-http Origin values. */
+  function isAllowedOrigin(origin: string | undefined): boolean {
+    if (origin === undefined) return true;
+    if (
+      origin === 'null' ||
+      origin.startsWith('vscode-file://') ||
+      origin.startsWith('cursor://')
+    ) {
+      return true;
+    }
+    return validateOriginHeader(origin, localhostAllowedOrigins()).ok;
+  }
 
   const server = createServer((request, response) => {
-    if (!validateHost(request, response) || !validateOrigin(request, response)) return;
+    if (!validateHost(request, response)) return;
+    if (!isAllowedOrigin(request.headers.origin)) {
+      response.writeHead(403, { 'content-type': 'application/json' });
+      response.end(
+        JSON.stringify({
+          jsonrpc: '2.0',
+          error: { code: -32_000, message: 'Origin not allowed' },
+          id: null,
+        }),
+      );
+      return;
+    }
 
     const url = new URL(request.url ?? '/', `http://${parsed.host}:${parsed.port}`);
     if (url.pathname === '/health') {
