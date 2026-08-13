@@ -239,6 +239,11 @@ export default definePlugin({
       });
     };
 
+    const failLoad = (): void => {
+      context.notify('Could not load that clip.', { tone: 'warning', key: 'clip' });
+      write({ ...snapshot('paused'), error: 'Could not load that clip.' });
+    };
+
     context.registerCommand({
       id: 'ambient-noise.play',
       title: 'Play ambient noise',
@@ -253,9 +258,7 @@ export default definePlugin({
         }
         write({ ...current, status: 'loading', error: null });
         if (!(await ensureLoaded(clip.id))) {
-          if (!isStale(token)) {
-            write({ ...read(), clips, status: 'unavailable', error: 'No playable clip.' });
-          }
+          if (!isStale(token)) failLoad();
           return;
         }
         if (isStale(token)) return;
@@ -300,9 +303,7 @@ export default definePlugin({
         if (!clip || clip.status !== 'ok') return;
         write({ ...current, status: 'loading', error: null });
         if (!(await ensureLoaded(clip.id))) {
-          if (!isStale(token)) {
-            write({ ...read(), clips, status: 'unavailable', error: 'No playable clip.' });
-          }
+          if (!isStale(token)) failLoad();
           return;
         }
         if (isStale(token)) return;
@@ -358,12 +359,6 @@ export default definePlugin({
       name: 'ambient-noise.pause-spotify',
       when: { type: 'entity', entity: PLAYER_ENTITY, key: 'status' },
       and: [{ type: 'equals', entity: PLAYER_ENTITY, key: 'status', value: 'playing' }],
-      then: [{ command: 'spotify.pause' }],
-    });
-    context.registerAutomation({
-      name: 'ambient-noise.pause-spotify-on-load',
-      when: { type: 'entity', entity: PLAYER_ENTITY, key: 'status' },
-      and: [{ type: 'equals', entity: PLAYER_ENTITY, key: 'status', value: 'loading' }],
       then: [{ command: 'spotify.pause' }],
     });
 

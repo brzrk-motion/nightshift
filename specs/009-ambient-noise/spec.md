@@ -83,7 +83,7 @@ When there is enough space and audio is playing, the widget may show a simple ac
 
 - Empty or missing `test-audio` catalog: widget shows an empty state explaining that no clips are bundled; play/next/previous are no-ops (no crash).
 - Unreadable or corrupt clip file: that clip is skipped or marked unavailable; other clips still play; a short error is logged and optionally toasted once.
-- Unsupported audio format for a file: treat as unreadable (v1 ships WAV PCM; see Assumptions).
+- Unsupported audio format for a file: treat as unreadable (v1 ships WAV PCM and MP3; see Assumptions).
 - Rapid next/previous during a crossfade: a new cycle cancels the in-progress fade and starts a new fade to the newly selected clip (no stacked overlapping tracks beyond the two-mix).
 - Plugin unload / Nightshift quit: playback stops and the audio device is released.
 - Playback continues if the widget is removed from the dashboard while playing (ambient sound is process-wide); it stops on plugin teardown.
@@ -129,7 +129,7 @@ When there is enough space and audio is playing, the widget may show a simple ac
 
 - This is a Nightshift **plugin** (app), not a host package; it ships bundled with the CLI like `focus` / `clock` / `system-monitor`.
 - Clip files live under `plugins/ambient-noise/test-audio/` (as provided for testing). A small catalog file maps files to display names. If that folder is empty in a checkout, implementation adds short fixture WAVs for tests and documents how to drop in real samples.
-- v1 playback format is **WAV PCM** (typically 16-bit). If supplied samples are another format, they are converted to WAV as part of implementation rather than adding an MP3/OGG decoder.
+- v1 playback formats are **WAV PCM** (typically 16-bit) and **MP3** (decoded at play with WASM mpg123). Other formats are treated as unreadable.
 - Local speakers only — no streaming, no Spotify, no network. No new SDK capability; audio is local output with a mockable sink so CI stays silent.
 - Crossfade duration is a fixed default (~1.5 s), not user-configurable in v1.
 - No volume slider, playlist editor, or user-import of extra files in v1 — catalog is bundled.

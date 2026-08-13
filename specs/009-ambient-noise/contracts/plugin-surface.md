@@ -2,7 +2,7 @@
 
 **Feature**: `009-ambient-noise`  
 **Audience**: Dashboard YAML authors, vibe/automation authors, plugin maintainers  
-**Transport**: In-process Nightshift SDK; local WAV files; local audio device
+**Transport**: In-process Nightshift SDK; local WAV/MP3 files; local audio device
 
 ## Plugin manifest
 
@@ -149,16 +149,16 @@ Key: `settings`
 
 ## Failure behavior
 
-| Condition                              | Behavior                                                                               |
-| -------------------------------------- | -------------------------------------------------------------------------------------- |
-| Missing `test-audio/` or empty catalog | `status: 'empty'`; EmptyState; commands no-op                                          |
-| Missing clip file                      | that clip `unavailable` at catalog load; others play                                   |
-| Decode/play failure                    | current command fails (toast / `unavailable` player status); clip stays `ok` for retry |
-| All clips unavailable                  | `status: 'unavailable'`                                                                |
-| No audio device / silent backend       | play still updates state; `output: 'silent'` + hint                                    |
-| Device open failure                    | `output: 'error'`; toast once (`key: 'output'`); Nightshift stays up                   |
-| Corrupt storage                        | first `ok` clip; not playing                                                           |
-| Plugin unload                          | sink closed; timer cleared                                                             |
+| Condition                              | Behavior                                                             |
+| -------------------------------------- | -------------------------------------------------------------------- |
+| Missing `test-audio/` or empty catalog | `status: 'empty'`; EmptyState; commands no-op                        |
+| Missing clip file                      | that clip `unavailable` at catalog load; others play                 |
+| Decode/play failure                    | toast; `status: 'paused'` with `error`; clip stays `ok` for retry    |
+| All clips unavailable                  | `status: 'unavailable'`                                              |
+| No audio device / silent backend       | play still updates state; `output: 'silent'` + hint                  |
+| Device open failure                    | `output: 'error'`; toast once (`key: 'output'`); Nightshift stays up |
+| Corrupt storage                        | first `ok` clip; not playing                                         |
+| Plugin unload                          | sink closed; timer cleared                                           |
 
 ## SDK components used by widget
 

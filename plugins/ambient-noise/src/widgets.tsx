@@ -81,6 +81,8 @@ export function PlayerWidget({ width, height }: WidgetProps): ReactNode {
       </text>
       {state.status === 'loading' ? (
         <text fg={theme.colors.muted}>{clip('Loading…', nameWidth)}</text>
+      ) : state.error ? (
+        <text fg={theme.colors.muted}>{clip(state.error, nameWidth)}</text>
       ) : null}
       {state.output !== 'device' && state.outputMessage ? (
         <text fg={theme.colors.muted}>{clip(state.outputMessage, nameWidth)}</text>

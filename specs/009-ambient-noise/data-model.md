@@ -120,7 +120,7 @@ Do not persist `playing`.
 
 | Layer   | Key / id                             | Contents                        |
 | ------- | ------------------------------------ | ------------------------------- |
-| Files   | `plugins/ambient-noise/test-audio/*` | WAV clips + `clips.json`        |
+| Files   | `plugins/ambient-noise/test-audio/*` | WAV/MP3 clips + `clips.json`    |
 | Storage | `settings`                           | `{ version: 1, currentClipId }` |
 | Entity  | `ambient-noise.player`               | `PlayerState`                   |
 

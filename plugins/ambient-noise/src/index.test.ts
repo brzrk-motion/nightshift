@@ -149,16 +149,11 @@ describe('ambient-noise plugin', () => {
     const { context, automations, disposers } = fakeContext();
     await plugin.setup(context);
 
-    expect(automations).toHaveLength(2);
+    expect(automations).toHaveLength(1);
     expect(automations[0]).toMatchObject({
       name: 'ambient-noise.pause-spotify',
       when: { type: 'entity', entity: PLAYER_ENTITY, key: 'status' },
       and: [{ type: 'equals', entity: PLAYER_ENTITY, key: 'status', value: 'playing' }],
-      then: [{ command: 'spotify.pause' }],
-    });
-    expect(automations[1]).toMatchObject({
-      name: 'ambient-noise.pause-spotify-on-load',
-      and: [{ type: 'equals', entity: PLAYER_ENTITY, key: 'status', value: 'loading' }],
       then: [{ command: 'spotify.pause' }],
     });
 
@@ -281,12 +276,18 @@ describe('ambient-noise plugin', () => {
     for (const dispose of disposers) dispose();
   });
 
-  it('marks the player unavailable when toggle cannot decode', async () => {
-    const { context, entities, commands, disposers } = fakeContext();
+  it('stays paused and toasts when toggle cannot decode, then play can retry', async () => {
+    const { context, entities, commands, notify, disposers } = fakeContext();
     await plugin.setup(context);
     loadGate.failNext = true;
     await commands.get('ambient-noise.toggle')?.run();
-    expect(player(entities).status).toBe('unavailable');
+    expect(player(entities).status).toBe('paused');
+    expect(player(entities).error).toMatch(/could not load/i);
+    expect(notify).toHaveBeenCalled();
+
+    await commands.get('ambient-noise.play')?.run();
+    expect(player(entities).status).toBe('playing');
+    expect(player(entities).error).toBeNull();
 
     for (const dispose of disposers) dispose();
   });
