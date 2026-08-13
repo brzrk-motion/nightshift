@@ -451,10 +451,10 @@ tooling, not part of the application — nothing in `apps/` or `packages/` depen
 on them.
 
 ```bash
-./mcp-up.sh                        # build every server, launch it, print the endpoints
-./mcp-up.sh --check                # verify each one starts and answers, then exit
-./mcp-up.sh --write-cursor-config  # merge the endpoints into .cursor/mcp.json
-./mcp-up.sh --only context --no-build
+pnpm mcp:up                        # build every server, launch it, print the endpoints
+pnpm mcp:up --check                # verify each one starts and answers, then exit
+pnpm mcp:up --write-cursor-config  # merge the endpoints into .cursor/mcp.json
+pnpm mcp:up --only context --no-build
 ```
 
 ```
@@ -498,7 +498,7 @@ reading whole files to find it. See
 
 ```
 nightshift.mjs         Build-and-launch script for local development
-mcp-up.sh              Build-and-launch script for the MCP servers
+mcp-up.mjs             Build-and-launch script for the MCP servers
 apps/cli               The nightshift command line interface
 packages/core          Runtime primitives: errors, versions, shared types
 packages/entities      Shared observable state — the contract for plugin state
@@ -527,7 +527,7 @@ pnpm lint        # eslint
 pnpm typecheck   # tsc --noEmit, tests included
 pnpm check       # format:check + lint + typecheck + test (also the pre-commit hook)
 pnpm format      # prettier --write
-pnpm mcp:up      # build and run the MCP servers (same as ./mcp-up.sh)
+pnpm mcp:up      # build and run the MCP servers
 ```
 
 Turborepo drives the task graph, so `pnpm build` builds dependencies first and
