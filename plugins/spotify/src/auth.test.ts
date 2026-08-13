@@ -14,7 +14,9 @@ import {
   SPOTIFY_LOGIN_URI,
   SPOTIFY_REDIRECT_URI,
   SPOTIFY_SCOPES,
+  STORED_AUTH_VERSION,
   isSpotifyStoredAuth,
+  parseStoredAuth,
   sessionFromStored,
 } from './entity.js';
 
@@ -150,7 +152,7 @@ describe('createAuthWaiter loopback', () => {
 describe('applyTokenResponse', () => {
   it('stores access token, expiry and optional refresh token', () => {
     const next = applyTokenResponse(
-      { clientId: 'id', clientSecret: 'secret', refreshToken: 'old' },
+      { version: STORED_AUTH_VERSION, clientId: 'id', clientSecret: 'secret', refreshToken: 'old' },
       {
         access_token: 'access',
         token_type: 'Bearer',
@@ -166,7 +168,12 @@ describe('applyTokenResponse', () => {
 
   it('keeps the previous refresh token when Spotify omits one', () => {
     const next = applyTokenResponse(
-      { clientId: 'id', clientSecret: 'secret', refreshToken: 'keep' },
+      {
+        version: STORED_AUTH_VERSION,
+        clientId: 'id',
+        clientSecret: 'secret',
+        refreshToken: 'keep',
+      },
       { access_token: 'access', token_type: 'Bearer', expires_in: 60 },
       0,
     );
@@ -180,11 +187,14 @@ describe('sessionFromStored', () => {
   });
 
   it('maps credentials without refresh to needs_auth', () => {
-    expect(sessionFromStored({ clientId: 'a', clientSecret: 'b' }).status).toBe('needs_auth');
+    expect(
+      sessionFromStored({ version: STORED_AUTH_VERSION, clientId: 'a', clientSecret: 'b' }).status,
+    ).toBe('needs_auth');
   });
 
   it('maps a refresh token to ready', () => {
     const session = sessionFromStored({
+      version: STORED_AUTH_VERSION,
       clientId: 'a',
       clientSecret: 'b',
       refreshToken: 'r',
@@ -195,9 +205,45 @@ describe('sessionFromStored', () => {
   });
 });
 
+describe('parseStoredAuth', () => {
+  it('accepts a versioned blob', () => {
+    const stored = {
+      version: STORED_AUTH_VERSION,
+      clientId: 'x',
+      clientSecret: 'y',
+    };
+    expect(parseStoredAuth(stored)).toEqual(stored);
+  });
+
+  it('upgrades legacy blobs that omit version', () => {
+    expect(parseStoredAuth({ clientId: 'x', clientSecret: 'y' })).toEqual({
+      version: STORED_AUTH_VERSION,
+      clientId: 'x',
+      clientSecret: 'y',
+    });
+  });
+
+  it('rejects wrong versions instead of coercing them to v1', () => {
+    expect(parseStoredAuth({ version: 2, clientId: 'x', clientSecret: 'y' })).toBeNull();
+  });
+
+  it('returns null for corrupt shapes', () => {
+    expect(parseStoredAuth(null)).toBeNull();
+    expect(parseStoredAuth({ clientId: '', clientSecret: 'y' })).toBeNull();
+    expect(parseStoredAuth({ version: STORED_AUTH_VERSION, clientId: 'x' })).toBeNull();
+  });
+});
+
 describe('isSpotifyStoredAuth', () => {
-  it('accepts objects with non-empty client id and secret', () => {
-    expect(isSpotifyStoredAuth({ clientId: 'x', clientSecret: 'y' })).toBe(true);
+  it('accepts only versioned blobs with non-empty client id and secret', () => {
+    expect(
+      isSpotifyStoredAuth({
+        version: STORED_AUTH_VERSION,
+        clientId: 'x',
+        clientSecret: 'y',
+      }),
+    ).toBe(true);
+    expect(isSpotifyStoredAuth({ clientId: 'x', clientSecret: 'y' })).toBe(false);
     expect(isSpotifyStoredAuth({ clientId: '', clientSecret: 'y' })).toBe(false);
     expect(isSpotifyStoredAuth(null)).toBe(false);
   });

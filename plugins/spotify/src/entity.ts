@@ -1,4 +1,4 @@
-import type { Json } from '@nightshift/sdk';
+import { parseStoredVersion, type Json } from '@nightshift/sdk';
 
 export const SPOTIFY_SESSION_ENTITY = 'spotify.session';
 export const SPOTIFY_PLAYER_ENTITY = 'spotify.player';
@@ -86,8 +86,11 @@ export interface SpotifyEpisodesState {
   [key: string]: Json;
 }
 
+export const STORED_AUTH_VERSION = 1 as const;
+
 /** Persisted under plugin storage — includes secrets; never mirror into entities. */
 export interface SpotifyStoredAuth {
+  version: typeof STORED_AUTH_VERSION;
   clientId: string;
   clientSecret: string;
   accessToken?: string;
@@ -150,15 +153,33 @@ export function initialEpisodesState(
   };
 }
 
-export function isSpotifyStoredAuth(value: unknown): value is SpotifyStoredAuth {
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
-  const record = value as Record<string, unknown>;
+function isSpotifyStoredAuthBody(
+  record: Record<string, unknown>,
+): record is Record<string, unknown> & SpotifyStoredAuth {
   return (
     typeof record['clientId'] === 'string' &&
     record['clientId'].trim() !== '' &&
     typeof record['clientSecret'] === 'string' &&
     record['clientSecret'].trim() !== ''
   );
+}
+
+/** Defensive parse — corrupt/partial storage becomes null (unconfigured). */
+export function parseStoredAuth(value: unknown): SpotifyStoredAuth | null {
+  const parsed = parseStoredVersion(value, STORED_AUTH_VERSION, isSpotifyStoredAuthBody);
+  if (parsed) return parsed;
+  // Legacy blobs written before the version field was added. Only upgrade when
+  // `version` is absent — never coerce a future/wrong version into v1.
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return null;
+  const record = value as Record<string, unknown>;
+  if (record['version'] !== undefined) return null;
+  if (!isSpotifyStoredAuthBody(record)) return null;
+  return { ...record, version: STORED_AUTH_VERSION } as SpotifyStoredAuth;
+}
+
+/** True only for versioned blobs — use `parseStoredAuth` to accept legacy shapes. */
+export function isSpotifyStoredAuth(value: unknown): value is SpotifyStoredAuth {
+  return parseStoredVersion(value, STORED_AUTH_VERSION, isSpotifyStoredAuthBody) !== null;
 }
 
 export function sessionFromStored(stored: SpotifyStoredAuth | undefined): SpotifySessionState {
@@ -178,6 +199,7 @@ export function sessionFromStored(stored: SpotifyStoredAuth | undefined): Spotif
 
 export function asJson(value: SpotifyStoredAuth): Json {
   const out: { [key: string]: Json } = {
+    version: STORED_AUTH_VERSION,
     clientId: value.clientId,
     clientSecret: value.clientSecret,
   };

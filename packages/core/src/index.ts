@@ -20,3 +20,4 @@ export {
   type DisposableBag,
   type DisposableBagOptions,
 } from './disposables.js';
+export { parseStoredVersion } from './storage.js';

@@ -1,19 +1,19 @@
-import type { Json } from '@nightshift/sdk';
+import { parseStoredVersion, type Json } from '@nightshift/sdk';
 
 export const CREDENTIALS_STORAGE_KEY = 'credentials';
+export const CREDENTIALS_VERSION = 1 as const;
 
 export interface Credentials {
-  version: 1;
+  version: typeof CREDENTIALS_VERSION;
   baseUrl: string;
   token: string;
   [key: string]: Json;
 }
 
-export function isCredentials(value: unknown): value is Credentials {
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
-  const record = value as Record<string, unknown>;
+function isCredentialsBody(
+  record: Record<string, unknown>,
+): record is Record<string, unknown> & Credentials {
   return (
-    record['version'] === 1 &&
     typeof record['baseUrl'] === 'string' &&
     record['baseUrl'].trim() !== '' &&
     typeof record['token'] === 'string' &&
@@ -21,12 +21,16 @@ export function isCredentials(value: unknown): value is Credentials {
   );
 }
 
+export function isCredentials(value: unknown): value is Credentials {
+  return parseStoredVersion(value, CREDENTIALS_VERSION, isCredentialsBody) !== null;
+}
+
 /** Defensive parse — corrupt/partial storage becomes null (unconfigured). */
 export function parseCredentials(value: Json | undefined): Credentials | null {
   if (value === undefined) return null;
-  return isCredentials(value) ? value : null;
+  return parseStoredVersion(value, CREDENTIALS_VERSION, isCredentialsBody);
 }
 
 export function serializeCredentials(baseUrl: string, token: string): Credentials {
-  return { version: 1, baseUrl, token };
+  return { version: CREDENTIALS_VERSION, baseUrl, token };
 }
