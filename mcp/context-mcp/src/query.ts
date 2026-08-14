@@ -302,8 +302,12 @@ function clampLimit(limit: number | undefined, fallback: number): number {
   return Math.min(Math.max(1, Math.trunc(limit)), 1000);
 }
 
-/** Matches every path when no glob is given. `**` crosses directories, `*` does not. */
+/**
+ * Matches every path when no glob is given. `**` crosses directories, `*` does not.
+ * `dot: true` keeps parity with the prior matcher so leading-dot segments
+ * (e.g. `.github/…`) are not skipped by default picomatch rules.
+ */
 function pathMatcher(glob: string | undefined): (file: string) => boolean {
   if (glob === undefined || glob === '') return () => true;
-  return picomatch(glob);
+  return picomatch(glob, { dot: true });
 }
