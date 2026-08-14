@@ -61,23 +61,31 @@ export function nowScale(width: number, height: number): NowScale {
     const font: HeroFont =
       width >= 80 && height >= 20 && (heroesInline || height >= 24) ? 'block' : 'tiny';
     const art: WeatherArtSize | 'none' = width >= 60 && height >= 16 ? 'large' : 'small';
+    // Temp's label is the condition ("Clear"); humidity/wind need theirs too.
+    // Stacked tiny fits a +1 label row from height 18; stacked block does not
+    // until much taller, so keep labels off there and rely on units.
+    const showLabel = heroesInline || (font === 'tiny' && height >= 18);
+    // "Feels like" only when stats share one band (inline large).
+    const showDetail = heroesInline;
 
     return {
       layout: 'large',
       font,
       art,
       heroesInline,
-      showLabel: heroesInline,
-      showDetail: heroesInline,
+      showLabel,
+      showDetail,
       showSecondary: true,
       tightGaps,
       compactToolbar,
     };
   }
 
-  const font: HeroFont = width >= 26 && height >= 9 ? 'tiny' : 'text';
-  const showSecondary = width >= 24;
-  const art: WeatherArtSize | 'none' = width >= 24 && height >= 8 ? 'small' : 'none';
+  // Tiny glyphs are 2 rows; below height 11 the compact row has to stay plain
+  // text so values like "10 km/h" remain contiguous. Art needs the same floor.
+  const font: HeroFont = width >= 26 && height >= 11 ? 'tiny' : 'text';
+  const showSecondary = width >= 26;
+  const art: WeatherArtSize | 'none' = width >= 26 && height >= 11 ? 'small' : 'none';
 
   return {
     layout: 'compact',

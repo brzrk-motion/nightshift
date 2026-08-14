@@ -48,10 +48,13 @@ describe('nowScale', () => {
       font: 'tiny',
       heroesInline: false,
       showSecondary: true,
+      showLabel: true,
+      showDetail: false,
     });
     expect(nowScale(48, 18)).toMatchObject({
       layout: 'large',
       showSecondary: true,
+      showLabel: true,
     });
   });
 
@@ -59,6 +62,20 @@ describe('nowScale', () => {
     expect(nowScale(30, 11)).toMatchObject({
       layout: 'compact',
       font: 'tiny',
+      art: 'small',
+      showSecondary: true,
+    });
+    expect(nowScale(30, 10)).toMatchObject({
+      layout: 'compact',
+      font: 'text',
+      art: 'none',
+      showSecondary: true,
+    });
+    expect(nowScale(24, 9)).toMatchObject({
+      layout: 'compact',
+      font: 'text',
+      art: 'none',
+      showSecondary: false,
     });
     expect(nowScale(22, 9)).toMatchObject({
       layout: 'compact',
