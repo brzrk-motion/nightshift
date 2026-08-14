@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useKeyboard } from '@opentui/react';
 import { useRuntime } from '../app/context.js';
 import { type ListItem } from './Table.js';
+import { handleListNavigationKey, moveListSelection } from './useListKeyboard.js';
 
 /** Keyboard navigation for an open select list — mounted only while focused. */
 export function SelectFieldListKeys({
@@ -22,15 +23,25 @@ export function SelectFieldListKeys({
   useEffect(() => runtime?.keyboardCapture.acquire(), [runtime]);
 
   useKeyboard((key) => {
-    if (items.length === 0) return;
-    if (key.name === 'up' || key.name === 'k') {
-      onCursorChange((index) => Math.max(0, index - 1));
-    } else if (key.name === 'down' || key.name === 'j') {
-      onCursorChange((index) => Math.min(items.length - 1, index + 1));
-    } else if (key.name === 'return') {
+    const onActivate = () => {
       const item = items[cursor];
       if (item && item.id !== value) onChange?.(item.id);
+    };
+    const result = handleListNavigationKey(
+      key.name,
+      { ctrl: key.ctrl, meta: key.meta },
+      items.length,
+      cursor,
+      { onActivate },
+    );
+    if (!result) return;
+    if (result.delta !== undefined) {
+      const { delta } = result;
+      // Functional update so key-repeat still moves when `cursor` is stale.
+      onCursorChange((index) => moveListSelection(index, items.length, delta));
+      return;
     }
+    if (result.action === 'activate') onActivate();
   });
 
   return null;
