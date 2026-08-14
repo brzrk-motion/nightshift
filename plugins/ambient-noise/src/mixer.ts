@@ -1,4 +1,10 @@
-import { CROSSFADE_MS, LEVELS_LEN, MIXER_CHANNELS, MIXER_SAMPLE_RATE } from './entity.js';
+import {
+  CROSSFADE_MS,
+  LEVELS_LEN,
+  MIXER_CHANNELS,
+  MIXER_SAMPLE_RATE,
+  SEAM_FADE_FRAMES,
+} from './entity.js';
 import type { AudioSink } from './sink.js';
 import { NullSink } from './sink.js';
 import type { PcmBuffer } from './wav.js';
@@ -18,9 +24,34 @@ function durationFrames(buffer: PcmBuffer): number {
   return Math.max(1, buffer.frameCount);
 }
 
+function seamLength(buffer: PcmBuffer): number {
+  if (buffer.frameCount < SEAM_FADE_FRAMES * 2) return 0;
+  return SEAM_FADE_FRAMES;
+}
+
 function readFrame(buffer: PcmBuffer, frame: number, channel: number): number {
   const wrapped = ((frame % buffer.frameCount) + buffer.frameCount) % buffer.frameCount;
   return buffer.frames[wrapped * MIXER_CHANNELS + channel] ?? 0;
+}
+
+function mixLoopSample(buffer: PcmBuffer, frame: number, channel: number): number {
+  const n = durationFrames(buffer);
+  const seam = seamLength(buffer);
+  const current = readFrame(buffer, frame, channel);
+  if (seam === 0 || frame < n - seam) return current;
+  const k = frame - (n - seam);
+  const theta = k / seam;
+  const incoming = readFrame(buffer, k, channel);
+  return clampInt16(
+    current * Math.cos((theta * Math.PI) / 2) + incoming * Math.sin((theta * Math.PI) / 2),
+  );
+}
+
+function advanceSource(source: MixerSource, buffer: PcmBuffer): void {
+  const n = durationFrames(buffer);
+  const seam = seamLength(buffer);
+  source.frame += 1;
+  if (source.frame >= n) source.frame = seam;
 }
 
 function rms(chunk: Int16Array): number {
@@ -33,8 +64,8 @@ function rms(chunk: Int16Array): number {
   return Math.min(1, Math.sqrt(sum / chunk.length) / 32768);
 }
 
-function toBuffer(chunk: Int16Array): Buffer {
-  return Buffer.from(chunk.buffer, chunk.byteOffset, chunk.byteLength);
+function copyPcm(chunk: Int16Array): Buffer {
+  return Buffer.from(Buffer.from(chunk.buffer, chunk.byteOffset, chunk.byteLength));
 }
 
 export class Mixer {
@@ -47,7 +78,9 @@ export class Mixer {
   playing = false;
   writeError: string | null = null;
   readonly levels: number[] = [];
-  private writePending = false;
+  private inflight: Promise<void> | null = null;
+  private queued: Buffer[] = [];
+  private writeGen = 0;
 
   constructor(sink: AudioSink = new NullSink()) {
     this.sink = sink;
@@ -58,7 +91,9 @@ export class Mixer {
   }
 
   setSink(sink: AudioSink): void {
-    this.writePending = false;
+    this.writeGen += 1;
+    this.queued = [];
+    this.inflight = null;
     this.sink.close();
     this.sink = sink;
   }
@@ -169,9 +204,9 @@ export class Mixer {
         chunk[i * 2 + 1] = 0;
         continue;
       }
-      let left = readFrame(outBuf, this.primary.frame, 0);
-      let right = readFrame(outBuf, this.primary.frame, 1);
-      this.primary.frame = (this.primary.frame + 1) % durationFrames(outBuf);
+      let left = mixLoopSample(outBuf, this.primary.frame, 0);
+      let right = mixLoopSample(outBuf, this.primary.frame, 1);
+      advanceSource(this.primary, outBuf);
 
       if (this.incoming && this.fadeRemaining > 0) {
         const inBuf = this.buffers.get(this.incoming.clipId);
@@ -179,11 +214,11 @@ export class Mixer {
           const theta = 1 - this.fadeRemaining / this.fadeTotal;
           const outGain = Math.cos((theta * Math.PI) / 2);
           const inGain = Math.sin((theta * Math.PI) / 2);
-          const inLeft = readFrame(inBuf, this.incoming.frame, 0);
-          const inRight = readFrame(inBuf, this.incoming.frame, 1);
+          const inLeft = mixLoopSample(inBuf, this.incoming.frame, 0);
+          const inRight = mixLoopSample(inBuf, this.incoming.frame, 1);
           left = clampInt16(left * outGain + inLeft * inGain);
           right = clampInt16(right * outGain + inRight * inGain);
-          this.incoming.frame = (this.incoming.frame + 1) % durationFrames(inBuf);
+          advanceSource(this.incoming, inBuf);
           this.fadeRemaining -= 1;
           if (this.fadeRemaining <= 0) {
             this.primary = this.incoming;
@@ -203,30 +238,62 @@ export class Mixer {
     return chunk;
   }
 
+  waitForDrain(): Promise<void> | null {
+    return this.inflight;
+  }
+
   close(): void {
     this.playing = false;
-    this.writePending = false;
+    this.writeGen += 1;
+    this.queued = [];
+    this.inflight = null;
     this.sink.close();
   }
 
   private writeChunk(chunk: Int16Array): void {
-    if (this.writePending) return;
+    const bytes = copyPcm(chunk);
+    if (this.inflight) {
+      this.queued.push(bytes);
+      return;
+    }
+    this.dispatch(bytes);
+  }
+
+  private dispatch(bytes: Buffer): void {
     try {
-      const result = this.sink.write(toBuffer(chunk));
-      if (result instanceof Promise) {
-        this.writePending = true;
-        void result.then(
-          () => {
-            this.writePending = false;
-          },
-          (error: unknown) => {
-            this.writePending = false;
-            this.failSink(error);
-          },
-        );
+      const result = this.sink.write(bytes);
+      if (!(result instanceof Promise)) {
+        this.flushQueuedSync();
+        return;
       }
+      this.inflight = this.watch(result, this.writeGen);
     } catch (error: unknown) {
       this.failSink(error);
+    }
+  }
+
+  private flushQueuedSync(): void {
+    while (this.queued.length > 0 && this.inflight === null) {
+      const next = this.queued.shift();
+      if (!next) return;
+      this.dispatch(next);
+    }
+  }
+
+  private async watch(first: Promise<void>, gen: number): Promise<void> {
+    try {
+      await first;
+      while (this.queued.length > 0 && this.writeGen === gen) {
+        const next = this.queued.shift();
+        if (!next) break;
+        const result = this.sink.write(next);
+        if (result instanceof Promise) await result;
+      }
+    } catch (error: unknown) {
+      this.queued = [];
+      this.failSink(error);
+    } finally {
+      if (this.writeGen === gen) this.inflight = null;
     }
   }
 

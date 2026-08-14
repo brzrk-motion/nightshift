@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { encodePcm16Wav, loadWav, toneBuffer } from './wav.js';
+import { MIXER_SAMPLE_RATE } from './entity.js';
+import { encodePcm16Wav, loadWav, pcmFromChannels, toneBuffer } from './wav.js';
 
 function concat(headerAndPayload: Uint8Array, extra: Uint8Array): Uint8Array {
   const out = new Uint8Array(headerAndPayload.length + extra.length);
@@ -50,5 +51,32 @@ describe('loadWav', () => {
     const prefix = encoded.subarray(0, 44 + 40 * 4);
     const decoded = loadWav(prefix);
     expect(decoded.frameCount).toBe(40);
+  });
+});
+
+describe('pcmFromChannels', () => {
+  it('resamples 24 kHz to mixer rate with a sane 440 Hz sine', () => {
+    const inRate = 24000;
+    const seconds = 0.25;
+    const hz = 440;
+    const n = Math.round(inRate * seconds);
+    const mono = new Float32Array(n);
+    for (let i = 0; i < n; i += 1) {
+      mono[i] = 0.5 * Math.sin((2 * Math.PI * hz * i) / inRate);
+    }
+    const decoded = pcmFromChannels([mono, mono], inRate);
+    expect(decoded.sampleRate).toBe(MIXER_SAMPLE_RATE);
+    expect(decoded.frameCount).toBe(Math.round(n * (MIXER_SAMPLE_RATE / inRate)));
+    let err = 0;
+    const skip = 64;
+    const end = decoded.frameCount - 64;
+    for (let i = skip; i < end; i += 1) {
+      const ideal = 0.5 * Math.sin((2 * Math.PI * hz * i) / MIXER_SAMPLE_RATE);
+      const sample = (decoded.frames[i * 2] ?? 0) / 32767;
+      const d = sample - ideal;
+      err += d * d;
+    }
+    const rmse = Math.sqrt(err / Math.max(1, end - skip));
+    expect(rmse).toBeLessThan(0.04);
   });
 });

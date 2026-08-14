@@ -4,10 +4,11 @@ import { defaultCatalogDir, loadCatalog, toPublicClips, type CatalogEntry } from
 import { loadClip, readClipBytes } from './decode.js';
 import {
   CHUNK_FRAMES,
+  CHUNK_MS,
   CROSSFADE_MS,
+  LEVELS_MS,
   PLAYER_ENTITY,
   SETTINGS_STORAGE_KEY,
-  TICK_MS,
   hydrateSettings,
   initialPlayerState,
   isTransportActive,
@@ -57,8 +58,9 @@ export default definePlugin({
     let outputError: string | null = null;
     let announcedOutput: string | null = null;
     let sinkReady = false;
-    let timer: ReturnType<typeof setInterval> | undefined;
-    let levelsTick = 0;
+    let uiTimer: ReturnType<typeof setInterval> | undefined;
+    let pumping = false;
+    let pumpAbort: AbortController | undefined;
     let generation = 0;
 
     const beginOp = (): number => {
@@ -112,36 +114,72 @@ export default definePlugin({
       };
     };
 
-    const stopTicks = (): void => {
-      if (timer === undefined) return;
-      clearInterval(timer);
-      timer = undefined;
+    const delay = (ms: number, signal: AbortSignal): Promise<void> => {
+      if (signal.aborted) return Promise.resolve();
+      return new Promise((resolve) => {
+        const timer = setTimeout(resolve, ms);
+        timer.unref?.();
+        const onAbort = (): void => {
+          clearTimeout(timer);
+          resolve();
+        };
+        signal.addEventListener('abort', onAbort, { once: true });
+      });
     };
 
-    const startTicks = (): void => {
-      if (timer !== undefined) return;
-      timer = setInterval(() => {
-        mixer.tick(CHUNK_FRAMES);
-        if (mixer.writeError) {
-          output = 'silent';
-          outputError = mixer.writeError;
-          mixer.writeError = null;
-          if (announcedOutput !== outputError) {
-            announcedOutput = outputError;
-            context.notify('Audio output failed.', { tone: 'warning', key: 'output' });
-          }
-          const current = read();
-          if (current.status === 'playing' || current.status === 'fading') {
-            write(snapshot(mixer.fading() ? 'fading' : 'playing'));
-          }
-        }
-        levelsTick += 1;
+    const reportWriteError = (): void => {
+      if (!mixer.writeError) return;
+      output = 'silent';
+      outputError = mixer.writeError;
+      mixer.writeError = null;
+      if (announcedOutput !== outputError) {
+        announcedOutput = outputError;
+        context.notify('Audio output failed.', { tone: 'warning', key: 'output' });
+      }
+    };
+
+    const stopUiClock = (): void => {
+      if (uiTimer === undefined) return;
+      clearInterval(uiTimer);
+      uiTimer = undefined;
+    };
+
+    const startUiClock = (): void => {
+      if (uiTimer !== undefined) return;
+      uiTimer = setInterval(() => {
         const current = read();
         if (current.status !== 'playing' && current.status !== 'fading') return;
-        if (levelsTick % 2 !== 0) return;
+        reportWriteError();
         write(snapshot(mixer.fading() ? 'fading' : 'playing'));
-      }, TICK_MS);
-      timer.unref?.();
+      }, LEVELS_MS);
+      uiTimer.unref?.();
+    };
+
+    const stopPump = (): void => {
+      pumpAbort?.abort();
+      pumpAbort = undefined;
+      pumping = false;
+    };
+
+    const startPump = (): void => {
+      if (pumping) return;
+      pumping = true;
+      pumpAbort = new AbortController();
+      const { signal } = pumpAbort;
+      const token = generation;
+      void (async () => {
+        try {
+          while (mixer.playing && token === generation && !signal.aborted) {
+            mixer.tick(CHUNK_FRAMES);
+            reportWriteError();
+            const drain = mixer.waitForDrain();
+            if (drain) await drain;
+            else await delay(CHUNK_MS, signal);
+          }
+        } finally {
+          if (token === generation) pumping = false;
+        }
+      })();
     };
 
     const ensureSink = async (): Promise<void> => {
@@ -261,7 +299,8 @@ export default definePlugin({
         if (isStale(token)) return;
         mixer.play(clip.id);
         mixer.retainActive();
-        startTicks();
+        startPump();
+        startUiClock();
         write(snapshot('playing'));
       },
     });
@@ -275,7 +314,8 @@ export default definePlugin({
         beginOp();
         mixer.pause();
         mixer.retainActive();
-        stopTicks();
+        stopPump();
+        stopUiClock();
         write(snapshot('paused'));
       },
     });
@@ -289,7 +329,8 @@ export default definePlugin({
           beginOp();
           mixer.pause();
           mixer.retainActive();
-          stopTicks();
+          stopPump();
+          stopUiClock();
           write(snapshot('paused'));
           return;
         }
@@ -306,7 +347,8 @@ export default definePlugin({
         if (isStale(token)) return;
         mixer.play(clip.id);
         mixer.retainActive();
-        startTicks();
+        startPump();
+        startUiClock();
         write(snapshot('playing'));
       },
     });
@@ -361,7 +403,8 @@ export default definePlugin({
     });
 
     context.own(() => {
-      stopTicks();
+      stopPump();
+      stopUiClock();
       mixer.close();
     });
 
