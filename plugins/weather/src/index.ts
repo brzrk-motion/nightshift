@@ -1,4 +1,4 @@
-import { definePlugin, type Json, type PluginContext } from '@nightshift/sdk';
+import { argString, definePlugin, type Json, type PluginContext } from '@nightshift/sdk';
 import { fetchForecast, geocode } from './client.js';
 import {
   WEATHER_LOCATIONS_ENTITY,
@@ -25,11 +25,6 @@ import {
 import { ForecastWidget, NowWidget } from './widgets.js';
 
 const POLL_MS = 15 * 60 * 1000;
-
-function stringArg(args: Record<string, Json> | undefined, key: string): string | undefined {
-  const value = args?.[key];
-  return typeof value === 'string' && value.trim() !== '' ? value.trim() : undefined;
-}
 
 function unitsArg(args: Record<string, Json> | undefined): WeatherUnits | undefined {
   const value = args?.['units'];
@@ -160,13 +155,13 @@ export default definePlugin({
       id: 'weather.configure-location',
       title: 'Configure weather location',
       run: async (args) => {
-        const id = stringArg(args, 'id') ?? 'default';
-        const query = stringArg(args, 'query');
+        const id = argString(args, 'id') ?? 'default';
+        const query = argString(args, 'query');
         if (!query) {
           context.log.warn('weather.configure-location needs a query');
           return;
         }
-        await configure(id, query, stringArg(args, 'label'));
+        await configure(id, query, argString(args, 'label'));
       },
     });
 
@@ -174,7 +169,7 @@ export default definePlugin({
       id: 'weather.remove-location',
       title: 'Remove weather location',
       run: (args) => {
-        const id = stringArg(args, 'id');
+        const id = argString(args, 'id');
         if (!id) return;
         const next = removeSlot(read(), id);
         write(next);
@@ -186,7 +181,7 @@ export default definePlugin({
       id: 'weather.refresh',
       title: 'Refresh weather',
       run: async (args) => {
-        const id = stringArg(args, 'id');
+        const id = argString(args, 'id');
         if (id) await refreshSlot(id);
         else await refreshAll();
       },
@@ -209,7 +204,7 @@ export default definePlugin({
       id: 'weather.set-primary',
       title: 'Set primary weather location',
       run: (args) => {
-        const id = stringArg(args, 'id');
+        const id = argString(args, 'id');
         if (!id) return;
         const next = setPrimary(read(), id);
         write(next);
@@ -223,8 +218,8 @@ export default definePlugin({
       id: 'weather.ensure-location',
       title: 'Ensure weather location slot',
       run: async (args) => {
-        const id = stringArg(args, 'id') ?? 'default';
-        const query = stringArg(args, 'query');
+        const id = argString(args, 'id') ?? 'default';
+        const query = argString(args, 'query');
         const current = read().locations[id];
         if (current?.query) {
           if (current.status === 'idle') await refreshSlot(id);

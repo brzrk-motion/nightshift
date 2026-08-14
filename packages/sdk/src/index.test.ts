@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { NIGHTSHIFT_API_VERSION, NightshiftError } from '@nightshift/core';
 import {
+  argString,
   CAPABILITIES,
   definePlugin,
   Icon,
@@ -52,6 +53,19 @@ describe('isCompatible', () => {
   it('accepts the current contract and rejects anything else', () => {
     expect(isCompatible(definePlugin(base).manifest)).toBe(true);
     expect(isCompatible(definePlugin({ ...base, apiVersion: 99 }).manifest)).toBe(false);
+  });
+});
+
+describe('argString', () => {
+  it('returns a trimmed string when the key is a non-blank string', () => {
+    expect(argString({ name: '  hello  ' }, 'name')).toBe('hello');
+  });
+
+  it('returns undefined when the key is missing, not a string, or blank', () => {
+    expect(argString(undefined, 'name')).toBeUndefined();
+    expect(argString({}, 'name')).toBeUndefined();
+    expect(argString({ name: 1 }, 'name')).toBeUndefined();
+    expect(argString({ name: '   ' }, 'name')).toBeUndefined();
   });
 });
 

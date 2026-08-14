@@ -227,6 +227,8 @@ export function isCompatible(manifest: PluginManifest): boolean {
   return manifest.apiVersion === NIGHTSHIFT_API_VERSION;
 }
 
+export { argString } from './args.js';
+
 export { NIGHTSHIFT_API_VERSION, parseStoredVersion } from '@nightshift/core';
 export type { EntityId, EntityMeta, EntityStore, Entity } from '@nightshift/entities';
 export type { Disposable, Json, Unsubscribe } from '@nightshift/core';
