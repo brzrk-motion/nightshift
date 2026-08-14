@@ -1,4 +1,4 @@
-import { definePlugin, type Json, type PluginContext } from '@nightshift/sdk';
+import { argString, definePlugin, type PluginContext } from '@nightshift/sdk';
 import {
   CLOCK_ENTITY,
   hydrateClockSettings,
@@ -8,11 +8,6 @@ import {
 import { isClockDateFormat } from './format.js';
 import { detectSystemTimezone, geocodeTimezone } from './location.js';
 import { ClockWidget } from './widgets.js';
-
-function stringArg(args: Record<string, Json> | undefined, key: string): string | undefined {
-  const value = args?.[key];
-  return typeof value === 'string' && value.trim() !== '' ? value.trim() : undefined;
-}
 
 export default definePlugin({
   id: 'clock',
@@ -94,7 +89,7 @@ export default definePlugin({
       id: 'clock.configure-location',
       title: 'Set clock location',
       run: async (args) => {
-        const query = stringArg(args, 'query');
+        const query = argString(args, 'query');
         if (!query) return;
 
         write({ ...read(), locationQuery: query, locationStatus: 'loading', locationError: null });
