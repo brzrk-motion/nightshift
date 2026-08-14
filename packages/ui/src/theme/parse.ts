@@ -7,13 +7,7 @@ import {
   NightshiftError,
   saveYamlResource,
 } from '@nightshift/core';
-import {
-  BUILT_IN_THEMES,
-  HEX_COLOR,
-  THEME_COLOR_KEYS,
-  type Theme,
-  type ThemeColors,
-} from '../theme.js';
+import { BUILT_IN_THEMES, HEX_COLOR, THEME_COLOR_KEYS, type ThemeColors } from '../theme.js';
 import type { ThemeSpec } from './schema.js';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -140,19 +134,6 @@ export interface ThemeLoadResult {
 export async function loadThemes(directory: string): Promise<ThemeLoadResult> {
   const { items, failed } = await loadYamlDir(directory, loadThemeFile);
   return { themes: items, failed };
-}
-
-/**
- * Merges user themes over built-ins by name. User files replace built-ins
- * of the same name rather than appearing alongside them.
- */
-export function mergeThemes(
-  userThemes: readonly ThemeSpec[],
-  builtIn: readonly Theme[],
-): ThemeSpec[] {
-  const registry = new Map<string, ThemeSpec>(builtIn.map((theme) => [theme.name, theme]));
-  for (const theme of userThemes) registry.set(theme.name, theme);
-  return [...registry.values()].sort((a, b) => a.name.localeCompare(b.name));
 }
 
 export { BUILT_IN_THEMES };
