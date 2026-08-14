@@ -5,16 +5,9 @@
   "description": "An MCP server that indexes this repository with tree-sitter and serves precise code context.",
   "license": "MIT",
   "type": "module",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "./dist/bin.js",
   "bin": {
     "nightshift-context-mcp": "./dist/bin.js"
-  },
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
-    }
   },
   "files": [
     "dist"
