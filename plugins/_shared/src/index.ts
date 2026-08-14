@@ -1,9 +1,9 @@
+export { todayKey } from './dates.js';
 export {
   formatDuration,
   pauseIfRunning,
   sessionProgress,
   tickCountdown,
-  todayKey,
   type CountdownTiming,
 } from './countdown.js';
 export {

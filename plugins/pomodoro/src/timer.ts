@@ -3,7 +3,6 @@ import {
   pauseIfRunning,
   sessionProgress,
   tickCountdown,
-  todayKey,
 } from '@nightshift/plugin-shared';
 
 /**
@@ -14,7 +13,7 @@ import {
  */
 export const POMODORO_ENTITY = 'pomodoro.session' as const;
 
-export { formatDuration, sessionProgress, todayKey };
+export { formatDuration, sessionProgress };
 
 export type PomodoroPhase = 'work' | 'shortBreak' | 'longBreak';
 export type PomodoroStatus = 'idle' | 'running' | 'paused' | 'phaseComplete';

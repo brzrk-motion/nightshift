@@ -14,12 +14,6 @@ export function formatDuration(totalSeconds: number): string {
   return hours > 0 ? `${hours}:${pad(minutes)}:${pad(rest)}` : `${pad(minutes)}:${pad(rest)}`;
 }
 
-/** A stable per-day key, local time, for keying daily counters. */
-export function todayKey(now: Date = new Date()): string {
-  const pad = (value: number): string => String(value).padStart(2, '0');
-  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
-}
-
 /** Progress through the current interval, from 0 to 1. */
 export function sessionProgress(state: CountdownTiming): number {
   if (state.durationSeconds <= 0) return 0;

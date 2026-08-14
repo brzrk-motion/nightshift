@@ -1,8 +1,8 @@
 import { argString, definePlugin, type PluginContext } from '@nightshift/sdk';
+import { todayKey } from '@nightshift/plugin-shared';
 import { HABIT_ENTITY, initialState, type HabitState } from './entity.js';
 import { addHabit, removeHabit, renameHabit, toggleCompletion } from './habits.js';
 import { parseStored, serializeState, STORAGE_KEY } from './storage.js';
-import { todayKey } from './layout.js';
 import { HabitTrackerWidget } from './widgets.js';
 
 export default definePlugin({
@@ -99,7 +99,6 @@ export {
   nameColumnWidth,
   resolveDensity,
   rollingWindow,
-  todayKey,
   truncateName,
   type HabitDensity,
 } from './layout.js';
