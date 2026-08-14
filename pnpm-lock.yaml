@@ -292,6 +292,9 @@ importers:
 
   plugins/clock:
     dependencies:
+      '@nightshift/plugin-shared':
+        specifier: workspace:*
+        version: link:../_shared
       '@nightshift/sdk':
         specifier: workspace:*
         version: link:../../packages/sdk
@@ -452,6 +455,9 @@ importers:
 
   plugins/weather:
     dependencies:
+      '@nightshift/plugin-shared':
+        specifier: workspace:*
+        version: link:../_shared
       '@nightshift/sdk':
         specifier: workspace:*
         version: link:../../packages/sdk
