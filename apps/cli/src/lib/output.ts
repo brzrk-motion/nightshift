@@ -1,4 +1,4 @@
-const ESC = '\u001b';
+import { ansi, shouldUseColor as coreShouldUseColor } from '@nightshift/core';
 
 export interface Style {
   bold(text: string): string;
@@ -9,27 +9,23 @@ export interface Style {
   danger(text: string): string;
 }
 
-function wrap(code: string, enabled: boolean) {
-  return (text: string): string => (enabled ? `${ESC}[${code}m${text}${ESC}[0m` : text);
-}
-
 export function createStyle(enabled: boolean): Style {
   return {
-    bold: wrap('1', enabled),
-    dim: wrap('2', enabled),
-    accent: wrap('36', enabled),
-    success: wrap('32', enabled),
-    warning: wrap('33', enabled),
-    danger: wrap('31', enabled),
+    bold: (text) => ansi(enabled, 'bold', text),
+    dim: (text) => ansi(enabled, 'dim', text),
+    accent: (text) => ansi(enabled, 'cyan', text),
+    success: (text) => ansi(enabled, 'green', text),
+    warning: (text) => ansi(enabled, 'yellow', text),
+    danger: (text) => ansi(enabled, 'red', text),
   };
 }
 
 /** Whether ANSI colour should be used, honouring NO_COLOR and --no-color. */
 export function shouldUseColor(override?: boolean): boolean {
-  if (override !== undefined) return override;
-  if (process.env['NO_COLOR'] !== undefined && process.env['NO_COLOR'] !== '') return false;
-  if (process.env['FORCE_COLOR'] !== undefined && process.env['FORCE_COLOR'] !== '0') return true;
-  return process.stdout.isTTY === true;
+  return coreShouldUseColor({
+    stream: process.stdout,
+    ...(override !== undefined ? { override } : {}),
+  });
 }
 
 /** Renders `label: value` pairs with the labels aligned. */
