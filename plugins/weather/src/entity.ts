@@ -3,9 +3,6 @@ import type { Json } from '@nightshift/sdk';
 /** Aggregate map of every configured location slot. */
 export const WEATHER_LOCATIONS_ENTITY = 'weather.locations';
 
-/** Current conditions for the primary slot — used by automations and simple consumers. */
-export const WEATHER_NOW_ENTITY = 'weather.now';
-
 export type WeatherUnits = 'metric' | 'imperial';
 export type WeatherStatus = 'idle' | 'loading' | 'ready' | 'error';
 
@@ -55,26 +52,8 @@ export interface WeatherLocationsState {
   units: WeatherUnits;
   primaryId: string;
   locations: Record<string, WeatherLocation>;
-  [key: string]: Json;
-}
-
-/** Flat current-conditions projection of the primary slot. */
-export interface WeatherNowState {
-  status: WeatherStatus;
-  error: string | null;
-  locationId: string | null;
-  placeName: string | null;
-  units: WeatherUnits;
+  /** Primary slot temperature — denormalized for automation flat-key triggers. */
   temperature: number | null;
-  feelsLike: number | null;
-  humidity: number | null;
-  windSpeed: number | null;
-  windDirection: number | null;
-  condition: string;
-  weatherCode: number | null;
-  sunrise: string | null;
-  sunset: string | null;
-  updatedAt: string | null;
   [key: string]: Json;
 }
 
@@ -107,27 +86,7 @@ export function initialLocationsState(
   units: WeatherUnits = 'metric',
   primaryId = 'default',
 ): WeatherLocationsState {
-  return { units, primaryId, locations: {} };
-}
-
-export function initialNowState(units: WeatherUnits = 'metric'): WeatherNowState {
-  return {
-    status: 'idle',
-    error: null,
-    locationId: null,
-    placeName: null,
-    units,
-    temperature: null,
-    feelsLike: null,
-    humidity: null,
-    windSpeed: null,
-    windDirection: null,
-    condition: '',
-    weatherCode: null,
-    sunrise: null,
-    sunset: null,
-    updatedAt: null,
-  };
+  return { units, primaryId, locations: {}, temperature: null };
 }
 
 /** Persisted location slot — same fields as {@link WeatherLocation} minus live status. */

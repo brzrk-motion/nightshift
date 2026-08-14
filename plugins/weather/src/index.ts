@@ -2,7 +2,6 @@ import { argString, definePlugin, type Json, type PluginContext } from '@nightsh
 import { fetchForecast, geocode } from './client.js';
 import {
   WEATHER_LOCATIONS_ENTITY,
-  WEATHER_NOW_ENTITY,
   emptyLocation,
   initialLocationsState,
   type WeatherLocationsState,
@@ -15,7 +14,7 @@ import {
   fromStored,
   isStoredWeather,
   markLoading,
-  mirrorPrimary,
+  publishLocationsState,
   removeSlot,
   setPrimary,
   setUnits,
@@ -50,13 +49,8 @@ export default definePlugin({
     const stored = await context.storage.get('weather');
     const initial = isStoredWeather(stored) ? fromStored(stored) : initialLocationsState();
 
-    context.registerEntity(WEATHER_LOCATIONS_ENTITY, initial, {
+    context.registerEntity(WEATHER_LOCATIONS_ENTITY, publishLocationsState(initial), {
       title: 'Weather locations',
-      owner: 'weather',
-    });
-    context.registerEntity(WEATHER_NOW_ENTITY, mirrorPrimary(initial), {
-      title: 'Weather now',
-      unit: 'degrees',
       owner: 'weather',
     });
 
@@ -65,8 +59,7 @@ export default definePlugin({
       initialLocationsState();
 
     const write = (next: WeatherLocationsState): void => {
-      context.entities.set(WEATHER_LOCATIONS_ENTITY, next);
-      context.entities.set(WEATHER_NOW_ENTITY, mirrorPrimary(next));
+      context.entities.set(WEATHER_LOCATIONS_ENTITY, publishLocationsState(next));
     };
 
     const persist = (next: WeatherLocationsState): void => {
@@ -255,8 +248,8 @@ export default definePlugin({
 
     context.registerAutomation({
       name: 'weather.frost-warning',
-      when: { type: 'entity', entity: WEATHER_NOW_ENTITY, key: 'temperature' },
-      and: [{ type: 'below', entity: WEATHER_NOW_ENTITY, key: 'temperature', value: 0 }],
+      when: { type: 'entity', entity: WEATHER_LOCATIONS_ENTITY, key: 'temperature' },
+      and: [{ type: 'below', entity: WEATHER_LOCATIONS_ENTITY, key: 'temperature', value: 0 }],
       then: [
         {
           command: 'app.notify',
@@ -315,12 +308,7 @@ export default definePlugin({
   },
 });
 
-export {
-  WEATHER_LOCATIONS_ENTITY,
-  WEATHER_NOW_ENTITY,
-  initialLocationsState,
-  initialNowState,
-} from './entity.js';
+export { WEATHER_LOCATIONS_ENTITY, initialLocationsState } from './entity.js';
 export { weatherCodeInfo } from './codes.js';
 export { weatherArt, heroDigits, WEATHER_ART, ART_WIDTH } from './art.js';
 export { parseCoordinates } from './client.js';
