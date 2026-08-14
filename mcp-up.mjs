@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Builds and runs every MCP server in mcp/, then supervises them.
+// Builds and runs every MCP server in mcp/.
 //
 //   pnpm mcp:up                      # build, launch, print the endpoint table
 //   pnpm mcp:up --check              # build, verify each server answers, exit
@@ -26,9 +26,6 @@ const HOST = '127.0.0.1';
 const BASE_PORT = 7411;
 const HEALTH_TIMEOUT_MS = 30_000;
 const HEALTH_INTERVAL_MS = 200;
-/** A child that dies this soon after starting is treated as a failure to start. */
-const CRASH_WINDOW_MS = 5_000;
-const MAX_RESTARTS = 3;
 
 const MIN_NODE_MAJOR = 22;
 
@@ -190,64 +187,16 @@ function spawnServer(server) {
   return child;
 }
 
-/** True when something is already serving /health on this port. */
-async function probeExisting(server) {
-  try {
-    const response = await fetch(`http://${HOST}:${server.port}/health`, {
-      signal: AbortSignal.timeout(2_000),
-    });
-    if (!response.ok) return null;
-    const body = await response.json();
-    return body?.status === 'ok' ? body : null;
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Starts a child unless the port is already occupied by a healthy server.
- * Returns `{ external: true }` when reusing an existing listener.
- */
-async function startServer(server) {
-  const existing = await probeExisting(server);
-  if (existing) {
-    process.stderr.write(`${label(server)} already listening on port ${server.port}; reusing it\n`);
-    return { server, child: null, restarts: 0, stopped: false, failed: false, external: true };
-  }
-  return supervise(server);
-}
-
-/**
- * Keeps one server running. A crash is restarted with a short backoff until it
- * has failed to stay up MAX_RESTARTS times, so a broken server reports itself
- * instead of spinning forever.
- */
-function supervise(server) {
-  const state = { server, child: null, restarts: 0, stopped: false, failed: false };
-
-  const start = () => {
-    const startedAt = Date.now();
-    state.child = spawnServer(server);
-    state.child.on('exit', (code, signal) => {
-      if (state.stopped) return;
-      const lived = Date.now() - startedAt;
-      const reason = signal ? `signal ${signal}` : `exit code ${code}`;
-      if (lived < CRASH_WINDOW_MS) state.restarts += 1;
-      else state.restarts = 0;
-
-      if (state.restarts > MAX_RESTARTS) {
-        state.failed = true;
-        process.stderr.write(
-          `${label(server)} gave up after ${MAX_RESTARTS} restarts (${reason})\n`,
-        );
-        return;
-      }
-      process.stderr.write(`${label(server)} exited (${reason}); restarting\n`);
-      setTimeout(start, 250 * state.restarts).unref?.();
-    });
-  };
-
-  start();
+function startServer(server) {
+  const child = spawnServer(server);
+  const state = { server, child, stopped: false, failed: false };
+  child.on('exit', (code, signal) => {
+    if (state.stopped) return;
+    state.failed = true;
+    const reason = signal ? `signal ${signal}` : `exit code ${code}`;
+    process.stderr.write(`${label(server)} exited (${reason})\n`);
+    process.exit(1);
+  });
   return state;
 }
 
@@ -257,7 +206,6 @@ async function stopAll(states) {
       (state) =>
         new Promise((done) => {
           state.stopped = true;
-          if (state.external) return done();
           const child = state.child;
           if (!child || child.exitCode !== null || child.signalCode !== null) return done();
           const force = setTimeout(() => child.kill('SIGKILL'), 3_000);
@@ -279,19 +227,7 @@ async function waitForHealth(state, deadline) {
       const response = await fetch(url, { signal: AbortSignal.timeout(2_000) });
       if (response.ok) return { ok: true, detail: await response.json() };
     } catch {
-      // Not listening yet — unless we spawned into a port something else owns.
-      if (state.child && !state.external) {
-        const existing = await probeExisting(state.server);
-        if (existing) {
-          process.stderr.write(
-            `${label(state.server)} port ${state.server.port} is in use; reusing the listener already there\n`,
-          );
-          state.external = true;
-          state.child?.kill('SIGTERM');
-          state.child = null;
-          return { ok: true, detail: existing };
-        }
-      }
+      // Not listening yet.
     }
     if (Date.now() > deadline) return { ok: false, detail: 'timed out waiting for /health' };
     await new Promise((resume) => setTimeout(resume, HEALTH_INTERVAL_MS));
@@ -419,8 +355,7 @@ async function main() {
     return 1;
   }
 
-  const states = [];
-  for (const server of servers) states.push(await startServer(server));
+  const states = servers.map((server) => startServer(server));
   const shutdown = () => {
     void stopAll(states).then(() => process.exit(0));
   };
