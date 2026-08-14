@@ -2,11 +2,19 @@ import { Writable } from 'node:stream';
 import { afterEach, describe, expect, it } from 'vitest';
 import { ansi, shouldUseColor } from './ansi.js';
 
-const env = process.env;
+/** Snapshot at load — not a live reference to `process.env`. */
+const ORIGINAL_ENV = { ...process.env };
 
-afterEach(() => {
-  process.env = { ...env };
-});
+function restoreEnv(): void {
+  for (const key of Object.keys(process.env)) {
+    if (!(key in ORIGINAL_ENV)) {
+      delete process.env[key];
+    }
+  }
+  Object.assign(process.env, ORIGINAL_ENV);
+}
+
+afterEach(restoreEnv);
 
 describe('shouldUseColor', () => {
   it('returns false when override is false', () => {
@@ -19,7 +27,14 @@ describe('shouldUseColor', () => {
 
   it('honours NO_COLOR', () => {
     process.env['NO_COLOR'] = '1';
+    delete process.env['FORCE_COLOR'];
     expect(shouldUseColor({})).toBe(false);
+  });
+
+  it('ignores empty NO_COLOR', () => {
+    process.env['NO_COLOR'] = '';
+    process.env['FORCE_COLOR'] = '1';
+    expect(shouldUseColor({})).toBe(true);
   });
 
   it('honours FORCE_COLOR', () => {
@@ -28,11 +43,21 @@ describe('shouldUseColor', () => {
     expect(shouldUseColor({})).toBe(true);
   });
 
+  it('treats FORCE_COLOR=0 as unset', () => {
+    delete process.env['NO_COLOR'];
+    process.env['FORCE_COLOR'] = '0';
+    expect(shouldUseColor({ stream: null })).toBe(false);
+  });
+
   it('returns false for a null stream', () => {
+    delete process.env['NO_COLOR'];
+    delete process.env['FORCE_COLOR'];
     expect(shouldUseColor({ stream: null })).toBe(false);
   });
 
   it('returns false for a non-TTY stream', () => {
+    delete process.env['NO_COLOR'];
+    delete process.env['FORCE_COLOR'];
     const stream = new Writable({
       write(_chunk, _encoding, callback) {
         callback();
