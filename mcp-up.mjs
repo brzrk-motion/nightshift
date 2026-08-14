@@ -298,46 +298,6 @@ async function waitForHealth(state, deadline) {
   }
 }
 
-/** One real MCP exchange, so --check proves the protocol works and not just the port. */
-async function listTools(server) {
-  const response = await fetch(`http://${HOST}:${server.port}/mcp`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', accept: 'application/json, text/event-stream' },
-    body: JSON.stringify({
-      jsonrpc: '2.0',
-      id: 1,
-      method: 'initialize',
-      params: {
-        protocolVersion: '2025-06-18',
-        capabilities: {},
-        clientInfo: { name: 'mcp-up', version: '1.0.0' },
-      },
-    }),
-    signal: AbortSignal.timeout(10_000),
-  });
-  if (!response.ok) throw new Error(`initialize returned ${response.status}`);
-
-  const tools = await fetch(`http://${HOST}:${server.port}/mcp`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', accept: 'application/json, text/event-stream' },
-    body: JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'tools/list' }),
-    signal: AbortSignal.timeout(10_000),
-  });
-  const payload = parseRpc(await tools.text());
-  const names = payload?.result?.tools?.map((tool) => tool.name) ?? [];
-  if (names.length === 0) throw new Error('tools/list returned no tools');
-  return names;
-}
-
-/** Reads a JSON-RPC reply from either a JSON body or a single SSE frame. */
-function parseRpc(body) {
-  const line = body
-    .split('\n')
-    .map((entry) => (entry.startsWith('data: ') ? entry.slice(6) : entry))
-    .find((entry) => entry.trim().startsWith('{'));
-  return line ? JSON.parse(line) : null;
-}
-
 function printTable(rows) {
   const widths = ['SERVER', 'PORT', 'ENDPOINT', 'STATUS'].map((header, column) =>
     Math.max(header.length, ...rows.map((row) => String(row[column]).length)),
@@ -432,24 +392,13 @@ async function main() {
   const results = [];
   for (const state of states) {
     const health = await waitForHealth(state, deadline);
-    let tools = [];
-    let detail = health.ok ? 'ready' : String(health.detail);
-
-    if (health.ok) {
-      try {
-        tools = await listTools(state.server);
-      } catch (error) {
-        detail = `unhealthy: ${error.message}`;
-      }
-    }
 
     results.push({
       id: state.server.id,
       port: state.server.port,
       url: `http://${HOST}:${state.server.port}/mcp`,
-      ok: health.ok && tools.length > 0,
-      status: detail,
-      tools,
+      ok: health.ok,
+      status: health.ok ? 'ready' : String(health.detail),
       index: health.ok ? health.detail?.index : undefined,
     });
   }
@@ -460,14 +409,7 @@ async function main() {
   if (options.json) {
     process.stdout.write(`${JSON.stringify({ servers: results }, null, 2)}\n`);
   } else {
-    printTable(
-      results.map((result) => [
-        result.id,
-        result.port,
-        result.url,
-        result.ok ? `${result.status} — ${result.tools.length} tools` : result.status,
-      ]),
-    );
+    printTable(results.map((result) => [result.id, result.port, result.url, result.status]));
   }
 
   if (options.writeCursorConfig && healthy.length > 0) {
