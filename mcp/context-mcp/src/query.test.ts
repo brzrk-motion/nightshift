@@ -1,6 +1,5 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 
-import { createExtractor } from './extract.js';
 import {
   fileOutline,
   findReferences,
@@ -9,8 +8,7 @@ import {
   readLines,
   searchSymbols,
 } from './query.js';
-import { createCodeIndex, type FileSystem } from './store.js';
-import { TEST_ROOT, testAbsPath, testRelPath } from './testRoot.js';
+import { makeTestIndex } from './testFixtures.js';
 
 const SOURCES: Record<string, string> = {
   'packages/core/src/timer.ts': [
@@ -45,23 +43,7 @@ const SOURCES: Record<string, string> = {
 let context: QueryContext;
 
 beforeAll(async () => {
-  const io: FileSystem = {
-    async stat(path) {
-      const source = SOURCES[testRelPath(path)];
-      if (source === undefined) throw new Error(`ENOENT ${path}`);
-      return { size: source.length, mtimeMs: 1 };
-    },
-    async readFile(path) {
-      const source = SOURCES[testRelPath(path)];
-      if (source === undefined) throw new Error(`ENOENT ${path}`);
-      return source;
-    },
-    list: () => Object.keys(SOURCES).sort(),
-  };
-
-  const index = createCodeIndex({ root: TEST_ROOT, extractor: await createExtractor(), io });
-  await index.reindexAll();
-  context = { index, readSource: (file) => io.readFile(testAbsPath(file)) };
+  context = await makeTestIndex(SOURCES);
 });
 
 describe('searchSymbols', () => {
