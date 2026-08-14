@@ -9,12 +9,12 @@ import {
   type WidgetProps,
 } from '@nightshift/sdk';
 import { HABIT_ENTITY, initialState, type Habit, type HabitState } from './entity.js';
+import { todayKey } from '@nightshift/plugin-shared';
 import {
   dayHeaderLabel,
   nameColumnWidth,
   resolveDensity,
   rollingWindow,
-  todayKey,
   truncateName,
   type HabitDensity,
 } from './layout.js';

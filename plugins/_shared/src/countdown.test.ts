@@ -1,11 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  formatDuration,
-  pauseIfRunning,
-  sessionProgress,
-  tickCountdown,
-  todayKey,
-} from './countdown.js';
+import { formatDuration, pauseIfRunning, sessionProgress, tickCountdown } from './countdown.js';
 
 describe('formatDuration', () => {
   it('pads minutes and seconds', () => {
@@ -16,13 +10,6 @@ describe('formatDuration', () => {
 
   it('includes hours past an hour', () => {
     expect(formatDuration(3661)).toBe('1:01:01');
-  });
-});
-
-describe('todayKey', () => {
-  it('formats as YYYY-MM-DD in local time', () => {
-    expect(todayKey(new Date(2026, 2, 5))).toBe('2026-03-05');
-    expect(todayKey(new Date(2026, 0, 1))).toBe('2026-01-01');
   });
 });
 

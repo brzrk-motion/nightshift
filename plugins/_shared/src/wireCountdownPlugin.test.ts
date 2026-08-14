@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createPluginTestContext } from '@nightshift/sdk/testing';
-import { todayKey } from './countdown.js';
+import { todayKey } from './dates.js';
 import { wireCountdownPlugin } from './wireCountdownPlugin.js';
 
 const ENTITY = 'test.countdown' as const;

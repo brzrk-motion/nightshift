@@ -9,7 +9,8 @@ import {
   ThemeProvider,
 } from '@nightshift/ui';
 import { HABIT_ENTITY, initialState, type HabitState } from './entity.js';
-import { addDays, dayHeaderLabel, resolveDensity, todayKey } from './layout.js';
+import { todayKey } from '@nightshift/plugin-shared';
+import { addDays, dayHeaderLabel, resolveDensity } from './layout.js';
 import { HabitTrackerWidget } from './widgets.js';
 
 const renderable = detectRuntime().ffi;
