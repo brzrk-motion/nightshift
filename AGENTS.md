@@ -71,7 +71,8 @@ Concretely:
 - `sdk` depends on `core`, `entities`, `automations`, `ui` (re-exports pieces
   of all three — see below).
 - `dashboard` depends on `sdk`, `automations`, `ui`, `entities`, `core`, `yaml`.
-- `vibes` depends on `core`, `entities`, `yaml`.
+- `vibes` depends on `core`, `entities`, `automations` (shared `runActions` /
+  `CommandRunner`), `yaml`.
 - `services` depends on `core`, `entities`, `automations`, `sdk`.
 - `apps/cli` depends on everything above, plus `commander`.
 - Bundled plugins depend on `@nightshift/sdk` at runtime (matching what a
