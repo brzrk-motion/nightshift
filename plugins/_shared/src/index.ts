@@ -7,6 +7,7 @@ export {
   type CountdownTiming,
 } from './countdown.js';
 export {
+<<<<<<< HEAD
   isDatedProgress,
   wireCountdownPlugin,
   type CountdownEntityConfig,
@@ -15,3 +16,11 @@ export {
   type DatedProgress,
   type WireCountdownPluginOptions,
 } from './wireCountdownPlugin.js';
+=======
+  formatOpenMeteoLocationLabel,
+  geocodeOpenMeteo,
+  OPEN_METEO_GEOCODE_URL,
+  type GeocodeFetch,
+  type OpenMeteoGeocodeHit,
+} from './open-meteo-geocode.js';
+>>>>>>> origin/main
