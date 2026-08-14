@@ -1,20 +1,14 @@
 import type { ReactNode } from 'react';
 import {
-  Button,
-  Card,
-  ProgressBar,
-  StatusBadge,
-  useCommands,
-  useEntity,
-  type BadgeTone,
-  type WidgetProps,
-} from '@nightshift/sdk';
+  TimerSessionWidget,
+  TimerTodayWidget,
+  type TimerSessionLabels,
+} from '@nightshift/plugin-shared/timer-session';
+import { type BadgeTone, type WidgetProps } from '@nightshift/sdk';
 import {
   POMODORO_ENTITY,
-  formatDuration,
   initialState,
   phaseLabel,
-  sessionProgress,
   type PomodoroPhase,
   type PomodoroState,
   type PomodoroStatus,
@@ -40,45 +34,39 @@ function headline(state: PomodoroState): string {
   return phaseLabel(state.phase);
 }
 
-export function SessionWidget({ width }: WidgetProps): ReactNode {
-  const entity = useEntity<PomodoroState>(POMODORO_ENTITY);
-  const commands = useCommands();
-  const state = entity?.state ?? initialState();
-  const starting = state.status === 'phaseComplete';
+const SESSION_LABELS: TimerSessionLabels<PomodoroState> = {
+  badges: (state) => [
+    { label: headline(state), tone: PHASE_TONE[state.phase] },
+    { label: state.status, tone: STATUS_TONE[state.status] },
+  ],
+  start: (state) =>
+    state.status === 'paused' ? 'Resume' : state.status === 'phaseComplete' ? 'Continue' : 'Start',
+};
 
+export function SessionWidget({ width }: WidgetProps): ReactNode {
   return (
-    <box style={{ flexDirection: 'column', flexGrow: 1, gap: 1 }}>
-      <box style={{ flexDirection: 'row', gap: 2, flexWrap: 'wrap' }}>
-        <text>
-          <b>{formatDuration(state.remainingSeconds)}</b>
-        </text>
-        <StatusBadge label={headline(state)} tone={PHASE_TONE[state.phase]} />
-        <StatusBadge label={state.status} tone={STATUS_TONE[state.status]} />
-      </box>
-      <ProgressBar value={sessionProgress(state)} width={Math.max(10, width - 6)} showPercent />
-      <box style={{ flexDirection: 'row', gap: 1, flexWrap: 'wrap' }}>
-        <Button
-          label={state.status === 'paused' ? 'Resume' : starting ? 'Continue' : 'Start'}
-          onPress={() => void commands.run('pomodoro.start')}
-        />
-        <Button label="Pause" onPress={() => void commands.run('pomodoro.pause')} />
-        <Button label="Skip" onPress={() => void commands.run('pomodoro.skip')} />
-        <Button label="Stop" onPress={() => void commands.run('pomodoro.stop')} />
-        <Button label="Reset" onPress={() => void commands.run('pomodoro.reset')} />
-      </box>
-    </box>
+    <TimerSessionWidget
+      width={width}
+      entity={POMODORO_ENTITY}
+      initialState={initialState}
+      commands={{
+        start: 'pomodoro.start',
+        pause: 'pomodoro.pause',
+        skip: 'pomodoro.skip',
+        stop: 'pomodoro.stop',
+        reset: 'pomodoro.reset',
+      }}
+      labels={SESSION_LABELS}
+    />
   );
 }
 
 export function TodayWidget(_props: WidgetProps): ReactNode {
-  const entity = useEntity<PomodoroState>(POMODORO_ENTITY);
-  const completed = entity?.state.completedPomodorosToday ?? 0;
-
   return (
-    <Card
-      value={String(completed)}
-      subtitle={completed === 1 ? 'pomodoro completed' : 'pomodoros completed'}
-      tone={completed > 0 ? 'success' : 'default'}
+    <TimerTodayWidget<PomodoroState>
+      entity={POMODORO_ENTITY}
+      getCompletedCount={(state) => state.completedPomodorosToday}
+      labels={{ singular: 'pomodoro completed', plural: 'pomodoros completed' }}
     />
   );
 }

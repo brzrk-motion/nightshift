@@ -1,3 +1,4 @@
+import { formatOpenMeteoLocationLabel, geocodeOpenMeteo } from '@nightshift/plugin-shared';
 import type { PluginFetch } from '@nightshift/sdk';
 import { weatherCodeInfo } from './codes.js';
 import type { WeatherDay, WeatherHour, WeatherUnits } from './entity.js';
@@ -24,7 +25,6 @@ export interface ForecastResult {
   hours: WeatherHour[];
 }
 
-const GEOCODE_URL = 'https://geocoding-api.open-meteo.com/v1/search';
 const FORECAST_URL = 'https://api.open-meteo.com/v1/forecast';
 
 /** Parse `"lat,lon"` when the user pastes coordinates instead of a place name. */
@@ -49,28 +49,11 @@ export async function geocode(
     return { name: query.trim(), ...coords };
   }
 
-  const url = `${GEOCODE_URL}?name=${encodeURIComponent(query.trim())}&count=1&language=en&format=json`;
-  const response = await fetchFn(url);
-  if (!response.ok) {
-    throw new Error(`Geocoding failed (${response.status})`);
-  }
-  const body = (await response.json()) as {
-    results?: Array<{
-      name: string;
-      latitude: number;
-      longitude: number;
-      country?: string;
-      admin1?: string;
-    }>;
-  };
-  const hit = body.results?.[0];
+  const hit = await geocodeOpenMeteo(fetchFn, query);
   if (!hit) return undefined;
 
-  const parts = [hit.name, hit.admin1, hit.country].filter(
-    (part): part is string => typeof part === 'string' && part.length > 0,
-  );
   return {
-    name: parts.join(', '),
+    name: formatOpenMeteoLocationLabel(hit),
     latitude: hit.latitude,
     longitude: hit.longitude,
     ...(hit.country === undefined ? {} : { country: hit.country }),

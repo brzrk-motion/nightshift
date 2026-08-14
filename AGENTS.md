@@ -40,7 +40,7 @@ packages/vibes         The vibe engine
 packages/automations   Triggers, conditions and actions
 packages/services      Config, logging, and the plugin runtime/host
 mcp/context-mcp        Agent tooling: a tree-sitter code index served over MCP
-plugins/_shared        Shared pure helpers for bundled plugins (not loadable)
+plugins/_shared        Shared pure helpers + timer session widgets for bundled plugins (not loadable)
 plugins/clock          The time and date, with 12/24-hour and date format settings
 plugins/pomodoro       Work intervals with short and long breaks — the reference plugin
 plugins/habit          Rolling 7-day habit tracker
@@ -77,9 +77,11 @@ Concretely:
 - Bundled plugins depend on `@nightshift/sdk` at runtime (matching what a
   third-party plugin is allowed to depend on). They may also depend on
   `@nightshift/plugin-shared` for duplicated pure helpers (countdown formatting,
-  date keys, pause/tick skeletons — see `plugins/_shared`). That package is
-  not a loadable plugin (no `definePlugin`); do not list it in `config.json`'s
-  `plugins` array. `@nightshift/entities` and `@nightshift/ui` appear only as
+  date keys, pause/tick skeletons — see `plugins/_shared`) and, via the
+  `@nightshift/plugin-shared/timer-session` subpath, shared timer session/today
+  widgets. Keep the package root free of React so pure helper imports do not
+  load the SDK/OpenTUI. That package is not a loadable plugin (no
+  `definePlugin`); do not list it in `config.json`'s `plugins` array. `@nightshift/entities` and `@nightshift/ui` appear only as
   `devDependencies`, for types in tests. `plugins/weather` and `plugins/clock`
   additionally declare the `network` capability and use `context.fetch` —
   weather to geocode+forecast, clock to geocode a location into a timezone
@@ -325,8 +327,10 @@ and is optional — not configured in this repo.
 ### The SDK is the only host import
 
 A plugin's allowed imports from Nightshift are `@nightshift/sdk`
-(`packages/sdk/src/index.ts`) and, for shared pure helpers among bundled
-plugins only, `@nightshift/plugin-shared`. The SDK module does two things:
+(`packages/sdk/src/index.ts`) and, for shared helpers among bundled plugins
+only, `@nightshift/plugin-shared` (pure countdown helpers from the package
+root; timer session widgets from `@nightshift/plugin-shared/timer-session`).
+The SDK module does two things:
 
 1. **Defines the runtime contract**: `definePlugin()`, `PluginManifest`,
    `PluginContext`, `Capability`, `CAPABILITIES`, `isCompatible()`.
@@ -340,9 +344,10 @@ If you're adding something a plugin should be able to use from the host, it
 goes through `packages/sdk/src/index.ts` — either as a new export re-exported
 from `ui`/`entities`/`automations`, or as a new field on `PluginContext`.
 Duplicated pure logic shared by two or more bundled plugins belongs in
-`@nightshift/plugin-shared` instead of the SDK. A plugin must never reach past
-the SDK into `@nightshift/services`, `@nightshift/dashboard`, etc. directly;
-those are host internals.
+`@nightshift/plugin-shared` instead of the SDK; duplicated timer session UI
+belongs on the `timer-session` subpath of that package. A plugin must never
+reach past the SDK into `@nightshift/services`, `@nightshift/dashboard`, etc.
+directly; those are host internals.
 
 ### Anatomy of a plugin
 

@@ -1,7 +1,7 @@
 {
   "name": "@nightshift/plugin-shared",
   "version": "0.1.0",
-  "description": "Shared helpers for Nightshift plugins (not a loadable plugin).",
+  "description": "Shared helpers and timer widgets for Nightshift plugins (not a loadable plugin).",
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",
@@ -10,6 +10,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./timer-session": {
+      "types": "./dist/timerSessionWidget.d.ts",
+      "default": "./dist/timerSessionWidget.js"
     }
   },
   "files": [
@@ -22,5 +26,13 @@
     "lint": "eslint src",
     "test": "vitest run --passWithNoTests",
     "clean": "rm -rf dist *.tsbuildinfo"
+  },
+  "dependencies": {
+    "@nightshift/sdk": "workspace:*",
+    "@opentui/react": "^0.5.1",
+    "react": "^19.2.8"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.18"
   }
 }

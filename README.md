@@ -459,7 +459,7 @@ pnpm mcp:up --only context --no-build
 
 ```
 SERVER   PORT  ENDPOINT                   STATUS
-context  7411  http://127.0.0.1:7411/mcp  ready — 7 tools
+context  7411  http://127.0.0.1:7411/mcp  ready
 ```
 
 `mcp-up` discovers servers by scanning `mcp/*/package.json` for an `mcp` block:
@@ -470,7 +470,7 @@ context  7411  http://127.0.0.1:7411/mcp  ready — 7 tools
 ```
 
 so a new server needs no changes to the launcher. Each is started with `--http`
-as a long-lived process, restarted if it crashes, and stopped on Ctrl-C.
+as a long-lived process and stopped on Ctrl-C (a crash exits `mcp-up` non-zero).
 
 The same binaries also speak stdio, which is what an editor spawning them
 directly will use — no daemon required:
