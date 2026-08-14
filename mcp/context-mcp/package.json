@@ -27,8 +27,12 @@
   "dependencies": {
     "@modelcontextprotocol/node": "^2.0.0",
     "@modelcontextprotocol/server": "^2.0.0",
+    "picomatch": "^4.0.5",
     "tree-sitter-wasms": "^0.1.13",
     "web-tree-sitter": "^0.25.10",
     "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/picomatch": "^4.0.3"
   }
 }

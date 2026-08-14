@@ -1,3 +1,4 @@
+import picomatch from 'picomatch';
 import { z } from 'zod';
 
 import { type CodeIndex } from './store.js';
@@ -301,27 +302,12 @@ function clampLimit(limit: number | undefined, fallback: number): number {
   return Math.min(Math.max(1, Math.trunc(limit)), 1000);
 }
 
-/** Matches every path when no glob is given. `**` crosses directories, `*` does not. */
+/**
+ * Matches every path when no glob is given. `**` crosses directories, `*` does not.
+ * `dot: true` keeps parity with the prior matcher so leading-dot segments
+ * (e.g. `.github/…`) are not skipped by default picomatch rules.
+ */
 function pathMatcher(glob: string | undefined): (file: string) => boolean {
   if (glob === undefined || glob === '') return () => true;
-
-  let pattern = '';
-  for (let index = 0; index < glob.length; index += 1) {
-    const character = glob[index];
-    if (character === '*') {
-      if (glob[index + 1] === '*') {
-        pattern += '.*';
-        index += 1;
-      } else {
-        pattern += '[^/]*';
-      }
-    } else if (character === '?') {
-      pattern += '[^/]';
-    } else {
-      pattern += character?.replace(/[.+^${}()|[\]\\]/g, '\\$&') ?? '';
-    }
-  }
-
-  const regex = new RegExp(`^${pattern}$`);
-  return (file) => regex.test(file);
+  return picomatch(glob, { dot: true });
 }
