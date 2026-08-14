@@ -1,3 +1,4 @@
+import { geocodeOpenMeteo, formatOpenMeteoLocationLabel } from '@nightshift/plugin-shared';
 import type { PluginFetch } from '@nightshift/sdk';
 
 export interface GeocodedTimezone {
@@ -6,8 +7,6 @@ export interface GeocodedTimezone {
   /** IANA zone, e.g. "America/Chicago". */
   timezone: string;
 }
-
-const GEOCODE_URL = 'https://geocoding-api.open-meteo.com/v1/search';
 
 /**
  * The IANA zone Node/the OS reports (e.g. from `TZ`, or the system clock's
@@ -33,27 +32,8 @@ export async function geocodeTimezone(
   fetchFn: PluginFetch,
   query: string,
 ): Promise<GeocodedTimezone | undefined> {
-  const trimmed = query.trim();
-  if (trimmed === '') return undefined;
-
-  const url = `${GEOCODE_URL}?name=${encodeURIComponent(trimmed)}&count=1&language=en&format=json`;
-  const response = await fetchFn(url);
-  if (!response.ok) {
-    throw new Error(`Geocoding failed (${response.status})`);
-  }
-  const body = (await response.json()) as {
-    results?: Array<{
-      name: string;
-      admin1?: string;
-      country?: string;
-      timezone?: string;
-    }>;
-  };
-  const hit = body.results?.[0];
+  const hit = await geocodeOpenMeteo(fetchFn, query);
   if (!hit?.timezone) return undefined;
 
-  const parts = [hit.name, hit.admin1, hit.country].filter(
-    (part): part is string => typeof part === 'string' && part.length > 0,
-  );
-  return { name: parts.join(', '), timezone: hit.timezone };
+  return { name: formatOpenMeteoLocationLabel(hit), timezone: hit.timezone };
 }
