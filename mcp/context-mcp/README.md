@@ -68,8 +68,7 @@ src/files.ts      Which files to index
 src/store.ts      The in-memory index, with size/mtime-based skipping
 src/watcher.ts    Debounced incremental reindex on change
 src/query.ts      The query surface — pure functions over the index
-src/tools.ts      The MCP tools, as data (schema + handler)
-src/server.ts     Registers the tools on an McpServer
+src/server.ts     Registers the MCP tools on an McpServer
 src/bin.ts        The executable: stdio or HTTP
 ```
 
