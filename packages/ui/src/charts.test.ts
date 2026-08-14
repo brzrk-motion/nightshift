@@ -203,6 +203,10 @@ describe('truncate', () => {
     ['nightshift', 6, 'night…'],
     ['nightshift', 1, '…'],
     ['nightshift', 0, ''],
+    ['Deep Work Sessions', 8, 'Deep Wo…'],
+    ['Drink more water please', 10, 'Drink mor…'],
+    // Code-point aware: one emoji is one unit, not two UTF-16 code units.
+    ['hi😀bye', 5, 'hi😀b…'],
   ])('truncates %s to %i', (text, width, expected) => {
     expect(truncate(text, width)).toBe(expected);
   });

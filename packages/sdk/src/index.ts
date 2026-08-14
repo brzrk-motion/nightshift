@@ -228,7 +228,6 @@ export function isCompatible(manifest: PluginManifest): boolean {
 }
 
 export { argString } from './args.js';
-export { clipText } from './text.js';
 
 export { NIGHTSHIFT_API_VERSION, parseStoredVersion } from '@nightshift/core';
 export type { EntityId, EntityMeta, EntityStore, Entity } from '@nightshift/entities';
@@ -271,6 +270,7 @@ export {
   Timeline,
   Toggle,
   Toolbar,
+  truncate as clipText,
   resolveBreakpoint,
   useCommands,
   useEntities,

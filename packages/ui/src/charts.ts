@@ -143,11 +143,13 @@ export function barChart(data: readonly BarDatum[], options: BarChartOptions): B
   });
 }
 
-/** Shortens a label to `width`, marking the cut with an ellipsis. */
+/** Shortens a label to `width` code points, marking the cut with an ellipsis. */
 export function truncate(text: string, width: number): string {
   if (width <= 0) return '';
-  if (text.length <= width) return text;
-  return width === 1 ? '…' : `${text.slice(0, width - 1)}…`;
+  const characters = [...text];
+  if (characters.length <= width) return text;
+  if (width === 1) return '…';
+  return `${characters.slice(0, width - 1).join('')}…`;
 }
 
 export interface LineChartOptions extends Partial<Scale> {
