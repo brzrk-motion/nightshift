@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { discoverPlugins } from './discovery.js';
-import { createPermissionPolicy, AUTO_GRANTED, SENSITIVE } from './permissions.js';
+import { AUTO_GRANTED, granted, missing } from './permissions.js';
 
 let dir: string;
 
@@ -101,38 +101,34 @@ describe('discoverPlugins', () => {
   });
 });
 
-describe('createPermissionPolicy', () => {
+describe('plugin permissions', () => {
   it('grants the everyday capabilities without asking', () => {
-    const policy = createPermissionPolicy();
     for (const capability of AUTO_GRANTED) {
-      expect(policy.granted('demo', capability), capability).toBe(true);
+      expect(granted('demo', capability), capability).toBe(true);
     }
   });
 
   it('withholds the ones that reach outside Nightshift', () => {
-    const policy = createPermissionPolicy();
-    expect(SENSITIVE).toEqual(['network', 'shell']);
-    for (const capability of SENSITIVE) {
-      expect(policy.granted('demo', capability), capability).toBe(false);
+    for (const capability of ['network', 'shell'] as const) {
+      expect(granted('demo', capability), capability).toBe(false);
     }
   });
 
   it('honours a per-plugin grant, and only for that plugin', () => {
-    const policy = createPermissionPolicy({ grants: { demo: ['network'] } });
+    const grants = { demo: ['network'] as const };
 
-    expect(policy.granted('demo', 'network')).toBe(true);
-    expect(policy.granted('demo', 'shell')).toBe(false);
-    expect(policy.granted('other', 'network')).toBe(false);
+    expect(granted('demo', 'network', grants)).toBe(true);
+    expect(granted('demo', 'shell', grants)).toBe(false);
+    expect(granted('other', 'network', grants)).toBe(false);
   });
 
   it('honours an "all" grant', () => {
-    const policy = createPermissionPolicy({ grants: { demo: 'all' } });
-    expect(policy.granted('demo', 'shell')).toBe(true);
+    expect(granted('demo', 'shell', { demo: 'all' })).toBe(true);
   });
 
   it('lists what is missing', () => {
-    const policy = createPermissionPolicy({ grants: { demo: ['network'] } });
+    const grants = { demo: ['network'] as const };
 
-    expect(policy.missing('demo', ['entities:read', 'network', 'shell'])).toEqual(['shell']);
+    expect(missing('demo', ['entities:read', 'network', 'shell'], grants)).toEqual(['shell']);
   });
 });

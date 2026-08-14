@@ -1,7 +1,6 @@
 import { join } from 'node:path';
 import { createEntityStore, type EntityId, type EntityStore } from '@nightshift/entities';
 import {
-  createPermissionPolicy,
   createPluginHost,
   discoverPlugins,
   saveConfig,
@@ -243,7 +242,7 @@ export async function createNightshiftRuntime(
     entities,
     dataDir: context.paths.dataDir,
     log: context.log.child('plugins'),
-    policy: createPermissionPolicy({ grants: context.config.pluginPermissions }),
+    grants: context.config.pluginPermissions,
     // A plugin installed into the config directory wins over one that ships
     // with Nightshift, so a user can replace a bundled plugin without a fork.
     resolveFrom: [join(context.paths.configDir, 'package.json'), import.meta.url],
