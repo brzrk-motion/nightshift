@@ -22,5 +22,11 @@
     "lint": "eslint src",
     "test": "vitest run --passWithNoTests",
     "clean": "rm -rf dist *.tsbuildinfo"
+  },
+  "dependencies": {
+    "@nightshift/sdk": "workspace:*"
+  },
+  "devDependencies": {
+    "@nightshift/entities": "workspace:*"
   }
 }
