@@ -150,6 +150,22 @@ describe('ambient-noise plugin', () => {
     for (const dispose of disposers) dispose();
   });
 
+  it('can pause and play again without getting stuck behind an in-flight drain', async () => {
+    const { context, entities, commands, disposers } = ambientNoiseTestContext();
+    await plugin.setup(context);
+    await commands.get('ambient-noise.play')?.run();
+    expect(player(entities).status).toBe('playing');
+    await commands.get('ambient-noise.pause')?.run();
+    expect(player(entities).status).toBe('paused');
+    await commands.get('ambient-noise.play')?.run();
+    expect(player(entities).status).toBe('playing');
+    await vi.advanceTimersByTimeAsync(LEVELS_MS * 2);
+    expect(player(entities).status).toBe('playing');
+    expect(player(entities).levels.length).toBeGreaterThan(0);
+
+    for (const dispose of disposers) dispose();
+  });
+
   it('wraps next/previous and ignores an unknown select id', async () => {
     const { context, entities, commands, disposers } = ambientNoiseTestContext();
     await plugin.setup(context);

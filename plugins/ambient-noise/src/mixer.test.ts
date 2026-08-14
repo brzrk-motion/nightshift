@@ -138,6 +138,35 @@ describe('Mixer', () => {
     expect(writes).toBe(3);
   });
 
+  it('discards queued chunks when paused so they do not play after pause', async () => {
+    let writes = 0;
+    let release!: () => void;
+    const firstWrite = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const sink: AudioSink = {
+      backend: 'device',
+      write: () => {
+        writes += 1;
+        return writes === 1 ? firstWrite : Promise.resolve();
+      },
+      close() {},
+    };
+    const mixer = new Mixer(sink);
+    mixer.load('a', toneBuffer(32, 100));
+    mixer.play('a');
+    mixer.tick(4);
+    mixer.tick(4);
+    mixer.tick(4);
+    expect(writes).toBe(1);
+    const pending = mixer.waitForDrain();
+    mixer.pause();
+    release();
+    await pending;
+    expect(writes).toBe(1);
+    expect(mixer.playing).toBe(false);
+  });
+
   it('falls back to a silent sink when device writes reject', async () => {
     const sink: AudioSink = {
       backend: 'device',

@@ -114,15 +114,25 @@ export default definePlugin({
       };
     };
 
+    const whenAborted = (signal: AbortSignal): Promise<void> => {
+      if (signal.aborted) return Promise.resolve();
+      return new Promise((resolve) => {
+        signal.addEventListener('abort', () => resolve(), { once: true });
+      });
+    };
+
     const delay = (ms: number, signal: AbortSignal): Promise<void> => {
       if (signal.aborted) return Promise.resolve();
       return new Promise((resolve) => {
-        const timer = setTimeout(resolve, ms);
-        timer.unref?.();
         const onAbort = (): void => {
           clearTimeout(timer);
           resolve();
         };
+        const timer = setTimeout(() => {
+          signal.removeEventListener('abort', onAbort);
+          resolve();
+        }, ms);
+        timer.unref?.();
         signal.addEventListener('abort', onAbort, { once: true });
       });
     };
@@ -173,7 +183,9 @@ export default definePlugin({
             mixer.tick(CHUNK_FRAMES);
             reportWriteError();
             const drain = mixer.waitForDrain();
-            if (drain) await drain;
+            // Race abort so pause/teardown is not blocked on an in-flight
+            // device write (which would let a second pump start mid-drain).
+            if (drain) await Promise.race([drain, whenAborted(signal)]);
             else await delay(CHUNK_MS, signal);
           }
         } finally {

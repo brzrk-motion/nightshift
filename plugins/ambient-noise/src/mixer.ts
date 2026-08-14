@@ -150,6 +150,11 @@ export class Mixer {
 
   pause(): void {
     this.playing = false;
+    // Drop anything not yet handed to the device so pause is snappy and a
+    // follow-up play cannot share the previous write generation's queue.
+    this.writeGen += 1;
+    this.queued = [];
+    this.inflight = null;
     if (this.incoming) {
       this.primary = this.incoming;
       this.incoming = null;
