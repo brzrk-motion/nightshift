@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import {
   Button,
+  clipText,
   Divider,
   EmptyState,
   ErrorState,
@@ -17,7 +18,7 @@ import {
   type WidgetProps,
 } from '@nightshift/sdk';
 import { formatProgress } from './client.js';
-import { clip, interpolateProgress, progressRatio, resolveLayout } from './format.js';
+import { interpolateProgress, progressRatio, resolveLayout } from './format.js';
 import {
   SPOTIFY_APP_DOCS_URL,
   SPOTIFY_EPISODES_ENTITY,
@@ -218,11 +219,11 @@ function BrowseRow({
     >
       <text fg={hovered ? theme.colors.accent : theme.colors.muted}>{hovered ? '▸' : '·'}</text>
       <text fg={hovered ? theme.colors.accent : theme.colors.text}>
-        {clip(item.name, nameWidth)}
+        {clipText(item.name, nameWidth)}
       </text>
       <box style={{ flexGrow: 1 }} />
       {metaWidth > 0 && item.meta ? (
-        <text fg={theme.colors.muted}>{clip(item.meta, metaWidth)}</text>
+        <text fg={theme.colors.muted}>{clipText(item.meta, metaWidth)}</text>
       ) : null}
     </box>
   );
@@ -258,7 +259,7 @@ function EpisodesPage({
     <box style={{ flexDirection: 'column', flexGrow: 1, gap: 1 }}>
       <box style={{ flexDirection: 'row', gap: 1, alignItems: 'center', flexShrink: 0 }}>
         <Button label="← Podcasts" onPress={onBack} />
-        <text fg={theme.colors.accent}>{clip(show.name, Math.max(8, width - 20))}</text>
+        <text fg={theme.colors.accent}>{clipText(show.name, Math.max(8, width - 20))}</text>
       </box>
 
       {current === null || current.loading ? (
@@ -401,10 +402,10 @@ function NowPlaying({
       <box style={{ flexDirection: 'column', flexShrink: 0 }}>
         <text fg={theme.colors.text}>
           <span fg={isPlaying ? theme.colors.success : theme.colors.muted}>{mark}</span>{' '}
-          {clip(player.name, Math.max(8, width - 6))}
+          {clipText(player.name, Math.max(8, width - 6))}
         </text>
         {detail ? (
-          <text fg={theme.colors.muted}>{clip(detail, Math.max(8, width - 2))}</text>
+          <text fg={theme.colors.muted}>{clipText(detail, Math.max(8, width - 2))}</text>
         ) : null}
       </box>
     );
@@ -415,15 +416,15 @@ function NowPlaying({
       <box style={{ flexDirection: 'row', gap: 1, height: 1 }}>
         <text fg={isPlaying ? theme.colors.success : theme.colors.muted}>{mark}</text>
         <text fg={theme.colors.accent}>
-          <b>{clip(player.name, Math.max(10, width - 8))}</b>
+          <b>{clipText(player.name, Math.max(10, width - 8))}</b>
         </text>
       </box>
       {player.artists ? (
-        <text fg={theme.colors.text}>{clip(player.artists, Math.max(10, width - 4))}</text>
+        <text fg={theme.colors.text}>{clipText(player.artists, Math.max(10, width - 4))}</text>
       ) : null}
       {player.deviceName ? (
         <text fg={theme.colors.muted}>
-          {clip(`on ${player.deviceName}`, Math.max(10, width - 4))}
+          {clipText(`on ${player.deviceName}`, Math.max(10, width - 4))}
         </text>
       ) : null}
     </box>
@@ -483,7 +484,7 @@ function ReadyPane({
   return (
     <box style={{ flexDirection: 'column', flexGrow: 1, gap: compact ? 0 : 1 }}>
       <box style={{ flexDirection: 'row', gap: 1, alignItems: 'center', flexShrink: 0 }}>
-        <text fg={theme.colors.muted}>{clip(`Spotify${who}`, Math.max(8, width - 26))}</text>
+        <text fg={theme.colors.muted}>{clipText(`Spotify${who}`, Math.max(8, width - 26))}</text>
         <box style={{ flexGrow: 1 }} />
         <IconButton icon="apps" label="Browse" onPress={() => setBrowsing(true)} />
         <IconButton icon="reset" onPress={() => void commands.run('spotify.refresh')} />

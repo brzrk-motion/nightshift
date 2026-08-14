@@ -3,6 +3,7 @@ import { NIGHTSHIFT_API_VERSION, NightshiftError } from '@nightshift/core';
 import {
   argString,
   CAPABILITIES,
+  clipText,
   definePlugin,
   Icon,
   isCapability,
@@ -53,6 +54,13 @@ describe('isCompatible', () => {
   it('accepts the current contract and rejects anything else', () => {
     expect(isCompatible(definePlugin(base).manifest)).toBe(true);
     expect(isCompatible(definePlugin({ ...base, apiVersion: 99 }).manifest)).toBe(false);
+  });
+});
+
+describe('clipText', () => {
+  it('is exported for plugin widgets to clip labels', () => {
+    expect(typeof clipText).toBe('function');
+    expect(clipText('Deep Work Sessions', 8)).toBe('Deep Wo…');
   });
 });
 

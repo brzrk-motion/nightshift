@@ -99,7 +99,6 @@ export {
   nameColumnWidth,
   resolveDensity,
   rollingWindow,
-  truncateName,
   type HabitDensity,
 } from './layout.js';
 export { parseStored, serializeState, STORAGE_KEY, STORAGE_VERSION } from './storage.js';

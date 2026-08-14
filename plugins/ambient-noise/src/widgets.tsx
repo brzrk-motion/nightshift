@@ -2,6 +2,7 @@ import { type ReactNode } from 'react';
 import {
   ActivityWaveform,
   Button,
+  clipText,
   EmptyState,
   ErrorState,
   IconButton,
@@ -25,13 +26,6 @@ const COMPACT_PREVIOUS_GLYPH = '«';
 const COMPACT_NEXT_GLYPH = '»';
 const PLAY_GLYPH = '▶';
 const PAUSE_GLYPH = '▮';
-
-function clip(text: string, max: number): string {
-  if (max <= 0) return '';
-  if (text.length <= max) return text;
-  if (max === 1) return '…';
-  return `${text.slice(0, max - 1)}…`;
-}
 
 export function PlayerWidget({ width, height }: WidgetProps): ReactNode {
   const theme = useTheme();
@@ -77,15 +71,15 @@ export function PlayerWidget({ width, height }: WidgetProps): ReactNode {
       }}
     >
       <text fg={playing ? theme.colors.accent : theme.colors.text}>
-        {clip(state.currentName || 'Ambient', nameWidth)}
+        {clipText(state.currentName || 'Ambient', nameWidth)}
       </text>
       {state.status === 'loading' ? (
-        <text fg={theme.colors.muted}>{clip('Loading…', nameWidth)}</text>
+        <text fg={theme.colors.muted}>{clipText('Loading…', nameWidth)}</text>
       ) : state.error ? (
-        <text fg={theme.colors.muted}>{clip(state.error, nameWidth)}</text>
+        <text fg={theme.colors.muted}>{clipText(state.error, nameWidth)}</text>
       ) : null}
       {state.output !== 'device' && state.outputMessage ? (
-        <text fg={theme.colors.muted}>{clip(state.outputMessage, nameWidth)}</text>
+        <text fg={theme.colors.muted}>{clipText(state.outputMessage, nameWidth)}</text>
       ) : null}
       {layout === 'wide' && playing && state.levels.length > 0 ? (
         <ActivityWaveform values={state.levels} width={Math.max(8, width - 6)} />

@@ -1,12 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  addDays,
-  dayHeaderLabel,
-  isDateKey,
-  resolveDensity,
-  rollingWindow,
-  truncateName,
-} from './layout.js';
+import { addDays, dayHeaderLabel, isDateKey, resolveDensity, rollingWindow } from './layout.js';
 
 describe('addDays', () => {
   it('shifts across month boundaries', () => {
@@ -59,12 +52,5 @@ describe('dayHeaderLabel', () => {
 
   it('uses weekday + date when wide', () => {
     expect(dayHeaderLabel('2026-08-11', 'wide')).toBe('Tue 11');
-  });
-});
-
-describe('truncateName', () => {
-  it('leaves short names alone and ellipsizes long ones', () => {
-    expect(truncateName('Water', 10)).toBe('Water');
-    expect(truncateName('Drink more water please', 10)).toBe('Drink mor…');
   });
 });

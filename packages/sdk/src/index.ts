@@ -270,6 +270,7 @@ export {
   Timeline,
   Toggle,
   Toolbar,
+  truncate as clipText,
   resolveBreakpoint,
   useCommands,
   useEntities,

@@ -51,13 +51,6 @@ export function dayHeaderLabel(dateKey: string, density: HabitDensity): string {
   return String(day);
 }
 
-export function truncateName(name: string, maxChars: number): string {
-  if (maxChars <= 0) return '';
-  if (name.length <= maxChars) return name;
-  if (maxChars === 1) return '…';
-  return `${name.slice(0, maxChars - 1)}…`;
-}
-
 export function nameColumnWidth(width: number, density: HabitDensity): number {
   // 7 day cells (~4 cols each with gap) + optional streak cols + chrome.
   const dayBudget = density === 'compact' ? 7 * 4 : density === 'wide' ? 7 * 7 : 7 * 5;
