@@ -5,7 +5,7 @@ import {
   applyError,
   applyForecast,
   fromStored,
-  mirrorPrimary,
+  primaryLocation,
   removeSlot,
   slotId,
   upsertSlot,
@@ -68,7 +68,7 @@ describe('state', () => {
     expect(state.locations['home']).toBeUndefined();
   });
 
-  it('applies forecast data and mirrors the primary slot', () => {
+  it('applies forecast data to the primary slot', () => {
     let state = upsertSlot(initialLocationsState(), 'home', '90210');
     state = applyForecast(state, 'home', {
       temperature: 11,
@@ -94,7 +94,7 @@ describe('state', () => {
     });
 
     expect(state.locations['home']?.status).toBe('ready');
-    expect(mirrorPrimary(state).temperature).toBe(11);
+    expect(primaryLocation(state)?.temperature).toBe(11);
   });
 
   it('records errors without dropping the slot', () => {
@@ -134,6 +134,6 @@ describe('state', () => {
     const state = fromStored(stored);
     expect(state.units).toBe('imperial');
     expect(state.locations['home']?.status).toBe('ready');
-    expect(mirrorPrimary(state).placeName).toBe('Beverly Hills');
+    expect(primaryLocation(state)?.placeName).toBe('Beverly Hills');
   });
 });

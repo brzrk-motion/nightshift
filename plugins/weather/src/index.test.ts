@@ -2,11 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createPluginTestContext } from '@nightshift/sdk/testing';
 import type { PluginContext } from '@nightshift/sdk';
 import plugin from './index.js';
-import {
-  WEATHER_LOCATIONS_ENTITY,
-  WEATHER_NOW_ENTITY,
-  type WeatherLocationsState,
-} from './entity.js';
+import { WEATHER_LOCATIONS_ENTITY, type WeatherLocationsState } from './entity.js';
 
 function weatherTestContext(fetch?: PluginContext['fetch']) {
   return createPluginTestContext({
@@ -45,7 +41,7 @@ describe('setup', () => {
     await plugin.setup(context);
 
     expect(entities.has(WEATHER_LOCATIONS_ENTITY)).toBe(true);
-    expect(entities.has(WEATHER_NOW_ENTITY)).toBe(true);
+    expect(entities.has('weather.now')).toBe(false);
     expect([...commands.keys()].sort()).toEqual([
       'weather.configure-location',
       'weather.ensure-location',
@@ -106,9 +102,7 @@ describe('setup', () => {
     expect(locations.locations['home']?.status).toBe('ready');
     expect(locations.locations['home']?.temperature).toBe(22);
     expect(locations.locations['home']?.placeName).toContain('Beverly Hills');
-
-    const now = entities.get(WEATHER_NOW_ENTITY) as { temperature: number };
-    expect(now.temperature).toBe(22);
+    expect(locations.temperature).toBe(22);
     expect(storageData.get('weather')).toMatchObject({ primaryId: 'home' });
     expect(fetchImpl).toHaveBeenCalled();
   });
