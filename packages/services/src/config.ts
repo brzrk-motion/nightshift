@@ -1,6 +1,6 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
-import { NightshiftError } from '@nightshift/core';
+import { configFail, isRecord, NightshiftError } from '@nightshift/core';
 import { isCapability, type Capability } from '@nightshift/sdk';
 import { resolvePaths, type NightshiftPaths, type ResolvePathsOptions } from './paths.js';
 
@@ -72,10 +72,6 @@ export interface LoadedConfig {
   exists: boolean;
   /** True when an on-disk config was upgraded in memory (and should be written back). */
   migrated: boolean;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 const WEATHER_PLUGIN = '@nightshift/plugin-weather';
@@ -211,8 +207,9 @@ export function parseConfig(input: unknown, source = 'config'): NightshiftConfig
   }
 
   const invalid = (key: string, expected: string): never => {
-    throw new NightshiftError('CONFIG_INVALID', `${source}: "${key}" must be ${expected}.`, {
-      hint: `Fix the value or delete the key to fall back to the default.`,
+    configFail(key, expected, {
+      message: `${source}: "${key}" must be ${expected}.`,
+      hint: 'Fix the value or delete the key to fall back to the default.',
     });
   };
 

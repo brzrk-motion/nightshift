@@ -2,6 +2,8 @@ import { readFile } from 'node:fs/promises';
 import { basename, extname } from 'node:path';
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 import {
+  assertRecord,
+  configFail,
   deleteYamlResource,
   loadYamlDir,
   NightshiftError,
@@ -16,14 +18,18 @@ import type { VibeAction, VibeSpec } from './schema.js';
  * validation with errors that name the exact path that is wrong, because a
  * vibe is a file people edit by hand.
  */
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
+const CONFIG_HINT = 'See the vibe guide for the file format.';
 
 function fail(path: string, expected: string): never {
-  throw new NightshiftError('CONFIG_INVALID', `${path} must be ${expected}.`, {
-    hint: 'See the vibe guide for the file format.',
-  });
+  configFail(path, expected, CONFIG_HINT);
+}
+
+function assertMapping(
+  value: unknown,
+  path: string,
+  expected: string,
+): asserts value is Record<string, unknown> {
+  assertRecord(value, path, expected, CONFIG_HINT);
 }
 
 function parseAction(input: unknown, path: string): VibeAction {
@@ -32,7 +38,7 @@ function parseAction(input: unknown, path: string): VibeAction {
     if (input.trim() === '') fail(path, 'a command id');
     return { command: input.trim() };
   }
-  if (!isRecord(input)) fail(path, 'a command id or an action object');
+  assertMapping(input, path, 'a command id or an action object');
 
   const command = input['command'];
   if (typeof command !== 'string' || command.trim() === '') {
@@ -41,7 +47,7 @@ function parseAction(input: unknown, path: string): VibeAction {
 
   const action: VibeAction = { command: command.trim() };
   if (input['args'] !== undefined) {
-    if (!isRecord(input['args'])) fail(`${path}.args`, 'an object');
+    assertMapping(input['args'], `${path}.args`, 'an object');
     action.args = input['args'] as Record<string, Json>;
   }
   return action;
@@ -53,12 +59,12 @@ function parseActions(input: unknown, path: string): VibeAction[] {
 }
 
 function parseEntities(input: unknown, path: string): Record<EntityId, Record<string, Json>> {
-  if (!isRecord(input)) fail(path, 'an object keyed by entity id');
+  assertMapping(input, path, 'an object keyed by entity id');
 
   const entities: Record<EntityId, Record<string, Json>> = {};
   for (const [id, state] of Object.entries(input)) {
     if (!isEntityId(id)) fail(`${path}.${id}`, 'an entity id like `timer.focus`');
-    if (!isRecord(state)) fail(`${path}.${id}`, 'an object of state to merge in');
+    assertMapping(state, `${path}.${id}`, 'an object of state to merge in');
     entities[id] = state as Record<string, Json>;
   }
   return entities;
@@ -86,7 +92,7 @@ export function parseVibe(source: string, options: ParseVibeOptions = {}): VibeS
     });
   }
 
-  if (!isRecord(document)) fail(label, 'a YAML mapping');
+  assertMapping(document, label, 'a YAML mapping');
 
   const name = document['name'] ?? options.name;
   if (typeof name !== 'string' || name.trim() === '') fail(`${label}.name`, 'a name');

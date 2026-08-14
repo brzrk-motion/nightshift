@@ -2,6 +2,8 @@ import { readFile } from 'node:fs/promises';
 import { basename, extname } from 'node:path';
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 import {
+  assertRecord,
+  configFail,
   deleteYamlResource,
   loadYamlDir,
   NightshiftError,
@@ -25,14 +27,18 @@ import {
  * dashboard is a file people edit by hand, and a vague error there costs more
  * than the strictness does.
  */
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
+const CONFIG_HINT = 'See the dashboard guide for the file format.';
 
 function fail(path: string, expected: string): never {
-  throw new NightshiftError('CONFIG_INVALID', `${path} must be ${expected}.`, {
-    hint: 'See the dashboard guide for the file format.',
-  });
+  configFail(path, expected, CONFIG_HINT);
+}
+
+function assertMapping(
+  value: unknown,
+  path: string,
+  expected: string,
+): asserts value is Record<string, unknown> {
+  assertRecord(value, path, expected, CONFIG_HINT);
 }
 
 function positiveNumber(value: unknown, path: string): number {
@@ -45,7 +51,7 @@ function positiveNumber(value: unknown, path: string): number {
 const CONDITION_TYPES = new Set(['equals', 'above', 'below']);
 
 function parseCondition(input: unknown, path: string): Condition {
-  if (!isRecord(input)) fail(path, 'a condition object');
+  assertMapping(input, path, 'a condition object');
 
   const type = input['type'];
   if (typeof type !== 'string' || !CONDITION_TYPES.has(type)) {
@@ -75,7 +81,7 @@ function parseWidget(input: unknown, path: string): WidgetSpec {
     if (input.trim() === '') fail(path, 'a widget type');
     return { type: input.trim() };
   }
-  if (!isRecord(input)) fail(path, 'a widget type or a widget object');
+  assertMapping(input, path, 'a widget type or a widget object');
 
   const type = input['type'];
   if (typeof type !== 'string' || type.trim() === '') fail(`${path}.type`, 'a widget type');
@@ -106,7 +112,7 @@ function parseWidget(input: unknown, path: string): WidgetSpec {
   }
 
   if (input['options'] !== undefined) {
-    if (!isRecord(input['options'])) fail(`${path}.options`, 'an object');
+    assertMapping(input['options'], `${path}.options`, 'an object');
     widget.options = input['options'] as Record<string, Json>;
   }
 
@@ -122,7 +128,7 @@ function parseRow(input: unknown, path: string): RowSpec {
   if (Array.isArray(input)) {
     return { widgets: input.map((widget, index) => parseWidget(widget, `${path}[${index}]`)) };
   }
-  if (!isRecord(input)) fail(path, 'a row object or a list of widgets');
+  assertMapping(input, path, 'a row object or a list of widgets');
 
   const widgets = input['widgets'];
   if (!Array.isArray(widgets) || widgets.length === 0) {
@@ -160,7 +166,7 @@ export function parseDashboard(source: string, options: ParseDashboardOptions = 
     });
   }
 
-  if (!isRecord(document)) fail(label, 'a YAML mapping with a `rows` list');
+  assertMapping(document, label, 'a YAML mapping with a `rows` list');
 
   const name = document['name'] ?? options.name;
   if (typeof name !== 'string' || name.trim() === '') fail(`${label}.name`, 'a name');
