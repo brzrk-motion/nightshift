@@ -2,11 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createPluginTestContext } from '@nightshift/sdk/testing';
 import type { PluginContext } from '@nightshift/sdk';
 import plugin from './index.js';
-import {
-  WEATHER_LOCATIONS_ENTITY,
-  WEATHER_NOW_ENTITY,
-  type WeatherLocationsState,
-} from './entity.js';
+import { WEATHER_LOCATIONS_ENTITY, type WeatherLocationsState } from './entity.js';
 
 function weatherTestContext(fetch?: PluginContext['fetch']) {
   return createPluginTestContext({
@@ -45,7 +41,7 @@ describe('setup', () => {
     await plugin.setup(context);
 
     expect(entities.has(WEATHER_LOCATIONS_ENTITY)).toBe(true);
-    expect(entities.has(WEATHER_NOW_ENTITY)).toBe(true);
+    expect(entities.has('weather.now')).toBe(false);
     expect([...commands.keys()].sort()).toEqual([
       'weather.configure-location',
       'weather.ensure-location',
@@ -61,6 +57,14 @@ describe('setup', () => {
       'weather.now',
     ]);
     expect(automations.map((automation) => automation.name)).toEqual(['weather.frost-warning']);
+    expect(automations[0]?.when).toEqual({
+      type: 'entity',
+      entity: WEATHER_LOCATIONS_ENTITY,
+      key: 'temperature',
+    });
+    expect(automations[0]?.and).toEqual([
+      { type: 'below', entity: WEATHER_LOCATIONS_ENTITY, key: 'temperature', value: 0 },
+    ]);
     expect(disposers).toHaveLength(1);
   });
 
@@ -106,9 +110,7 @@ describe('setup', () => {
     expect(locations.locations['home']?.status).toBe('ready');
     expect(locations.locations['home']?.temperature).toBe(22);
     expect(locations.locations['home']?.placeName).toContain('Beverly Hills');
-
-    const now = entities.get(WEATHER_NOW_ENTITY) as { temperature: number };
-    expect(now.temperature).toBe(22);
+    expect(locations.temperature).toBe(22);
     expect(storageData.get('weather')).toMatchObject({ primaryId: 'home' });
     expect(fetchImpl).toHaveBeenCalled();
   });
@@ -152,6 +154,12 @@ describe('setup', () => {
     const locations = entities.get(WEATHER_LOCATIONS_ENTITY) as WeatherLocationsState;
     expect(locations.locations['home']?.placeName).toContain('Austin');
     expect(locations.locations['office']?.placeName).toContain('New York');
+    expect(locations.temperature).toBe(locations.locations['home']?.temperature);
+
+    await commands.get('weather.set-primary')!.run({ id: 'office' });
+    const afterPrimary = entities.get(WEATHER_LOCATIONS_ENTITY) as WeatherLocationsState;
+    expect(afterPrimary.primaryId).toBe('office');
+    expect(afterPrimary.temperature).toBe(afterPrimary.locations['office']?.temperature);
   });
 
   it('records an error when geocoding finds nothing', async () => {
@@ -221,7 +229,7 @@ describe('setup', () => {
 
   it('does not hit the network on setup when locations are stored but no widget is mounted', async () => {
     const fetchImpl = vi.fn(async () => jsonResponse({ results: [] }));
-    const { context, commands, storageData } = weatherTestContext(fetchImpl);
+    const { context, commands, entities, storageData } = weatherTestContext(fetchImpl);
     storageData.set('weather', {
       primaryId: 'home',
       units: 'metric',
@@ -251,6 +259,8 @@ describe('setup', () => {
     await plugin.setup(context);
 
     expect(fetchImpl).not.toHaveBeenCalled();
+    const locations = entities.get(WEATHER_LOCATIONS_ENTITY) as WeatherLocationsState;
+    expect(locations.temperature).toBe(22);
 
     await commands.get('weather.widget-mounted')!.run();
     expect(fetchImpl).toHaveBeenCalled();

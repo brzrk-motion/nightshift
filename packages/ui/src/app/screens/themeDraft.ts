@@ -1,6 +1,7 @@
 import { HEX_COLOR, MIDNIGHT_THEME, THEME_COLOR_KEYS, type ThemeColorKey } from '../../theme.js';
 import type { Json } from '@nightshift/core';
 import { themeFromMidnight } from '../../theme/schema.js';
+import { CATALOG_NAME, duplicateCatalogDraft, mapCatalogActive } from './draftUtils.js';
 
 /** One row from the `nightshift.themes` catalog entity. */
 export interface ThemeCatalogRow {
@@ -18,7 +19,7 @@ export interface ThemeDraft {
   colors: Record<ThemeColorKey, string>;
 }
 
-export const THEME_NAME = /^[a-z][a-z0-9-]*$/;
+export const THEME_NAME = CATALOG_NAME;
 
 export function emptyDraft(): ThemeDraft {
   const template = themeFromMidnight();
@@ -39,18 +40,10 @@ export function draftFromCatalog(row: ThemeCatalogRow): ThemeDraft {
 
 /** Prefill a create draft from an existing catalog row (duplicate flow). */
 export function duplicateDraft(row: ThemeCatalogRow): ThemeDraft {
-  const draft = draftFromCatalog(row);
-  draft.name = '';
-  return draft;
+  return duplicateCatalogDraft(row, draftFromCatalog);
 }
 
-/** Maps catalog rows with an explicit active theme name (for tests). */
-export function mapCatalogActive(
-  rows: readonly ThemeCatalogRow[],
-  active: string | null,
-): ThemeCatalogRow[] {
-  return rows.map((row) => ({ ...row, active: row.name === active }));
-}
+export { mapCatalogActive };
 
 /**
  * Turns the editor draft into the args blob `theme.save` expects. Throws

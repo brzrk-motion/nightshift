@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { todayKey } from '@nightshift/plugin-shared';
 import { createPluginTestContext } from '@nightshift/sdk/testing';
 import plugin from './index.js';
-import { DEFAULT_WORK_MINUTES, POMODORO_ENTITY, todayKey } from './timer.js';
+import { DEFAULT_WORK_MINUTES, POMODORO_ENTITY } from './timer.js';
 
 beforeEach(() => {
   vi.useFakeTimers();

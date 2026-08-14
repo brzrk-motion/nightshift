@@ -1,6 +1,6 @@
 import { createEventBus, type EventBus, type Json, type Unsubscribe } from '@nightshift/core';
 import type { EntityStore } from '@nightshift/entities';
-import type { Action, AutomationSpec, Condition } from './schema.js';
+import type { AutomationSpec, Condition } from './schema.js';
 
 /**
  * The slice of the command registry the automation engine needs — narrow so
@@ -63,13 +63,12 @@ export function checkCondition(entities: EntityStore, condition: Condition): boo
 }
 
 /**
- * Reactive counterpart to the vibe engine's `runActions`: every action runs,
- * a failure only warns, and the fire is reported either way so a plugin or the
- * CLI can surface it.
+ * Runs a list of command actions, collecting a warning for each one that fails
+ * rather than stopping at the first — shared by the vibe and automation engines.
  */
-async function runActions(
+export async function runActions(
   commands: CommandRunner,
-  actions: readonly Action[],
+  actions: readonly { command: string; args?: Record<string, Json> }[],
   warnings: string[],
 ): Promise<void> {
   for (const action of actions) {

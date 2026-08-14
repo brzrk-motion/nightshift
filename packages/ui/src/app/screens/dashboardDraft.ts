@@ -1,4 +1,5 @@
 import type { Json } from '@nightshift/core';
+import { CATALOG_NAME, duplicateCatalogDraft, mapCatalogActive, optional } from './draftUtils.js';
 
 /** One row from the `nightshift.dashboards` catalog entity. */
 export interface DashboardCatalogRow {
@@ -22,7 +23,7 @@ export interface DashboardDraft {
   rows?: Array<Record<string, Json>>;
 }
 
-export const DASHBOARD_NAME = /^[a-z][a-z0-9-]*$/;
+export const DASHBOARD_NAME = CATALOG_NAME;
 
 /** Matches `DEFAULT_DASHBOARD_REFRESH` in `@nightshift/dashboard` schema. */
 export const DEFAULT_DASHBOARD_REFRESH_SECONDS = 60;
@@ -44,23 +45,10 @@ export function draftFromCatalog(row: DashboardCatalogRow): DashboardDraft {
 
 /** Prefill a create draft from an existing catalog row (duplicate flow). */
 export function duplicateDraft(row: DashboardCatalogRow): DashboardDraft {
-  const draft = draftFromCatalog(row);
-  draft.name = '';
-  return draft;
+  return duplicateCatalogDraft(row, draftFromCatalog);
 }
 
-function optional(value: string): string | undefined {
-  const trimmed = value.trim();
-  return trimmed === '' ? undefined : trimmed;
-}
-
-/** Maps catalog rows with an explicit active dashboard name (for tests). */
-export function mapCatalogActive(
-  rows: readonly DashboardCatalogRow[],
-  active: string | null,
-): DashboardCatalogRow[] {
-  return rows.map((row) => ({ ...row, active: row.name === active }));
-}
+export { mapCatalogActive };
 
 /**
  * Turns the editor draft into the args blob `dashboard.save` expects. Throws

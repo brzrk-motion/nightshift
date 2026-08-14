@@ -1,5 +1,5 @@
 import { definePlugin, type PluginContext } from '@nightshift/sdk';
-import { wireCountdownPlugin } from '@nightshift/plugin-shared';
+import { todayKey, wireCountdownPlugin } from '@nightshift/plugin-shared';
 import {
   initialState,
   POMODORO_ENTITY,
@@ -9,7 +9,6 @@ import {
   startSession,
   stopSession,
   tickSession,
-  todayKey,
   type PomodoroPhase,
 } from './timer.js';
 import { SessionWidget, TodayWidget } from './widgets.js';
@@ -143,7 +142,6 @@ export {
   startSession,
   stopSession,
   tickSession,
-  todayKey,
   type PomodoroPhase,
   type PomodoroState,
   type PomodoroStatus,

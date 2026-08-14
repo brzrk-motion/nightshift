@@ -1,3 +1,4 @@
+export { todayKey } from './dates.js';
 export {
   authorizedFetch,
   bearerHeaders,
@@ -12,7 +13,6 @@ export {
   pauseIfRunning,
   sessionProgress,
   tickCountdown,
-  todayKey,
   type CountdownTiming,
 } from './countdown.js';
 export {

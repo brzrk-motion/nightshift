@@ -11,12 +11,12 @@ import {
   Toolbar,
   useCommands,
   useEntity,
+  useRenderer,
   useTheme,
   useToasts,
   type WidgetProps,
 } from '@nightshift/sdk';
 import { formatProgress } from './client.js';
-import { copyToClipboard } from './clipboard.js';
 import { clip, interpolateProgress, progressRatio, resolveLayout } from './format.js';
 import {
   SPOTIFY_APP_DOCS_URL,
@@ -120,6 +120,7 @@ function ConnectPane({ session }: { session: SpotifySessionState }): ReactNode {
   const theme = useTheme();
   const commands = useCommands();
   const toasts = useToasts();
+  const renderer = useRenderer();
   const [paste, setPaste] = useState('');
 
   const submitPaste = (): void => {
@@ -130,7 +131,7 @@ function ConnectPane({ session }: { session: SpotifySessionState }): ReactNode {
 
   const copyAuthUrl = (): void => {
     if (!session.authUrl) return;
-    if (copyToClipboard(session.authUrl)) {
+    if (renderer.copyToClipboardOSC52(session.authUrl)) {
       toasts.push('Spotify link copied — paste it in a browser.', { tone: 'success' });
     } else {
       toasts.push('Could not copy the Spotify link.', { tone: 'danger' });

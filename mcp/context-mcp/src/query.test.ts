@@ -38,6 +38,7 @@ const SOURCES: Record<string, string> = {
     '  return helper;',
     '}',
   ].join('\n'),
+  '.github/workflows/ci.js': ['export function workflow() {', '  return true;', '}'].join('\n'),
 };
 
 let context: QueryContext;
@@ -70,6 +71,14 @@ describe('searchSymbols', () => {
     expect(searchSymbols(context, { path: 'apps/**/*.js' }).symbols.map((s) => s.name)).toEqual([
       'helper',
       'run',
+    ]);
+
+    // Broad globs must still include leading-dot path segments (picomatch `dot`).
+    expect(searchSymbols(context, { path: '**/*' }).symbols.map((s) => s.name)).toContain(
+      'workflow',
+    );
+    expect(searchSymbols(context, { path: '.github/**' }).symbols.map((s) => s.name)).toEqual([
+      'workflow',
     ]);
 
     expect(searchSymbols(context, { exportedOnly: true }).symbols.map((s) => s.name)).not.toContain(

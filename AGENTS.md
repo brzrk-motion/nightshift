@@ -71,7 +71,8 @@ Concretely:
 - `sdk` depends on `core`, `entities`, `automations`, `ui` (re-exports pieces
   of all three — see below).
 - `dashboard` depends on `sdk`, `automations`, `ui`, `entities`, `core`, `yaml`.
-- `vibes` depends on `core`, `entities`, `yaml`.
+- `vibes` depends on `core`, `entities`, `automations` (shared `runActions` /
+  `CommandRunner`), `yaml`.
 - `services` depends on `core`, `entities`, `automations`, `sdk`.
 - `apps/cli` depends on everything above, plus `commander`.
 - Bundled plugins depend on `@nightshift/sdk` at runtime (matching what a
@@ -360,13 +361,19 @@ export default definePlugin({
   version: '1.0.0',
   capabilities: ['entities:write', 'widgets:register', 'automations:register'],
   setup(context) {
-    context.registerEntity('weather.now', { temperature: 11 });
+    // Primary temperature is denormalized on weather.locations for flat-key automations.
+    context.registerEntity('weather.locations', {
+      units: 'metric',
+      primaryId: 'home',
+      locations: {},
+      temperature: 11,
+    });
     context.registerWidget({
       type: 'weather.now',
       title: 'Weather',
-      entities: ['weather.now'],
+      entities: ['weather.locations'],
       render: () => {
-        const entity = useEntity<{ temperature: number }>('weather.now');
+        const entity = useEntity<{ temperature: number }>('weather.locations');
         return <Card value={`${entity?.state.temperature ?? '—'}°`} />;
       },
     });
