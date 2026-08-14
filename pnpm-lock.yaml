@@ -247,14 +247,10 @@ importers:
         version: 2.9.0
 
   plugins/_shared:
-    dependencies:
+    devDependencies:
       '@nightshift/sdk':
         specifier: workspace:*
         version: link:../../packages/sdk
-    devDependencies:
-      '@nightshift/entities':
-        specifier: workspace:*
-        version: link:../../packages/entities
 
   plugins/ambient-noise:
     dependencies:

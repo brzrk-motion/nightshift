@@ -23,10 +23,10 @@
     "test": "vitest run --passWithNoTests",
     "clean": "rm -rf dist *.tsbuildinfo"
   },
-  "dependencies": {
+  "peerDependencies": {
     "@nightshift/sdk": "workspace:*"
   },
   "devDependencies": {
-    "@nightshift/entities": "workspace:*"
+    "@nightshift/sdk": "workspace:*"
   }
 }
