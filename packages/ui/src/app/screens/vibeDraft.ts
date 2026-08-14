@@ -1,5 +1,6 @@
 import type { Json } from '@nightshift/core';
 import type { EntityId } from '@nightshift/entities';
+import { CATALOG_NAME, duplicateCatalogDraft, optional } from './draftUtils.js';
 
 /** One row from the `nightshift.vibes` catalog entity. */
 export interface VibeCatalogRow {
@@ -46,13 +47,11 @@ export function emptyDraft(): VibeDraft {
   };
 }
 
-export const VIBE_NAME = /^[a-z][a-z0-9-]*$/;
+export const VIBE_NAME = CATALOG_NAME;
 
 /** Prefill a create draft from an existing catalog row (duplicate flow). */
 export function duplicateDraft(row: VibeCatalogRow): VibeDraft {
-  const draft = draftFromCatalog(row);
-  draft.name = '';
-  return draft;
+  return duplicateCatalogDraft(row, draftFromCatalog);
 }
 
 export function draftFromCatalog(row: VibeCatalogRow): VibeDraft {
@@ -74,11 +73,6 @@ export function draftFromCatalog(row: VibeCatalogRow): VibeDraft {
       ? {}
       : { entities: row.entities as Record<EntityId, Record<string, Json>> }),
   };
-}
-
-function optional(value: string): string | undefined {
-  const trimmed = value.trim();
-  return trimmed === '' ? undefined : trimmed;
 }
 
 function parseActionDrafts(
