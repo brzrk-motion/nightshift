@@ -99,6 +99,16 @@ describe('search', () => {
     expect(registry.search('quit')).toEqual([]);
   });
 
+  it('includes hidden commands when asked', () => {
+    expect(registry.search('quit', { includeHidden: true }).map((entry) => entry.id)).toEqual([
+      'app.quit',
+    ]);
+  });
+
+  it('caps the result list when a limit is set', () => {
+    expect(registry.search('', { limit: 2 })).toHaveLength(2);
+  });
+
   it('finds commands by a subsequence of the id', () => {
     expect(registry.search('fsta').map((entry) => entry.id)).toEqual(['focus.start']);
   });
@@ -109,6 +119,13 @@ describe('search', () => {
 
   it('returns nothing when a character is missing', () => {
     expect(registry.search('zzz')).toEqual([]);
+  });
+
+  it('matches a substring of the command id', () => {
+    const themed = createCommandRegistry([
+      command('theme.activate.midnight', { title: 'Activate midnight' }),
+    ]);
+    expect(themed.search('midnight').map((entry) => entry.id)).toEqual(['theme.activate.midnight']);
   });
 
   it('ranks a run of consecutive characters above a scattered match', () => {

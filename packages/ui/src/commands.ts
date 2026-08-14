@@ -32,8 +32,11 @@ export interface CommandRegistry {
   get(id: string): Command | undefined;
   /** Every registered command, hidden ones included, sorted by id. */
   list(): Command[];
-  /** Visible commands matching a palette query, best match first. */
-  search(query: string): Command[];
+  /**
+   * Commands matching a palette query, best match first. Hidden commands are
+   * omitted unless `includeHidden` is set; `limit` caps how many are returned.
+   */
+  search(query: string, options?: { includeHidden?: boolean; limit?: number }): Command[];
   run(id: string, args?: Record<string, Json>): Promise<void>;
   readonly events: EventBus<CommandEvents>;
 }
@@ -93,14 +96,20 @@ export function createCommandRegistry(initial: readonly Command[] = []): Command
 
     list: () => [...commands.values()].sort((a, b) => a.id.localeCompare(b.id)),
 
-    search(query) {
-      return registry
+    search(query, { includeHidden = false, limit } = {}) {
+      const trimmed = query.trim();
+      const needle = trimmed.toLowerCase();
+      const matches = registry
         .list()
-        .filter((command) => !command.hidden)
-        .map((command) => ({ command, score: scoreCommand(command, query) }))
-        .filter((entry) => entry.score > 0)
+        .filter((command) => includeHidden || !command.hidden)
+        .map((command) => ({ command, score: scoreCommand(command, trimmed) }))
+        .filter(
+          (entry) =>
+            entry.score > 0 || (needle !== '' && entry.command.id.toLowerCase().includes(needle)),
+        )
         .sort((a, b) => b.score - a.score || a.command.id.localeCompare(b.command.id))
         .map((entry) => entry.command);
+      return limit === undefined ? matches : matches.slice(0, limit);
     },
 
     async run(id, args) {
