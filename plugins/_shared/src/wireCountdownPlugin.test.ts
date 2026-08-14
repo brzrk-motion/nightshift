@@ -124,4 +124,31 @@ describe('wireCountdownPlugin', () => {
     vi.advanceTimersByTime(5000);
     expect(entities.get(ENTITY)).toEqual(frozen);
   });
+
+  it('uses a custom storage key for restore and persist', async () => {
+    const { context, entities, storageData } = createPluginTestContext();
+    storageData.set('custom-progress', { date: todayKey(), completedToday: 4 });
+
+    const { read, write } = await wireCountdownPlugin({
+      context,
+      entity: { id: ENTITY },
+      storageKey: 'custom-progress',
+      reducers: {
+        initialState: (stored) =>
+          initialState(typeof stored?.completedToday === 'number' ? stored.completedToday : 0),
+        tick,
+        persistOnTick: (_before, after) => after.status === 'finished',
+        toStoredProgress: (state) => ({ date: todayKey(), completedToday: state.completedToday }),
+      },
+    });
+
+    expect(entities.get(ENTITY)).toMatchObject({ completedToday: 4 });
+
+    write({ ...read(), status: 'running', remainingSeconds: 1 });
+    vi.advanceTimersByTime(1000);
+    await vi.waitFor(() =>
+      expect(storageData.get('custom-progress')).toMatchObject({ completedToday: 5 }),
+    );
+    expect(storageData.get('progress')).toBeUndefined();
+  });
 });

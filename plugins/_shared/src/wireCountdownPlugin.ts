@@ -20,15 +20,27 @@ export interface CountdownEntityConfig {
   meta?: EntityMeta;
 }
 
-export interface CountdownReducers<TState extends Json> {
+type CountdownReducersBase<TState extends Json> = {
   /** Build entity state from today's stored progress, or fresh defaults when absent. */
   initialState: (stored: DatedProgress | undefined) => TState;
   tick: (state: TState, elapsedSeconds: number) => TState;
-  /** When a tick transition should write storage. Omit to skip persistence. */
-  persistOnTick?: (before: TState, after: TState) => boolean;
-  /** Storage payload written on persist; defaults to `{ date: todayKey() }`. */
-  toStoredProgress?: (state: TState) => DatedProgress;
-}
+};
+
+/**
+ * Persistence is all-or-nothing: `persistOnTick` without `toStoredProgress`
+ * would overwrite storage with a bare `{ date }`, wiping daily counters.
+ */
+export type CountdownReducers<TState extends Json> = CountdownReducersBase<TState> &
+  (
+    | {
+        persistOnTick?: undefined;
+        toStoredProgress?: undefined;
+      }
+    | {
+        persistOnTick: (before: TState, after: TState) => boolean;
+        toStoredProgress: (state: TState) => DatedProgress;
+      }
+  );
 
 export interface WireCountdownPluginOptions<TState extends Json> {
   context: PluginContext;
@@ -69,10 +81,10 @@ export async function wireCountdownPlugin<TState extends Json>(
     if (after === before) return;
     write(after);
 
-    if (!reducers.persistOnTick?.(before, after)) return;
+    const { persistOnTick, toStoredProgress } = reducers;
+    if (persistOnTick === undefined || !persistOnTick(before, after)) return;
 
-    const progress = reducers.toStoredProgress?.(after) ?? { date: todayKey() };
-    context.storage.set(storageKey, progress).catch((error: unknown) => {
+    context.storage.set(storageKey, toStoredProgress(after)).catch((error: unknown) => {
       const message = options.persistFailedMessage ?? 'Could not save countdown progress';
       context.log.warn(message, { error: `${error}` });
     });
