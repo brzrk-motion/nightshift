@@ -54,6 +54,19 @@ describe('ensureOk', () => {
   it('throws HttpError for other statuses', async () => {
     await expect(ensureOk(new Response('nope', { status: 500 }))).rejects.toBeInstanceOf(HttpError);
   });
+
+  it('preserves a formatter reason on thrown errors', async () => {
+    await expect(
+      ensureOk(new Response('{"error":{"reason":"NO_ACTIVE_DEVICE"}}', { status: 404 }), () => ({
+        message: 'hint',
+        reason: 'NO_ACTIVE_DEVICE',
+      })),
+    ).rejects.toMatchObject({
+      status: 404,
+      message: 'hint',
+      reason: 'NO_ACTIVE_DEVICE',
+    });
+  });
 });
 
 describe('httpErrorFromResponse', () => {
@@ -63,5 +76,18 @@ describe('httpErrorFromResponse', () => {
       (status) => (status === 401 ? 'Invalid token' : 'fail'),
     );
     expect(error).toMatchObject({ status: 401, message: 'Invalid token', body: 'bad token' });
+  });
+
+  it('accepts structured formatter results with reason', async () => {
+    const error = await httpErrorFromResponse(new Response('body', { status: 404 }), () => ({
+      message: 'No device',
+      reason: 'NO_ACTIVE_DEVICE',
+    }));
+    expect(error).toMatchObject({
+      status: 404,
+      message: 'No device',
+      reason: 'NO_ACTIVE_DEVICE',
+      body: 'body',
+    });
   });
 });

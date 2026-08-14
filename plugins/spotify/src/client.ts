@@ -2,6 +2,7 @@ import {
   authorizedFetch,
   ensureOk,
   HttpError,
+  httpErrorFromResponse,
   type HttpErrorMessageFormatter,
 } from '@nightshift/plugin-shared';
 import type { PluginFetch, PluginFetchInit } from '@nightshift/sdk';
@@ -42,8 +43,9 @@ export function parseSpotifyErrorMessage(
   };
 }
 
+/** Keep Spotify's machine `reason` on {@link HttpError} so remaps (no-device hint) still work. */
 const spotifyErrorMessage: HttpErrorMessageFormatter = (status, body) =>
-  parseSpotifyErrorMessage(status, body).message;
+  parseSpotifyErrorMessage(status, body);
 
 async function api(
   fetchFn: PluginFetch,
@@ -55,9 +57,7 @@ async function api(
 }
 
 async function readError(response: Response): Promise<never> {
-  const body = await response.text();
-  const parsed = parseSpotifyErrorMessage(response.status, body);
-  throw new HttpError(response.status, body, parsed.message, parsed.reason);
+  throw await httpErrorFromResponse(response, spotifyErrorMessage);
 }
 
 function isPremiumRequired(error: HttpError): boolean {

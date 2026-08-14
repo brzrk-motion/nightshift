@@ -170,6 +170,37 @@ describe('play', () => {
       message: expect.stringContaining('Open the Spotify app'),
     });
   });
+
+  it('remaps API NO_ACTIVE_DEVICE responses to the device hint', async () => {
+    const fetchFn = vi.fn(async (url: string) => {
+      if (url.includes('/me/player/devices')) {
+        return new Response(
+          JSON.stringify({
+            devices: [{ id: 'dev-1', name: 'Laptop', is_active: true }],
+          }),
+          { status: 200 },
+        );
+      }
+      if (url.includes('/me/player/play')) {
+        return new Response(
+          JSON.stringify({
+            error: {
+              status: 404,
+              message: 'Player command failed: No active device found',
+              reason: 'NO_ACTIVE_DEVICE',
+            },
+          }),
+          { status: 404 },
+        );
+      }
+      throw new Error(`unexpected ${url}`);
+    });
+
+    await expect(play(fetchFn, 'token')).rejects.toMatchObject({
+      reason: 'NO_ACTIVE_DEVICE',
+      message: expect.stringContaining('Open the Spotify app'),
+    });
+  });
 });
 
 describe('playContext', () => {

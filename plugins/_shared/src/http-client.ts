@@ -14,7 +14,13 @@ export class HttpError extends Error {
   }
 }
 
-export type HttpErrorMessageFormatter = (status: number, body: string) => string;
+export type HttpErrorDetails = {
+  message: string;
+  reason?: string | null;
+};
+
+/** Return a message string, or `{ message, reason }` when the API exposes a machine reason. */
+export type HttpErrorMessageFormatter = (status: number, body: string) => string | HttpErrorDetails;
 
 function defaultHttpErrorMessage(status: number, body: string): string {
   const trimmed = body.trim();
@@ -50,9 +56,14 @@ export async function httpErrorFromResponse(
   formatMessage?: HttpErrorMessageFormatter,
 ): Promise<HttpError> {
   const body = await response.text();
-  const message =
-    formatMessage?.(response.status, body) ?? defaultHttpErrorMessage(response.status, body);
-  return new HttpError(response.status, body, message);
+  if (!formatMessage) {
+    return new HttpError(response.status, body);
+  }
+  const formatted = formatMessage(response.status, body);
+  if (typeof formatted === 'string') {
+    return new HttpError(response.status, body, formatted);
+  }
+  return new HttpError(response.status, body, formatted.message, formatted.reason);
 }
 
 /** Treat 204 and 2xx as success; otherwise throw {@link HttpError}. */
