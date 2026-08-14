@@ -29,8 +29,6 @@ export {
 
 export { themeFromMidnight, type ThemeSpec } from './theme/schema.js';
 
-export { BORDERS, SPACING, type BorderToken, type SpacingToken } from './tokens.js';
-
 export {
   formContentSize,
   formScale,

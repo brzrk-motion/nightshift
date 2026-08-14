@@ -52,16 +52,8 @@ export function shellContentSize(size: TerminalSize, navCollapsed: boolean): Ter
   };
 }
 
-/**
- * Splits `total` cells between weighted children, giving the leftover from
- * rounding to the largest remainders so the parts always add up to the whole.
- */
-function weighted(total: number, weights: readonly number[], floor: number): number[] {
-  const flexible = total - floor * weights.length;
-  const sum = weights.reduce((accumulator, weight) => accumulator + weight, 0);
-  const exact = weights.map((weight) => (flexible * weight) / sum);
-  const sizes = exact.map((value) => floor + Math.floor(value));
-
+/** Gives leftover cells from rounding to the largest fractional remainders. */
+function distributeRemainder(sizes: number[], exact: readonly number[], total: number): void {
   let remainder = total - sizes.reduce((accumulator, size) => accumulator + size, 0);
   const order = exact
     .map((value, index) => ({ index, fraction: value - Math.floor(value) }))
@@ -71,7 +63,18 @@ function weighted(total: number, weights: readonly number[], floor: number): num
     const target = order[cursor]?.index ?? 0;
     sizes[target] = (sizes[target] ?? 0) + 1;
   }
+}
 
+/**
+ * Splits `total` cells between weighted children, giving the leftover from
+ * rounding to the largest remainders so the parts always add up to the whole.
+ */
+function weighted(total: number, weights: readonly number[], floor: number): number[] {
+  const flexible = total - floor * weights.length;
+  const sum = weights.reduce((accumulator, weight) => accumulator + weight, 0);
+  const exact = weights.map((weight) => (flexible * weight) / sum);
+  const sizes = exact.map((value) => floor + Math.floor(value));
+  distributeRemainder(sizes, exact, total);
   return sizes;
 }
 
@@ -123,15 +126,7 @@ export function distribute(
     const sum = safeWeights.reduce((accumulator, weight) => accumulator + weight, 0);
     const exact = safeWeights.map((weight) => (flexible * weight) / sum);
     const sizes = exact.map((value, index) => (floors[index] ?? 0) + Math.floor(value));
-
-    let remainder = total - sizes.reduce((accumulator, size) => accumulator + size, 0);
-    const order = exact
-      .map((value, index) => ({ index, fraction: value - Math.floor(value) }))
-      .sort((a, b) => b.fraction - a.fraction || a.index - b.index);
-    for (let cursor = 0; remainder > 0; cursor = (cursor + 1) % order.length, remainder -= 1) {
-      const target = order[cursor]?.index ?? 0;
-      sizes[target] = (sizes[target] ?? 0) + 1;
-    }
+    distributeRemainder(sizes, exact, total);
     return sizes;
   }
 

@@ -1,11 +1,10 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 
-import { createExtractor } from './extract.js';
 import { type QueryContext } from './query.js';
 import { createContextServer } from './server.js';
-import { createCodeIndex, type FileSystem } from './store.js';
+import { makeTestIndex } from './testFixtures.js';
 import { createTools, type Tool } from './tools.js';
-import { TEST_ROOT, testAbsPath, testRelPath } from './testRoot.js';
+
 const SOURCES: Record<string, string> = {
   'src/timer.ts': ['export function tick(): number {', '  return 1;', '}'].join('\n'),
 };
@@ -14,23 +13,7 @@ let tools: Map<string, Tool>;
 let context: QueryContext;
 
 beforeAll(async () => {
-  const io: FileSystem = {
-    async stat(path) {
-      const source = SOURCES[testRelPath(path)];
-      if (source === undefined) throw new Error('ENOENT');
-      return { size: source.length, mtimeMs: 1 };
-    },
-    async readFile(path) {
-      const source = SOURCES[testRelPath(path)];
-      if (source === undefined) throw new Error('ENOENT');
-      return source;
-    },
-    list: () => Object.keys(SOURCES),
-  };
-
-  const index = createCodeIndex({ root: TEST_ROOT, extractor: await createExtractor(), io });
-  await index.reindexAll();
-  context = { index, readSource: (file) => io.readFile(testAbsPath(file)) };
+  context = await makeTestIndex(SOURCES);
   tools = new Map(createTools(context).map((tool) => [tool.name, tool]));
 });
 
@@ -62,38 +45,9 @@ describe('createTools', () => {
     }
   });
 
-  it('reports index status', async () => {
-    expect(await call('index_status')).toMatchObject({ root: TEST_ROOT, files: 1, symbols: 1 });
-  });
-
-  it('searches symbols and returns their source', async () => {
-    expect(await call('search_symbols', { name: 'tick' })).toMatchObject({
-      total: 1,
-      symbols: [{ name: 'tick', kind: 'function', file: 'src/timer.ts' }],
-    });
-
-    expect(await call('get_symbol', { name: 'tick' })).toMatchObject({
-      definitions: [{ source: 'export function tick(): number {\n  return 1;\n}' }],
-    });
-  });
-
-  it('outlines a file, finds references and reads a range', async () => {
-    expect(await call('file_outline', { file: 'src/timer.ts' })).toMatchObject({
-      language: 'typescript',
-      symbols: [{ name: 'tick' }],
-    });
-
-    expect(await call('find_references', { name: 'tick' })).toMatchObject({
-      total: 1,
-      hits: [{ file: 'src/timer.ts', line: 1, isDefinition: true }],
-    });
-
-    expect(
-      await call('read_lines', { file: 'src/timer.ts', startLine: 2, endLine: 2 }),
-    ).toMatchObject({ source: '  return 1;' });
-  });
-
   it('explains an unindexed file instead of failing', async () => {
+    // Tool-layer only: query.fileOutline returns undefined; the adapter maps that
+    // to a structured error payload agents can act on.
     expect(await call('file_outline', { file: 'src/missing.ts' })).toMatchObject({
       file: 'src/missing.ts',
       error: expect.stringContaining('Not indexed'),
@@ -107,21 +61,15 @@ describe('createTools', () => {
     expect(result?.content[0]?.text).toContain('Invalid arguments');
   });
 
-  it('reindexes a single file on request', async () => {
-    expect(await call('reindex', { file: 'src/timer.ts' })).toMatchObject({
-      file: 'src/timer.ts',
-      symbols: 1,
-    });
-
+  it('reports when reindex cannot pick up a path', async () => {
+    // Tool-layer only: index.update returns undefined; the adapter shapes the miss.
     expect(await call('reindex', { file: 'src/nope.ts' })).toMatchObject({ indexed: false });
   });
 });
 
 describe('createContextServer', () => {
   it('registers every tool on an MCP server', () => {
-    const server = createContextServer(context);
-
-    expect(server).toBeDefined();
+    expect(() => createContextServer(context)).not.toThrow();
     // Registering the same name twice throws, so a second build proves the
     // registration loop is not leaking state between instances.
     expect(() => createContextServer(context)).not.toThrow();

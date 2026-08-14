@@ -18,9 +18,11 @@ import { spawn } from 'node:child_process';
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createStatusWriter, runTurboBuild } from './scripts/run-turbo-build.mjs';
 
 const root = dirname(fileURLToPath(import.meta.url));
 const interactive = process.stderr.isTTY === true;
+const status = createStatusWriter();
 
 const HOST = '127.0.0.1';
 const BASE_PORT = 7411;
@@ -115,48 +117,16 @@ function discover() {
   return servers.sort((a, b) => a.id.localeCompare(b.id));
 }
 
-function status(text) {
-  if (!interactive) return;
-  process.stderr.write(text ? `\u001b[2m${text}\u001b[0m\r` : '\r\u001b[2K');
-}
-
 function label(server) {
   return interactive ? `\u001b[2m[${server.id}]\u001b[0m` : `[${server.id}]`;
 }
 
 /** Builds the given packages with Turbo, staying silent unless it fails. */
 async function build(servers) {
-  // Bypass `.bin/turbo(.cmd)` — invoke the JS entry with this node so Windows
-  // never needs a shell (and never splits `C:\Program Files\...`).
-  const turbo = join(root, 'node_modules', 'turbo', 'bin', 'turbo');
-  if (!existsSync(turbo)) {
-    process.stderr.write('mcp-up: dependencies are missing. Run `pnpm install` first.\n');
-    return false;
-  }
-
-  status('building…');
-  const filters = servers.flatMap((server) => ['--filter', `${server.package}...`]);
-  const code = await new Promise((resolve, reject) => {
-    const child = spawn(
-      process.execPath,
-      [turbo, 'run', 'build', ...filters, '--output-logs=errors-only'],
-      {
-        cwd: root,
-        stdio: ['ignore', 'pipe', 'pipe'],
-      },
-    );
-    let output = '';
-    child.stdout.on('data', (chunk) => (output += chunk));
-    child.stderr.on('data', (chunk) => (output += chunk));
-    child.on('error', reject);
-    child.on('close', (exit) => {
-      if (exit !== 0) process.stderr.write(output);
-      resolve(exit ?? 0);
-    });
+  const code = await runTurboBuild(root, {
+    filters: servers.map((server) => `${server.package}...`),
+    label: 'mcp-up',
   });
-  status('');
-
-  if (code !== 0) process.stderr.write('mcp-up: build failed; not starting.\n');
   return code === 0;
 }
 
