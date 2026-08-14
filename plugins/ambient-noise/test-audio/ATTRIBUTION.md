@@ -17,6 +17,7 @@ Shipped copies are ~60s loop excerpts (the mixer window), not the full source re
 - Author: freesound_community
 - Source: [Pixabay 5934](https://pixabay.com/sound-effects/soft-static-noise-5934/)
 - License: [Pixabay Content License](https://pixabay.com/service/license-summary/)
+- Shipped as 44.1 kHz stereo 320 kb/s (source recording was 24 kHz / 160 kb/s)
 
 ## Ambient Noise
 

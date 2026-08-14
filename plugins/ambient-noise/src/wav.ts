@@ -22,15 +22,27 @@ function clampInt16(value: number): number {
   return value | 0;
 }
 
-function sampleAt(mono: Float32Array, frame: number): number {
+const LANCZOS_A = 3;
+
+function lanczos(x: number, a: number): number {
+  if (x === 0) return 1;
+  const abs = Math.abs(x);
+  if (abs >= a) return 0;
+  const pix = Math.PI * x;
+  return (a * Math.sin(pix) * Math.sin(pix / a)) / (pix * pix);
+}
+
+function sampleAt(mono: Float32Array, pos: number): number {
   if (mono.length === 0) return 0;
-  if (frame <= 0) return mono[0] ?? 0;
-  if (frame >= mono.length - 1) return mono[mono.length - 1] ?? 0;
-  const left = Math.floor(frame);
-  const frac = frame - left;
-  const a = mono[left] ?? 0;
-  const b = mono[left + 1] ?? a;
-  return a + (b - a) * frac;
+  if (pos <= 0) return mono[0] ?? 0;
+  if (pos >= mono.length - 1) return mono[mono.length - 1] ?? 0;
+  const center = Math.floor(pos);
+  let sum = 0;
+  for (let i = center - LANCZOS_A + 1; i <= center + LANCZOS_A; i += 1) {
+    const index = i < 0 ? 0 : i >= mono.length ? mono.length - 1 : i;
+    sum += (mono[index] ?? 0) * lanczos(pos - i, LANCZOS_A);
+  }
+  return sum;
 }
 
 export function pcmFromChannels(
@@ -44,9 +56,15 @@ export function pcmFromChannels(
   const frames = new Int16Array(frameCount * MIXER_CHANNELS);
   const left = channels[0] ?? new Float32Array(frameCountIn);
   const right = channels[1] ?? left;
+  const native = sampleRate === MIXER_SAMPLE_RATE;
 
   for (let i = 0; i < frameCount; i += 1) {
-    const src = sampleRate === MIXER_SAMPLE_RATE ? i : i / ratio;
+    if (native) {
+      frames[i * 2] = clampInt16(Math.round((left[i] ?? 0) * 32767));
+      frames[i * 2 + 1] = clampInt16(Math.round((right[i] ?? 0) * 32767));
+      continue;
+    }
+    const src = i / ratio;
     frames[i * 2] = clampInt16(Math.round(sampleAt(left, src) * 32767));
     frames[i * 2 + 1] = clampInt16(Math.round(sampleAt(right, src) * 32767));
   }

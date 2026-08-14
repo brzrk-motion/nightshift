@@ -112,7 +112,7 @@ describe('Mixer', () => {
     expect(mixer.currentClipId()).toBe('b');
   });
 
-  it('skips ticks while a device write is still in flight', async () => {
+  it('queues chunks while a device write is still in flight', async () => {
     let writes = 0;
     let release!: () => void;
     const firstWrite = new Promise<void>((resolve) => {
@@ -134,9 +134,75 @@ describe('Mixer', () => {
     mixer.tick(4);
     expect(writes).toBe(1);
     release();
-    await firstWrite;
+    await mixer.waitForDrain();
+    expect(writes).toBe(3);
+  });
+
+  it('discards queued chunks when paused so they do not play after pause', async () => {
+    let writes = 0;
+    let release!: () => void;
+    const firstWrite = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const sink: AudioSink = {
+      backend: 'device',
+      write: () => {
+        writes += 1;
+        return writes === 1 ? firstWrite : Promise.resolve();
+      },
+      close() {},
+    };
+    const mixer = new Mixer(sink);
+    mixer.load('a', toneBuffer(32, 100));
+    mixer.play('a');
     mixer.tick(4);
+    mixer.tick(4);
+    mixer.tick(4);
+    expect(writes).toBe(1);
+    const pending = mixer.waitForDrain();
+    mixer.pause();
+    release();
+    await pending;
+    expect(writes).toBe(1);
+    expect(mixer.playing).toBe(false);
+  });
+
+  it('does not overlap device writes across pause and play', async () => {
+    let concurrent = 0;
+    let maxConcurrent = 0;
+    let writes = 0;
+    let release!: () => void;
+    const firstWrite = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const sink: AudioSink = {
+      backend: 'device',
+      write: () => {
+        writes += 1;
+        concurrent += 1;
+        maxConcurrent = Math.max(maxConcurrent, concurrent);
+        const done = writes === 1 ? firstWrite : Promise.resolve();
+        return done.finally(() => {
+          concurrent -= 1;
+        });
+      },
+      close() {},
+    };
+    const mixer = new Mixer(sink);
+    mixer.load('a', toneBuffer(32, 100));
+    mixer.play('a');
+    mixer.tick(4);
+    expect(writes).toBe(1);
+    mixer.pause();
+    mixer.play('a');
+    mixer.tick(4);
+    // Second write must wait for the in-flight device op.
+    expect(writes).toBe(1);
+    expect(maxConcurrent).toBe(1);
+    release();
+    await mixer.waitForDrain();
     expect(writes).toBe(2);
+    expect(maxConcurrent).toBe(1);
   });
 
   it('falls back to a silent sink when device writes reject', async () => {
@@ -149,7 +215,7 @@ describe('Mixer', () => {
     mixer.load('a', toneBuffer(32, 100));
     mixer.play('a');
     mixer.tick(4);
-    await Promise.resolve();
+    await mixer.waitForDrain();
     expect(mixer.sinkBackend).toBe('silent');
     expect(mixer.writeError).toMatch(/disconnected/);
     expect(() => mixer.tick(4)).not.toThrow();
@@ -168,6 +234,27 @@ describe('Mixer', () => {
     expect(chunk[11 * 2]).toBe(2000);
     expect(mixer.has('a')).toBe(false);
     expect(mixer.has('b')).toBe(true);
+  });
+
+  it('crossfades the loop seam instead of cutting', () => {
+    const frameCount = 5000;
+    const frames = new Int16Array(frameCount * 2);
+    for (let i = 0; i < frameCount; i += 1) {
+      const sample = i < frameCount / 2 ? 20000 : -20000;
+      frames[i * 2] = sample;
+      frames[i * 2 + 1] = sample;
+    }
+    const mixer = new Mixer();
+    mixer.load('a', { sampleRate: 44100, channels: 2, frames, frameCount });
+    mixer.play('a');
+    mixer.tick(frameCount - 8);
+    const aroundWrap = mixer.tick(16);
+    let maxJump = 0;
+    for (let i = 1; i < 16; i += 1) {
+      const jump = Math.abs((aroundWrap[i * 2] ?? 0) - (aroundWrap[(i - 1) * 2] ?? 0));
+      if (jump > maxJump) maxJump = jump;
+    }
+    expect(maxJump).toBeLessThan(8000);
   });
 
   it('records 0–1 levels while playing', () => {

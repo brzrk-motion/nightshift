@@ -1,13 +1,15 @@
 import { join } from 'node:path';
 import { argString, definePlugin, type PluginContext } from '@nightshift/sdk';
+import { drainOrAbort } from './abortRace.js';
 import { defaultCatalogDir, loadCatalog, toPublicClips, type CatalogEntry } from './catalog.js';
 import { loadClip, readClipBytes } from './decode.js';
 import {
   CHUNK_FRAMES,
+  CHUNK_MS,
   CROSSFADE_MS,
+  LEVELS_MS,
   PLAYER_ENTITY,
   SETTINGS_STORAGE_KEY,
-  TICK_MS,
   hydrateSettings,
   initialPlayerState,
   isTransportActive,
@@ -57,8 +59,9 @@ export default definePlugin({
     let outputError: string | null = null;
     let announcedOutput: string | null = null;
     let sinkReady = false;
-    let timer: ReturnType<typeof setInterval> | undefined;
-    let levelsTick = 0;
+    let uiTimer: ReturnType<typeof setInterval> | undefined;
+    let pumping = false;
+    let pumpAbort: AbortController | undefined;
     let generation = 0;
 
     const beginOp = (): number => {
@@ -112,36 +115,84 @@ export default definePlugin({
       };
     };
 
-    const stopTicks = (): void => {
-      if (timer === undefined) return;
-      clearInterval(timer);
-      timer = undefined;
+    const delay = (ms: number, signal: AbortSignal): Promise<void> => {
+      if (signal.aborted) return Promise.resolve();
+      return new Promise((resolve) => {
+        const onAbort = (): void => {
+          clearTimeout(timer);
+          resolve();
+        };
+        const timer = setTimeout(() => {
+          signal.removeEventListener('abort', onAbort);
+          resolve();
+        }, ms);
+        timer.unref?.();
+        signal.addEventListener('abort', onAbort, { once: true });
+      });
     };
 
-    const startTicks = (): void => {
-      if (timer !== undefined) return;
-      timer = setInterval(() => {
-        mixer.tick(CHUNK_FRAMES);
-        if (mixer.writeError) {
-          output = 'silent';
-          outputError = mixer.writeError;
-          mixer.writeError = null;
-          if (announcedOutput !== outputError) {
-            announcedOutput = outputError;
-            context.notify('Audio output failed.', { tone: 'warning', key: 'output' });
-          }
-          const current = read();
-          if (current.status === 'playing' || current.status === 'fading') {
-            write(snapshot(mixer.fading() ? 'fading' : 'playing'));
-          }
-        }
-        levelsTick += 1;
+    const reportWriteError = (): void => {
+      if (!mixer.writeError) return;
+      output = 'silent';
+      outputError = mixer.writeError;
+      mixer.writeError = null;
+      if (announcedOutput !== outputError) {
+        announcedOutput = outputError;
+        context.notify('Audio output failed.', { tone: 'warning', key: 'output' });
+      }
+    };
+
+    const stopUiClock = (): void => {
+      if (uiTimer === undefined) return;
+      clearInterval(uiTimer);
+      uiTimer = undefined;
+    };
+
+    const startUiClock = (): void => {
+      if (uiTimer !== undefined) return;
+      uiTimer = setInterval(() => {
         const current = read();
         if (current.status !== 'playing' && current.status !== 'fading') return;
-        if (levelsTick % 2 !== 0) return;
+        reportWriteError();
         write(snapshot(mixer.fading() ? 'fading' : 'playing'));
-      }, TICK_MS);
-      timer.unref?.();
+      }, LEVELS_MS);
+      uiTimer.unref?.();
+    };
+
+    const stopPump = (): void => {
+      const ac = pumpAbort;
+      pumpAbort = undefined;
+      pumping = false;
+      ac?.abort();
+    };
+
+    const startPump = (): void => {
+      if (pumping) return;
+      pumping = true;
+      // Pump lifetime follows mixer.playing + abort only — not `generation`.
+      // next/select call beginOp() to cancel stale loads; that must not kill audio.
+      const ac = new AbortController();
+      pumpAbort = ac;
+      const { signal } = ac;
+      void (async () => {
+        try {
+          while (mixer.playing && !signal.aborted) {
+            mixer.tick(CHUNK_FRAMES);
+            reportWriteError();
+            const drain = mixer.waitForDrain();
+            // Abort must win over an in-flight device write so pause can
+            // start a new pump — but remove the listener when drain wins,
+            // or every chunk leaks an abort handler for the session.
+            if (drain) await drainOrAbort(drain, signal);
+            else await delay(CHUNK_MS, signal);
+          }
+        } finally {
+          if (pumpAbort === ac) {
+            pumping = false;
+            pumpAbort = undefined;
+          }
+        }
+      })();
     };
 
     const ensureSink = async (): Promise<void> => {
@@ -261,7 +312,8 @@ export default definePlugin({
         if (isStale(token)) return;
         mixer.play(clip.id);
         mixer.retainActive();
-        startTicks();
+        startPump();
+        startUiClock();
         write(snapshot('playing'));
       },
     });
@@ -275,7 +327,8 @@ export default definePlugin({
         beginOp();
         mixer.pause();
         mixer.retainActive();
-        stopTicks();
+        stopPump();
+        stopUiClock();
         write(snapshot('paused'));
       },
     });
@@ -289,7 +342,8 @@ export default definePlugin({
           beginOp();
           mixer.pause();
           mixer.retainActive();
-          stopTicks();
+          stopPump();
+          stopUiClock();
           write(snapshot('paused'));
           return;
         }
@@ -306,7 +360,8 @@ export default definePlugin({
         if (isStale(token)) return;
         mixer.play(clip.id);
         mixer.retainActive();
-        startTicks();
+        startPump();
+        startUiClock();
         write(snapshot('playing'));
       },
     });
@@ -361,7 +416,8 @@ export default definePlugin({
     });
 
     context.own(() => {
-      stopTicks();
+      stopPump();
+      stopUiClock();
       mixer.close();
     });
 

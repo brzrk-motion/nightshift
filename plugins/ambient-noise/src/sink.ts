@@ -1,3 +1,12 @@
+import { MIXER_CHANNELS, MIXER_SAMPLE_RATE, SPEAKER_BUFFER_MS } from './entity.js';
+
+export const DEVICE_SINK_OPTIONS = {
+  sampleRate: MIXER_SAMPLE_RATE,
+  channels: MIXER_CHANNELS,
+  bitDepth: 16 as const,
+  bufferSize: SPEAKER_BUFFER_MS,
+};
+
 export interface AudioSink {
   write(chunk: Buffer | Uint8Array): Promise<void> | void;
   close(): void;
@@ -48,7 +57,7 @@ export async function createDeviceSink(): Promise<AudioSink> {
     const mod = (await import('@audio/speaker')) as { default?: (opts: object) => SpeakerWrite };
     const speaker = mod.default;
     if (typeof speaker !== 'function') return new NullSink();
-    const write = speaker({ sampleRate: 44100, channels: 2, bitDepth: 16 });
+    const write = speaker(DEVICE_SINK_OPTIONS);
     const kind = write.backend === 'null' || write.backend === 'silent' ? 'silent' : 'device';
     return {
       backend: kind,

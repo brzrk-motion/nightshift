@@ -3,11 +3,18 @@ import type { Json } from '@nightshift/sdk';
 export const PLAYER_ENTITY = 'ambient-noise.player';
 export const SETTINGS_STORAGE_KEY = 'settings';
 export const CROSSFADE_MS = 1500;
+export const SEAM_FADE_MS = 48;
 export const LEVELS_LEN = 48;
 export const MIXER_SAMPLE_RATE = 44100;
 export const MIXER_CHANNELS = 2;
-export const CHUNK_FRAMES = 2205;
-export const TICK_MS = 50;
+/** 100 ms of mixer PCM per pull-paced write. */
+export const CHUNK_FRAMES = 4410;
+export const CHUNK_MS = Math.round((CHUNK_FRAMES / MIXER_SAMPLE_RATE) * 1000);
+/** Widget levels/position only — never mix on this timer. */
+export const LEVELS_MS = 100;
+/** Device ring in ms. Ambient can afford latency; 50 ms underruns. */
+export const SPEAKER_BUFFER_MS = 300;
+export const SEAM_FADE_FRAMES = Math.round((SEAM_FADE_MS / 1000) * MIXER_SAMPLE_RATE);
 
 export type ClipStatus = 'ok' | 'unavailable';
 export type PlayerStatus =

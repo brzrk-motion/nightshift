@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createPluginTestContext } from '@nightshift/sdk/testing';
 import type { Json } from '@nightshift/sdk';
-import { PLAYER_ENTITY, SETTINGS_STORAGE_KEY, type PlayerState } from './entity.js';
+import { PLAYER_ENTITY, SETTINGS_STORAGE_KEY, LEVELS_MS, type PlayerState } from './entity.js';
 import type { PcmBuffer } from './wav.js';
 
 const loadGate = vi.hoisted(() => ({
@@ -132,6 +132,40 @@ describe('ambient-noise plugin', () => {
     for (const dispose of disposers) dispose();
   });
 
+  it('publishes levels from a UI clock, not by mixing on that timer', async () => {
+    const { context, entities, commands, disposers } = ambientNoiseTestContext();
+    await plugin.setup(context);
+    await commands.get('ambient-noise.play')?.run();
+    expect(player(entities).status).toBe('playing');
+    const before = player(entities).levels.length;
+    await vi.advanceTimersByTimeAsync(LEVELS_MS * 3);
+    expect(player(entities).status).toBe('playing');
+    expect(player(entities).levels.length).toBeGreaterThanOrEqual(before);
+    await commands.get('ambient-noise.pause')?.run();
+    const pausedLevels = player(entities).levels.length;
+    await vi.advanceTimersByTimeAsync(LEVELS_MS * 3);
+    expect(player(entities).status).toBe('paused');
+    expect(player(entities).levels.length).toBe(pausedLevels);
+
+    for (const dispose of disposers) dispose();
+  });
+
+  it('can pause and play again without getting stuck behind an in-flight drain', async () => {
+    const { context, entities, commands, disposers } = ambientNoiseTestContext();
+    await plugin.setup(context);
+    await commands.get('ambient-noise.play')?.run();
+    expect(player(entities).status).toBe('playing');
+    await commands.get('ambient-noise.pause')?.run();
+    expect(player(entities).status).toBe('paused');
+    await commands.get('ambient-noise.play')?.run();
+    expect(player(entities).status).toBe('playing');
+    await vi.advanceTimersByTimeAsync(LEVELS_MS * 2);
+    expect(player(entities).status).toBe('playing');
+    expect(player(entities).levels.length).toBeGreaterThan(0);
+
+    for (const dispose of disposers) dispose();
+  });
+
   it('wraps next/previous and ignores an unknown select id', async () => {
     const { context, entities, commands, disposers } = ambientNoiseTestContext();
     await plugin.setup(context);
@@ -172,6 +206,40 @@ describe('ambient-noise plugin', () => {
     const after = player(entities);
     expect(after.currentClipId).not.toBe(startId);
     expect(after.status === 'fading' || after.status === 'playing').toBe(true);
+
+    for (const dispose of disposers) dispose();
+  });
+
+  it('keeps mixing after next during playback (beginOp must not kill the pump)', async () => {
+    const { context, entities, commands, disposers } = ambientNoiseTestContext();
+    await plugin.setup(context);
+    expect(
+      player(entities).clips.filter((clip) => clip.status === 'ok').length,
+    ).toBeGreaterThanOrEqual(2);
+
+    await commands.get('ambient-noise.play')?.run();
+    await vi.advanceTimersByTimeAsync(LEVELS_MS);
+    await commands.get('ambient-noise.next')?.run();
+    expect(['fading', 'playing']).toContain(player(entities).status);
+    const levelsAfterSkip = player(entities).levels.length;
+    await vi.advanceTimersByTimeAsync(LEVELS_MS * 5);
+    expect(['fading', 'playing']).toContain(player(entities).status);
+    expect(player(entities).levels.length).toBeGreaterThan(levelsAfterSkip);
+
+    for (const dispose of disposers) dispose();
+  });
+
+  it('keeps mixing if play is invoked again while already playing', async () => {
+    const { context, entities, commands, disposers } = ambientNoiseTestContext();
+    await plugin.setup(context);
+    await commands.get('ambient-noise.play')?.run();
+    await vi.advanceTimersByTimeAsync(LEVELS_MS);
+    const levelsBefore = player(entities).levels.length;
+    await commands.get('ambient-noise.play')?.run();
+    expect(player(entities).status).toBe('playing');
+    await vi.advanceTimersByTimeAsync(LEVELS_MS * 5);
+    expect(player(entities).status).toBe('playing');
+    expect(player(entities).levels.length).toBeGreaterThan(levelsBefore);
 
     for (const dispose of disposers) dispose();
   });
