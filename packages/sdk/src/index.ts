@@ -275,6 +275,7 @@ export {
   useCommands,
   useEntities,
   useEntity,
+  useRenderer,
   useShellContentSize,
   useTheme,
   useToasts,

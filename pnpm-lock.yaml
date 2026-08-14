@@ -236,6 +236,9 @@ importers:
 
   packages/vibes:
     dependencies:
+      '@nightshift/automations':
+        specifier: workspace:*
+        version: link:../automations
       '@nightshift/core':
         specifier: workspace:*
         version: link:../core

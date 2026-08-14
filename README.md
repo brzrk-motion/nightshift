@@ -331,20 +331,26 @@ export default definePlugin({
   ],
   setup(context) {
     // Real Open-Meteo fetch goes through context.fetch (needs pluginPermissions).
-    context.registerEntity('weather.now', { temperature: 11 });
+    // Primary temperature is denormalized on weather.locations for flat-key automations.
+    context.registerEntity('weather.locations', {
+      units: 'metric',
+      primaryId: 'home',
+      locations: {},
+      temperature: 11,
+    });
     context.registerWidget({
       type: 'weather.now',
       title: 'Weather',
       entities: ['weather.locations'],
       render: () => {
-        const entity = useEntity<{ temperature: number }>('weather.now');
+        const entity = useEntity<{ temperature: number }>('weather.locations');
         return <Card value={`${entity?.state.temperature ?? '—'}°`} />;
       },
     });
     context.registerAutomation({
       name: 'weather.frost-warning',
-      when: { type: 'entity', entity: 'weather.now', key: 'temperature' },
-      and: [{ type: 'below', entity: 'weather.now', key: 'temperature', value: 0 }],
+      when: { type: 'entity', entity: 'weather.locations', key: 'temperature' },
+      and: [{ type: 'below', entity: 'weather.locations', key: 'temperature', value: 0 }],
       then: [{ command: 'app.notify', args: { message: 'Frost tonight.', tone: 'warning' } }],
     });
   },
@@ -383,7 +389,8 @@ Nightshift ships bundled plugins:
   (zip, city, postal code, or `lat,lon`). Enter a place in the widget, or run
   `weather.configure-location`. Multiple weather widgets can use different
   slots; the shipped `home` dashboard shares `location: home` between now and
-  forecast. Frost warnings watch the primary slot mirrored on `weather.now`.
+  forecast. Frost warnings watch the primary slot's temperature denormalized on
+  `weather.locations`.
 - **spotify** — control the Spotify client on your machine (playlists,
   podcasts, play/pause/skip). Does not stream audio. The `spotify.player`
   widget asks for a Spotify Developer app Client ID and Secret, then Connect

@@ -3,10 +3,9 @@ import type {
   StoredWeatherLocation,
   WeatherLocation,
   WeatherLocationsState,
-  WeatherNowState,
   WeatherUnits,
 } from './entity.js';
-import { emptyLocation, initialNowState } from './entity.js';
+import { emptyLocation } from './entity.js';
 import type { ForecastResult, GeocodedPlace } from './client.js';
 
 export function slotId(optionsLocation: unknown, fallback = 'default'): string {
@@ -32,16 +31,26 @@ function hydrateLocation(id: string, stored: StoredWeatherLocation): WeatherLoca
   };
 }
 
+export function primaryLocation(state: WeatherLocationsState): WeatherLocation | undefined {
+  return state.locations[state.primaryId];
+}
+
+export function publishLocationsState(state: WeatherLocationsState): WeatherLocationsState {
+  return { ...state, temperature: primaryLocation(state)?.temperature ?? null };
+}
+
 export function fromStored(stored: StoredWeather): WeatherLocationsState {
   const locations: Record<string, WeatherLocation> = {};
   for (const [id, entry] of Object.entries(stored.locations)) {
     locations[id] = hydrateLocation(id, entry);
   }
-  return {
+  const state: WeatherLocationsState = {
     units: stored.units === 'imperial' ? 'imperial' : 'metric',
     primaryId: stored.primaryId || Object.keys(locations)[0] || 'default',
     locations,
+    temperature: null,
   };
+  return publishLocationsState(state);
 }
 
 export function toStored(state: WeatherLocationsState): StoredWeather {
@@ -198,30 +207,6 @@ export function applyError(
       ...state.locations,
       [id]: { ...location, status: 'error', error: message },
     },
-  };
-}
-
-export function mirrorPrimary(state: WeatherLocationsState): WeatherNowState {
-  const primary = state.locations[state.primaryId];
-  if (!primary) {
-    return initialNowState(state.units);
-  }
-  return {
-    status: primary.status,
-    error: primary.error,
-    locationId: primary.id,
-    placeName: primary.placeName || null,
-    units: state.units,
-    temperature: primary.temperature,
-    feelsLike: primary.feelsLike,
-    humidity: primary.humidity,
-    windSpeed: primary.windSpeed,
-    windDirection: primary.windDirection,
-    condition: primary.condition,
-    weatherCode: primary.weatherCode,
-    sunrise: primary.sunrise,
-    sunset: primary.sunset,
-    updatedAt: primary.updatedAt,
   };
 }
 

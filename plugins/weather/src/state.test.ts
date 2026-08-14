@@ -5,8 +5,10 @@ import {
   applyError,
   applyForecast,
   fromStored,
-  mirrorPrimary,
+  primaryLocation,
+  publishLocationsState,
   removeSlot,
+  setPrimary,
   slotId,
   upsertSlot,
   weekdayShort,
@@ -68,7 +70,7 @@ describe('state', () => {
     expect(state.locations['home']).toBeUndefined();
   });
 
-  it('applies forecast data and mirrors the primary slot', () => {
+  it('applies forecast data to the primary slot', () => {
     let state = upsertSlot(initialLocationsState(), 'home', '90210');
     state = applyForecast(state, 'home', {
       temperature: 11,
@@ -94,7 +96,52 @@ describe('state', () => {
     });
 
     expect(state.locations['home']?.status).toBe('ready');
-    expect(mirrorPrimary(state).temperature).toBe(11);
+    expect(primaryLocation(state)?.temperature).toBe(11);
+    // Mutators leave top-level temperature stale until publishLocationsState.
+    expect(state.temperature).toBeNull();
+    expect(publishLocationsState(state).temperature).toBe(11);
+  });
+
+  it('denormalizes the active primary temperature for flat-key automations', () => {
+    let state = upsertSlot(initialLocationsState(), 'home', '90210');
+    state = applyForecast(state, 'home', {
+      temperature: 11,
+      feelsLike: 9,
+      humidity: 40,
+      windSpeed: 12,
+      windDirection: 180,
+      weatherCode: 0,
+      condition: 'Clear',
+      sunrise: '2026-08-10T06:30',
+      sunset: '2026-08-10T20:00',
+      days: [],
+      hours: [],
+    });
+    state = upsertSlot(state, 'office', '10001');
+    state = applyForecast(state, 'office', {
+      temperature: -3,
+      feelsLike: -5,
+      humidity: 60,
+      windSpeed: 8,
+      windDirection: 90,
+      weatherCode: 71,
+      condition: 'Snow',
+      sunrise: '2026-08-10T07:00',
+      sunset: '2026-08-10T19:00',
+      days: [],
+      hours: [],
+    });
+
+    expect(publishLocationsState(state).temperature).toBe(11);
+
+    state = setPrimary(state, 'office');
+    expect(publishLocationsState(state).temperature).toBe(-3);
+
+    state = removeSlot(state, 'office');
+    expect(publishLocationsState(state).temperature).toBe(11);
+
+    state = removeSlot(state, 'home');
+    expect(publishLocationsState(state).temperature).toBeNull();
   });
 
   it('records errors without dropping the slot', () => {
@@ -134,6 +181,7 @@ describe('state', () => {
     const state = fromStored(stored);
     expect(state.units).toBe('imperial');
     expect(state.locations['home']?.status).toBe('ready');
-    expect(mirrorPrimary(state).placeName).toBe('Beverly Hills');
+    expect(primaryLocation(state)?.placeName).toBe('Beverly Hills');
+    expect(state.temperature).toBe(72);
   });
 });
