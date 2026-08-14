@@ -1,6 +1,9 @@
-import { createEventBus, NightshiftError, type EventBus, type Json } from '@nightshift/core';
+import { runActions, type CommandRunner } from '@nightshift/automations';
+import { createEventBus, NightshiftError, type EventBus } from '@nightshift/core';
 import type { EntityStore } from '@nightshift/entities';
 import type { VibeSpec } from './schema.js';
+
+export type { CommandRunner };
 
 /**
  * The narrow slices of the theme engine and command registry the vibe engine
@@ -11,10 +14,6 @@ import type { VibeSpec } from './schema.js';
 export interface ThemeSwitcher {
   resolve(name: string): unknown | undefined;
   activate(name: string): unknown;
-}
-
-export interface CommandRunner {
-  run(id: string, args?: Record<string, Json>): void | Promise<void>;
 }
 
 export interface VibeActivationResult {
@@ -45,26 +44,6 @@ export interface VibeEngineOptions {
   themes: ThemeSwitcher;
   entities: EntityStore;
   commands: CommandRunner;
-}
-
-/**
- * Runs a list of vibe actions, collecting a warning for each one that fails
- * rather than stopping at the first — a vibe with five actions should still
- * apply the four that work.
- */
-async function runActions(
-  commands: CommandRunner,
-  actions: readonly { command: string; args?: Record<string, Json> }[],
-  warnings: string[],
-): Promise<void> {
-  for (const action of actions) {
-    try {
-      await commands.run(action.command, action.args);
-    } catch (error) {
-      const reason = error instanceof Error ? error.message : String(error);
-      warnings.push(`"${action.command}" failed: ${reason}`);
-    }
-  }
 }
 
 export function createVibeEngine(options: VibeEngineOptions): VibeEngine {
