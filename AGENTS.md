@@ -360,13 +360,19 @@ export default definePlugin({
   version: '1.0.0',
   capabilities: ['entities:write', 'widgets:register', 'automations:register'],
   setup(context) {
-    context.registerEntity('weather.now', { temperature: 11 });
+    // Primary temperature is denormalized on weather.locations for flat-key automations.
+    context.registerEntity('weather.locations', {
+      units: 'metric',
+      primaryId: 'home',
+      locations: {},
+      temperature: 11,
+    });
     context.registerWidget({
       type: 'weather.now',
       title: 'Weather',
-      entities: ['weather.now'],
+      entities: ['weather.locations'],
       render: () => {
-        const entity = useEntity<{ temperature: number }>('weather.now');
+        const entity = useEntity<{ temperature: number }>('weather.locations');
         return <Card value={`${entity?.state.temperature ?? '—'}°`} />;
       },
     });
