@@ -1,6 +1,6 @@
 import type {
-  StoredLocation,
   StoredWeather,
+  StoredWeatherLocation,
   WeatherLocation,
   WeatherLocationsState,
   WeatherNowState,
@@ -15,52 +15,27 @@ export function slotId(optionsLocation: unknown, fallback = 'default'): string {
     : fallback;
 }
 
-export function toStoredLocation(location: WeatherLocation): StoredLocation {
+export function serializeLocation(location: WeatherLocation): StoredWeatherLocation {
+  const { status: _status, error: _error, ...stored } = location;
+  return stored;
+}
+
+function hydrateLocation(id: string, stored: StoredWeatherLocation): WeatherLocation {
   return {
-    id: location.id,
-    query: location.query,
-    label: location.label,
-    placeName: location.placeName,
-    latitude: location.latitude,
-    longitude: location.longitude,
-    temperature: location.temperature,
-    feelsLike: location.feelsLike,
-    humidity: location.humidity,
-    windSpeed: location.windSpeed,
-    windDirection: location.windDirection,
-    condition: location.condition,
-    weatherCode: location.weatherCode,
-    sunrise: location.sunrise,
-    sunset: location.sunset,
-    days: location.days,
-    hours: location.hours,
-    updatedAt: location.updatedAt,
+    ...stored,
+    id,
+    label: stored.label || id,
+    status: stored.updatedAt ? 'ready' : 'idle',
+    error: null,
+    days: stored.days ?? [],
+    hours: stored.hours ?? [],
   };
 }
 
 export function fromStored(stored: StoredWeather): WeatherLocationsState {
   const locations: Record<string, WeatherLocation> = {};
   for (const [id, entry] of Object.entries(stored.locations)) {
-    locations[id] = {
-      ...emptyLocation(id, entry.query),
-      label: entry.label || id,
-      placeName: entry.placeName,
-      latitude: entry.latitude,
-      longitude: entry.longitude,
-      status: entry.updatedAt ? 'ready' : entry.query ? 'idle' : 'idle',
-      temperature: entry.temperature,
-      feelsLike: entry.feelsLike,
-      humidity: entry.humidity,
-      windSpeed: entry.windSpeed,
-      windDirection: entry.windDirection,
-      condition: entry.condition,
-      weatherCode: entry.weatherCode,
-      sunrise: entry.sunrise,
-      sunset: entry.sunset,
-      days: entry.days ?? [],
-      hours: entry.hours ?? [],
-      updatedAt: entry.updatedAt,
-    };
+    locations[id] = hydrateLocation(id, entry);
   }
   return {
     units: stored.units === 'imperial' ? 'imperial' : 'metric',
@@ -70,10 +45,10 @@ export function fromStored(stored: StoredWeather): WeatherLocationsState {
 }
 
 export function toStored(state: WeatherLocationsState): StoredWeather {
-  const locations: Record<string, StoredLocation> = {};
+  const locations: Record<string, StoredWeatherLocation> = {};
   for (const [id, location] of Object.entries(state.locations)) {
     if (location.query.trim() === '') continue;
-    locations[id] = toStoredLocation(location);
+    locations[id] = serializeLocation(location);
   }
   return {
     units: state.units,
