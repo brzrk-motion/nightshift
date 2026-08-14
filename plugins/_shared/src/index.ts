@@ -1,4 +1,12 @@
 export {
+  authorizedFetch,
+  bearerHeaders,
+  ensureOk,
+  HttpError,
+  httpErrorFromResponse,
+  type HttpErrorMessageFormatter,
+} from './http-client.js';
+export {
   formatDuration,
   pauseIfRunning,
   sessionProgress,

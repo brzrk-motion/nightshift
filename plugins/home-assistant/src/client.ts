@@ -1,33 +1,20 @@
+import {
+  HttpError,
+  authorizedFetch,
+  ensureOk,
+  type HttpErrorMessageFormatter,
+} from '@nightshift/plugin-shared';
 import type { PluginFetch } from '@nightshift/sdk';
 import type { Scene } from './entity.js';
 import { scenesFromStates, type HaStateRow } from './scenes.js';
 
-export class HomeAssistantApiError extends Error {
-  readonly status: number;
-
-  constructor(status: number, message: string) {
-    super(message);
-    this.name = 'HomeAssistantApiError';
-    this.status = status;
-  }
-}
-
-function authHeaders(token: string, body?: string): Record<string, string> {
-  return {
-    Authorization: `Bearer ${token}`,
-    Accept: 'application/json',
-    ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
-  };
-}
-
-async function readErrorMessage(response: Response): Promise<string> {
-  const body = await response.text();
+const haErrorMessage: HttpErrorMessageFormatter = (status, body) => {
   const trimmed = body.trim();
-  if (response.status === 401 || response.status === 403) {
+  if (status === 401 || status === 403) {
     return trimmed || 'Invalid Home Assistant access token.';
   }
-  return trimmed || `Home Assistant API error (${response.status})`;
-}
+  return trimmed || `Home Assistant API error (${status})`;
+};
 
 /** Lightweight reachability + auth check: GET /api/ */
 export async function checkConnection(
@@ -35,12 +22,8 @@ export async function checkConnection(
   baseUrl: string,
   token: string,
 ): Promise<void> {
-  const response = await fetchFn(`${baseUrl}/api/`, {
-    headers: authHeaders(token),
-  });
-  if (!response.ok) {
-    throw new HomeAssistantApiError(response.status, await readErrorMessage(response));
-  }
+  const response = await authorizedFetch(fetchFn, token, `${baseUrl}/api/`);
+  await ensureOk(response, haErrorMessage);
 }
 
 /** GET /api/states → scene.* only */
@@ -49,18 +32,11 @@ export async function listScenes(
   baseUrl: string,
   token: string,
 ): Promise<Scene[]> {
-  const response = await fetchFn(`${baseUrl}/api/states`, {
-    headers: authHeaders(token),
-  });
-  if (!response.ok) {
-    throw new HomeAssistantApiError(response.status, await readErrorMessage(response));
-  }
+  const response = await authorizedFetch(fetchFn, token, `${baseUrl}/api/states`);
+  await ensureOk(response, haErrorMessage);
   const json: unknown = await response.json();
   if (!Array.isArray(json)) {
-    throw new HomeAssistantApiError(
-      response.status,
-      'Home Assistant /api/states was not an array.',
-    );
+    throw new HttpError(response.status, '', 'Home Assistant /api/states was not an array.');
   }
   return scenesFromStates(json as HaStateRow[]);
 }
@@ -73,12 +49,9 @@ export async function activateScene(
   entityId: string,
 ): Promise<void> {
   const body = JSON.stringify({ entity_id: entityId });
-  const response = await fetchFn(`${baseUrl}/api/services/scene/turn_on`, {
+  const response = await authorizedFetch(fetchFn, token, `${baseUrl}/api/services/scene/turn_on`, {
     method: 'POST',
-    headers: authHeaders(token, body),
     body,
   });
-  if (!response.ok) {
-    throw new HomeAssistantApiError(response.status, await readErrorMessage(response));
-  }
+  await ensureOk(response, haErrorMessage);
 }
