@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 import { type CodeIndex } from './store.js';
-import { SYMBOL_KINDS, type LanguageId, type SymbolRecord } from './types.js';
+import { SYMBOL_KINDS, type LanguageId, type SymbolKind, type SymbolRecord } from './types.js';
 
 export interface QueryContext {
   index: CodeIndex;
@@ -20,12 +20,16 @@ const pathGlob = z
 
 export const searchSymbolsInputSchema = z.object({
   name: z.string().optional().describe('Case-insensitive match; exact names rank first.'),
+  // Keep the Zod array mutable so MCP JSON Schema does not emit `readOnly: true`
+  // (Zod's `.readonly()` would), while the exported input type stays `readonly`.
   kinds: z.array(kindSchema).optional().describe('Restrict to these kinds of definition.'),
   path: pathGlob.optional(),
   exportedOnly: z.boolean().optional().describe('Only symbols exported from their module.'),
   limit: z.number().int().positive().optional().describe('Defaults to 50.'),
 });
-export type SearchSymbolsInput = z.infer<typeof searchSymbolsInputSchema>;
+export type SearchSymbolsInput = Omit<z.infer<typeof searchSymbolsInputSchema>, 'kinds'> & {
+  kinds?: readonly SymbolKind[] | undefined;
+};
 
 export interface SearchSymbolsResult {
   total: number;

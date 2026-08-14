@@ -72,7 +72,9 @@ describe('searchSymbols', () => {
   });
 
   it('filters by kind, path glob and export', () => {
-    expect(searchSymbols(context, { kinds: ['class'] }).symbols.map((s) => s.name)).toEqual([
+    // `kinds` must accept readonly arrays (pre-dedupe SearchSymbolsInput contract).
+    const classOnly = ['class'] as const;
+    expect(searchSymbols(context, { kinds: classOnly }).symbols.map((s) => s.name)).toEqual([
       'Timer',
     ]);
 
