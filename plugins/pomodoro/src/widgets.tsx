@@ -3,7 +3,7 @@ import {
   TimerSessionWidget,
   TimerTodayWidget,
   type TimerSessionLabels,
-} from '@nightshift/plugin-shared';
+} from '@nightshift/plugin-shared/timer-session';
 import { type BadgeTone, type WidgetProps } from '@nightshift/sdk';
 import {
   POMODORO_ENTITY,
