@@ -2,7 +2,7 @@
 // Builds and runs every MCP server in mcp/, then supervises them.
 //
 //   pnpm mcp:up                      # build, launch, print the endpoint table
-//   pnpm mcp:up --check              # build, verify each server answers, exit
+//   pnpm mcp:up --check              # build, poll /health on each server, exit
 //   pnpm mcp:up --write-cursor-config
 //   pnpm mcp:up --only context --no-build
 //
@@ -34,7 +34,7 @@ const MIN_NODE_MAJOR = 22;
 
 const USAGE = `Usage: pnpm mcp:up [options]
 
-  --check                Verify every server starts and answers, then exit
+  --check                Verify every server starts and /health reports ok, then exit
   --only <id>            Run just one server (repeatable)
   --no-build             Skip the build; use whatever is in dist/
   --write-cursor-config  Write .cursor/mcp.json from the endpoints, then exit
@@ -277,7 +277,12 @@ async function waitForHealth(state, deadline) {
     if (state.failed) return { ok: false, detail: 'failed to start' };
     try {
       const response = await fetch(url, { signal: AbortSignal.timeout(2_000) });
-      if (response.ok) return { ok: true, detail: await response.json() };
+      // Same contract as probeExisting: HTTP 200 is not enough — require status: ok
+      // so --check (which now relies on /health alone) cannot pass on a random listener.
+      if (response.ok) {
+        const body = await response.json();
+        if (body?.status === 'ok') return { ok: true, detail: body };
+      }
     } catch {
       // Not listening yet — unless we spawned into a port something else owns.
       if (state.child && !state.external) {
