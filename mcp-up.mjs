@@ -2,7 +2,7 @@
 // Builds and runs every MCP server in mcp/, then supervises them.
 //
 //   pnpm mcp:up                      # build, launch, print the endpoint table
-//   pnpm mcp:up --check              # build, verify each server answers, exit
+//   pnpm mcp:up --check              # build, poll /health on each server, exit
 //   pnpm mcp:up --write-cursor-config
 //   pnpm mcp:up --only context --no-build
 //
@@ -36,7 +36,7 @@ const MIN_NODE_MAJOR = 22;
 
 const USAGE = `Usage: pnpm mcp:up [options]
 
-  --check                Verify every server starts and answers, then exit
+  --check                Verify every server starts and /health reports ok, then exit
   --only <id>            Run just one server (repeatable)
   --no-build             Skip the build; use whatever is in dist/
   --write-cursor-config  Write .cursor/mcp.json from the endpoints, then exit
@@ -247,7 +247,12 @@ async function waitForHealth(state, deadline) {
     if (state.failed) return { ok: false, detail: 'failed to start' };
     try {
       const response = await fetch(url, { signal: AbortSignal.timeout(2_000) });
-      if (response.ok) return { ok: true, detail: await response.json() };
+      // Same contract as probeExisting: HTTP 200 is not enough — require status: ok
+      // so --check (which now relies on /health alone) cannot pass on a random listener.
+      if (response.ok) {
+        const body = await response.json();
+        if (body?.status === 'ok') return { ok: true, detail: body };
+      }
     } catch {
       // Not listening yet — unless we spawned into a port something else owns.
       if (state.child && !state.external) {
@@ -266,46 +271,6 @@ async function waitForHealth(state, deadline) {
     if (Date.now() > deadline) return { ok: false, detail: 'timed out waiting for /health' };
     await new Promise((resume) => setTimeout(resume, HEALTH_INTERVAL_MS));
   }
-}
-
-/** One real MCP exchange, so --check proves the protocol works and not just the port. */
-async function listTools(server) {
-  const response = await fetch(`http://${HOST}:${server.port}/mcp`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', accept: 'application/json, text/event-stream' },
-    body: JSON.stringify({
-      jsonrpc: '2.0',
-      id: 1,
-      method: 'initialize',
-      params: {
-        protocolVersion: '2025-06-18',
-        capabilities: {},
-        clientInfo: { name: 'mcp-up', version: '1.0.0' },
-      },
-    }),
-    signal: AbortSignal.timeout(10_000),
-  });
-  if (!response.ok) throw new Error(`initialize returned ${response.status}`);
-
-  const tools = await fetch(`http://${HOST}:${server.port}/mcp`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', accept: 'application/json, text/event-stream' },
-    body: JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'tools/list' }),
-    signal: AbortSignal.timeout(10_000),
-  });
-  const payload = parseRpc(await tools.text());
-  const names = payload?.result?.tools?.map((tool) => tool.name) ?? [];
-  if (names.length === 0) throw new Error('tools/list returned no tools');
-  return names;
-}
-
-/** Reads a JSON-RPC reply from either a JSON body or a single SSE frame. */
-function parseRpc(body) {
-  const line = body
-    .split('\n')
-    .map((entry) => (entry.startsWith('data: ') ? entry.slice(6) : entry))
-    .find((entry) => entry.trim().startsWith('{'));
-  return line ? JSON.parse(line) : null;
 }
 
 function printTable(rows) {
@@ -402,24 +367,13 @@ async function main() {
   const results = [];
   for (const state of states) {
     const health = await waitForHealth(state, deadline);
-    let tools = [];
-    let detail = health.ok ? 'ready' : String(health.detail);
-
-    if (health.ok) {
-      try {
-        tools = await listTools(state.server);
-      } catch (error) {
-        detail = `unhealthy: ${error.message}`;
-      }
-    }
 
     results.push({
       id: state.server.id,
       port: state.server.port,
       url: `http://${HOST}:${state.server.port}/mcp`,
-      ok: health.ok && tools.length > 0,
-      status: detail,
-      tools,
+      ok: health.ok,
+      status: health.ok ? 'ready' : String(health.detail),
       index: health.ok ? health.detail?.index : undefined,
     });
   }
@@ -430,14 +384,7 @@ async function main() {
   if (options.json) {
     process.stdout.write(`${JSON.stringify({ servers: results }, null, 2)}\n`);
   } else {
-    printTable(
-      results.map((result) => [
-        result.id,
-        result.port,
-        result.url,
-        result.ok ? `${result.status} — ${result.tools.length} tools` : result.status,
-      ]),
-    );
+    printTable(results.map((result) => [result.id, result.port, result.url, result.status]));
   }
 
   if (options.writeCursorConfig && healthy.length > 0) {

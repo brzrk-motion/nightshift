@@ -129,7 +129,7 @@ pnpm lint             # turbo run lint
 pnpm typecheck        # turbo run typecheck (tsc --noEmit, tests included)
 pnpm check            # format:check + lint + typecheck + test (pre-commit hook)
 pnpm format           # prettier --write .
-pnpm mcp:up [args]    # ./mcp-up.mjs — builds and runs the MCP servers (--check smoke-tests them)
+pnpm mcp:up [args]    # ./mcp-up.mjs — builds and runs the MCP servers (--check polls /health)
 ```
 
 `pnpm start` is what you want while iterating on the CLI or a bundled plugin —
