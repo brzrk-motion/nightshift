@@ -210,6 +210,40 @@ describe('ambient-noise plugin', () => {
     for (const dispose of disposers) dispose();
   });
 
+  it('keeps mixing after next during playback (beginOp must not kill the pump)', async () => {
+    const { context, entities, commands, disposers } = ambientNoiseTestContext();
+    await plugin.setup(context);
+    expect(
+      player(entities).clips.filter((clip) => clip.status === 'ok').length,
+    ).toBeGreaterThanOrEqual(2);
+
+    await commands.get('ambient-noise.play')?.run();
+    await vi.advanceTimersByTimeAsync(LEVELS_MS);
+    await commands.get('ambient-noise.next')?.run();
+    expect(['fading', 'playing']).toContain(player(entities).status);
+    const levelsAfterSkip = player(entities).levels.length;
+    await vi.advanceTimersByTimeAsync(LEVELS_MS * 5);
+    expect(['fading', 'playing']).toContain(player(entities).status);
+    expect(player(entities).levels.length).toBeGreaterThan(levelsAfterSkip);
+
+    for (const dispose of disposers) dispose();
+  });
+
+  it('keeps mixing if play is invoked again while already playing', async () => {
+    const { context, entities, commands, disposers } = ambientNoiseTestContext();
+    await plugin.setup(context);
+    await commands.get('ambient-noise.play')?.run();
+    await vi.advanceTimersByTimeAsync(LEVELS_MS);
+    const levelsBefore = player(entities).levels.length;
+    await commands.get('ambient-noise.play')?.run();
+    expect(player(entities).status).toBe('playing');
+    await vi.advanceTimersByTimeAsync(LEVELS_MS * 5);
+    expect(player(entities).status).toBe('playing');
+    expect(player(entities).levels.length).toBeGreaterThan(levelsBefore);
+
+    for (const dispose of disposers) dispose();
+  });
+
   it('does not start playback if pause arrives while a clip is still loading', async () => {
     vi.useRealTimers();
     const { context, entities, commands, disposers } = ambientNoiseTestContext();

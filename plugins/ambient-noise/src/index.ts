@@ -166,20 +166,23 @@ export default definePlugin({
     };
 
     const stopPump = (): void => {
-      pumpAbort?.abort();
+      const ac = pumpAbort;
       pumpAbort = undefined;
       pumping = false;
+      ac?.abort();
     };
 
     const startPump = (): void => {
       if (pumping) return;
       pumping = true;
-      pumpAbort = new AbortController();
-      const { signal } = pumpAbort;
-      const token = generation;
+      // Pump lifetime follows mixer.playing + abort only — not `generation`.
+      // next/select call beginOp() to cancel stale loads; that must not kill audio.
+      const ac = new AbortController();
+      pumpAbort = ac;
+      const { signal } = ac;
       void (async () => {
         try {
-          while (mixer.playing && token === generation && !signal.aborted) {
+          while (mixer.playing && !signal.aborted) {
             mixer.tick(CHUNK_FRAMES);
             reportWriteError();
             const drain = mixer.waitForDrain();
@@ -189,7 +192,10 @@ export default definePlugin({
             else await delay(CHUNK_MS, signal);
           }
         } finally {
-          if (token === generation) pumping = false;
+          if (pumpAbort === ac) {
+            pumping = false;
+            pumpAbort = undefined;
+          }
         }
       })();
     };
