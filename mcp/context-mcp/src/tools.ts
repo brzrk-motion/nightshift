@@ -2,13 +2,18 @@ import { z } from 'zod';
 
 import {
   fileOutline,
+  fileOutlineInputSchema,
   findReferences,
+  findReferencesInputSchema,
   getSymbol,
+  getSymbolInputSchema,
   type QueryContext,
   readLines,
+  readLinesInputSchema,
+  reindexInputSchema,
   searchSymbols,
+  searchSymbolsInputSchema,
 } from './query.js';
-import { SYMBOL_KINDS } from './types.js';
 
 /**
  * A type alias rather than an interface: the SDK's result type carries an index
@@ -61,11 +66,6 @@ function text(body: string, options: { isError?: boolean } = {}): ToolResult {
   return { content: [{ type: 'text', text: body }], ...options };
 }
 
-const kindSchema = z.enum(SYMBOL_KINDS);
-const pathGlob = z
-  .string()
-  .describe('Glob over repository-relative paths, e.g. "packages/**/*.ts".');
-
 /** Every tool the context server exposes, in the order they are advertised. */
 export function createTools(context: QueryContext): Tool[] {
   return [
@@ -83,13 +83,7 @@ export function createTools(context: QueryContext): Tool[] {
       title: 'Search symbols',
       description:
         "Find definitions by name, kind and path without reading any files. Returns each symbol's file, line range, signature and doc comment — enough to decide what to fetch next. Prefer this over a text search when looking for where something is defined.",
-      inputSchema: z.object({
-        name: z.string().optional().describe('Case-insensitive match; exact names rank first.'),
-        kinds: z.array(kindSchema).optional().describe('Restrict to these kinds of definition.'),
-        path: pathGlob.optional(),
-        exportedOnly: z.boolean().optional().describe('Only symbols exported from their module.'),
-        limit: z.number().int().positive().optional().describe('Defaults to 50.'),
-      }),
+      inputSchema: searchSymbolsInputSchema,
       run: async (input) => searchSymbols(context, input),
     }),
 
@@ -98,30 +92,7 @@ export function createTools(context: QueryContext): Tool[] {
       title: 'Get symbol source',
       description:
         'Return the exact source of a definition — the whole function, class or type and nothing else. Use this instead of reading a file when you know the name you need.',
-      inputSchema: z.object({
-        name: z.string().describe('The symbol name, matched case-insensitively.'),
-        file: z
-          .string()
-          .optional()
-          .describe('Disambiguate when the name is defined in several files.'),
-        kind: kindSchema.optional(),
-        contextLines: z
-          .number()
-          .int()
-          .min(0)
-          .optional()
-          .describe('Extra lines above and below. Defaults to 0.'),
-        includeDoc: z
-          .boolean()
-          .optional()
-          .describe('Include the comment block above the definition. Defaults to true.'),
-        limit: z
-          .number()
-          .int()
-          .positive()
-          .optional()
-          .describe('Definitions to return. Defaults to 3.'),
-      }),
+      inputSchema: getSymbolInputSchema,
       run: async (input) => getSymbol(context, input),
     }),
 
@@ -130,9 +101,7 @@ export function createTools(context: QueryContext): Tool[] {
       title: 'File outline',
       description:
         'List every definition in one file with its line range and signature, and no bodies. The cheap way to understand a file before deciding which parts to read.',
-      inputSchema: z.object({
-        file: z.string().describe('Repository-relative path.'),
-      }),
+      inputSchema: fileOutlineInputSchema,
       run: async ({ file }) =>
         fileOutline(context, file) ?? {
           file,
@@ -145,15 +114,7 @@ export function createTools(context: QueryContext): Tool[] {
       title: 'Find references',
       description:
         'Every place an identifier is mentioned, taken from the syntax tree — so matches inside comments and strings are never reported. Identifier-level and not type-aware: unrelated members sharing a name are included.',
-      inputSchema: z.object({
-        name: z.string().describe('The exact identifier, case-sensitive.'),
-        path: pathGlob.optional(),
-        includeLines: z
-          .boolean()
-          .optional()
-          .describe('Include the source line of each hit. Defaults to true.'),
-        limit: z.number().int().positive().optional().describe('Defaults to 200.'),
-      }),
+      inputSchema: findReferencesInputSchema,
       run: async (input) => findReferences(context, input),
     }),
 
@@ -162,11 +123,7 @@ export function createTools(context: QueryContext): Tool[] {
       title: 'Read lines',
       description:
         'Read an exact, inclusive line range from an indexed file. Use it to follow up on a line number from another tool instead of reading the whole file.',
-      inputSchema: z.object({
-        file: z.string().describe('Repository-relative path.'),
-        startLine: z.number().int().positive().describe('1-based, inclusive.'),
-        endLine: z.number().int().positive().describe('1-based, inclusive.'),
-      }),
+      inputSchema: readLinesInputSchema,
       run: async (input) =>
         readLines(context, input).catch((error: unknown) => ({
           file: input.file,
@@ -179,12 +136,7 @@ export function createTools(context: QueryContext): Tool[] {
       title: 'Reindex',
       description:
         'Force a refresh. The index follows file changes on its own, so this is only needed after a bulk change such as a branch switch, or to pick up a brand new file immediately.',
-      inputSchema: z.object({
-        file: z
-          .string()
-          .optional()
-          .describe('Reindex just this path. Omit to reindex the whole tree.'),
-      }),
+      inputSchema: reindexInputSchema,
       run: async ({ file }) => {
         if (file === undefined) return context.index.reindexAll();
         const entry = await context.index.update(file);
