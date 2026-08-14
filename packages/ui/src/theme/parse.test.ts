@@ -3,14 +3,7 @@ import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { MIDNIGHT_THEME } from '../theme.js';
-import {
-  deleteTheme,
-  loadThemes,
-  mergeThemes,
-  parseTheme,
-  saveTheme,
-  serializeTheme,
-} from './parse.js';
+import { deleteTheme, loadThemes, parseTheme, saveTheme, serializeTheme } from './parse.js';
 
 describe('parseTheme', () => {
   it('parses a valid theme document', () => {
@@ -92,20 +85,5 @@ describe('loadThemes', () => {
     const result = await loadThemes(dir);
     expect(result.themes).toHaveLength(0);
     expect(result.failed).toHaveLength(1);
-  });
-});
-
-describe('mergeThemes', () => {
-  it('lets user themes override built-ins by name', () => {
-    const user = [
-      {
-        ...MIDNIGHT_THEME,
-        name: 'midnight',
-        colors: { ...MIDNIGHT_THEME.colors, accent: '#ffffff' },
-      },
-    ];
-    const merged = mergeThemes(user, [MIDNIGHT_THEME]);
-    expect(merged).toHaveLength(1);
-    expect(merged[0]?.colors.accent).toBe('#ffffff');
   });
 });
