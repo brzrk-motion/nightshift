@@ -1,6 +1,6 @@
 import { createWriteStream, mkdirSync, type WriteStream } from 'node:fs';
 import { dirname } from 'node:path';
-import type { Json, Unsubscribe } from '@nightshift/core';
+import { ansi, shouldUseColor, type Json, type Unsubscribe } from '@nightshift/core';
 import { LOG_LEVELS, type LogLevel } from './config.js';
 
 export type LogFields = Record<string, Json | undefined>;
@@ -60,26 +60,16 @@ const SEVERITY: Record<LogLevel, number> = {
   trace: 5,
 };
 
-const COLORS: Record<Exclude<LogLevel, 'silent'>, string> = {
-  error: '\u001b[31m',
-  warn: '\u001b[33m',
-  info: '\u001b[36m',
-  debug: '\u001b[35m',
-  trace: '\u001b[90m',
-};
-
-const DIM = '\u001b[2m';
-const RESET = '\u001b[0m';
+const LEVEL_STYLE = {
+  error: 'red',
+  warn: 'yellow',
+  info: 'cyan',
+  debug: 'magenta',
+  trace: 'gray',
+} as const satisfies Record<Exclude<LogLevel, 'silent'>, string>;
 
 export function isLogLevel(value: unknown): value is LogLevel {
   return typeof value === 'string' && LOG_LEVELS.includes(value as LogLevel);
-}
-
-function detectColor(stream: NodeJS.WritableStream | null): boolean {
-  if (!stream) return false;
-  if (process.env['NO_COLOR'] !== undefined && process.env['NO_COLOR'] !== '') return false;
-  if (process.env['FORCE_COLOR'] !== undefined && process.env['FORCE_COLOR'] !== '0') return true;
-  return (stream as NodeJS.WriteStream).isTTY === true;
 }
 
 function formatFields(fields: LogFields): string {
@@ -98,7 +88,10 @@ function formatFields(fields: LogFields): string {
  */
 export function createLogger(options: LoggerOptions = {}): Logger {
   let stream = options.stream === undefined ? process.stderr : options.stream;
-  let color = options.color ?? detectColor(stream);
+  let color = shouldUseColor({
+    stream,
+    ...(options.color !== undefined ? { override: options.color } : {}),
+  });
 
   let level: LogLevel = options.level ?? 'info';
   let file: WriteStream | null = null;
@@ -121,13 +114,10 @@ export function createLogger(options: LoggerOptions = {}): Logger {
 
   const write = (record: LogRecord): void => {
     if (stream) {
-      const tint = color ? COLORS[record.level] : '';
-      const off = color ? RESET : '';
-      const dim = color ? DIM : '';
       const tail = record.fields ? formatFields(record.fields) : '';
       const line =
-        `${dim}${record.time}${off} ${tint}${record.level.padEnd(5)}${off} ` +
-        `${dim}${record.scope}${off} ${record.message}${tail ? ` ${dim}${tail}${off}` : ''}\n`;
+        `${ansi(color, 'dim', record.time)} ${ansi(color, LEVEL_STYLE[record.level], record.level.padEnd(5))} ` +
+        `${ansi(color, 'dim', record.scope)} ${record.message}${tail ? ` ${ansi(color, 'dim', tail)}` : ''}\n`;
       stream.write(line);
     }
     if (file) {
@@ -175,7 +165,10 @@ export function createLogger(options: LoggerOptions = {}): Logger {
       },
       setStream: (next) => {
         stream = next;
-        color = options.color ?? detectColor(next);
+        color = shouldUseColor({
+          stream: next,
+          ...(options.color !== undefined ? { override: options.color } : {}),
+        });
       },
       onRecord: (listener) => {
         listeners.add(listener);

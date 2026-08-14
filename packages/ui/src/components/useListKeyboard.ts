@@ -33,14 +33,14 @@ export function handleListNavigationKey(
   count: number,
   selectedIndex: number,
   handlers: ListKeyboardHandlers,
-): { selectedIndex?: number; action?: 'activate' | 'edit' | 'add' } | null {
+): { selectedIndex?: number; delta?: number; action?: 'activate' | 'edit' | 'add' } | null {
   if (count <= 0 && keyName !== 'a') return null;
 
   if (keyName === 'up' || keyName === 'k') {
-    return { selectedIndex: moveListSelection(selectedIndex, count, -1) };
+    return { selectedIndex: moveListSelection(selectedIndex, count, -1), delta: -1 };
   }
   if (keyName === 'down' || keyName === 'j') {
-    return { selectedIndex: moveListSelection(selectedIndex, count, 1) };
+    return { selectedIndex: moveListSelection(selectedIndex, count, 1), delta: 1 };
   }
   if (keyName === 'return' && handlers.onActivate) {
     return { action: 'activate' };

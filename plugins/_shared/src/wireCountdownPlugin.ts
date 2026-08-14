@@ -1,4 +1,6 @@
-import { type EntityId, type EntityMeta, type Json, type PluginContext } from '@nightshift/sdk';
+// `import type` (not `import { type … }`) so emit fully elides the SDK import —
+// otherwise verbatimModuleSyntax leaves `import {} from '@nightshift/sdk'` at runtime.
+import type { EntityId, EntityMeta, Json, PluginContext } from '@nightshift/sdk';
 import { todayKey } from './countdown.js';
 
 /** Storage blob keyed by calendar date for daily progress counters. */

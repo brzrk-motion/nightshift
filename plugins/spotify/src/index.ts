@@ -1,4 +1,4 @@
-import { definePlugin, type Json, type PluginContext } from '@nightshift/sdk';
+import { argString, definePlugin, type PluginContext } from '@nightshift/sdk';
 import { ensureAccessToken, startConnectFlow } from './auth.js';
 import {
   SpotifyApiError,
@@ -35,11 +35,6 @@ import {
 import { PlayerWidget } from './widgets.js';
 
 const STORAGE_KEY = 'auth';
-
-function stringArg(args: Record<string, Json> | undefined, key: string): string | undefined {
-  const value = args?.[key];
-  return typeof value === 'string' && value.trim() !== '' ? value.trim() : undefined;
-}
 
 export default definePlugin({
   id: 'spotify',
@@ -224,8 +219,8 @@ export default definePlugin({
       id: 'spotify.configure',
       title: 'Configure Spotify app credentials',
       run: async (args) => {
-        const clientId = stringArg(args, 'clientId');
-        const clientSecret = stringArg(args, 'clientSecret');
+        const clientId = argString(args, 'clientId');
+        const clientSecret = argString(args, 'clientSecret');
         if (!clientId || !clientSecret) {
           context.log.warn('spotify.configure needs clientId and clientSecret');
           return;
@@ -339,7 +334,7 @@ export default definePlugin({
       id: 'spotify.submit-redirect',
       title: 'Submit Spotify auth redirect URL',
       run: (args) => {
-        const value = stringArg(args, 'url') ?? stringArg(args, 'redirect');
+        const value = argString(args, 'url') ?? argString(args, 'redirect');
         if (!value) {
           context.log.warn('spotify.submit-redirect needs a url');
           return;
@@ -450,7 +445,7 @@ export default definePlugin({
       id: 'spotify.play-context',
       title: 'Spotify play playlist or show',
       run: async (args) => {
-        const uri = stringArg(args, 'uri');
+        const uri = argString(args, 'uri');
         if (!uri) {
           context.log.warn('spotify.play-context needs a uri');
           return;
@@ -466,13 +461,13 @@ export default definePlugin({
       id: 'spotify.show-episodes',
       title: 'Load a Spotify podcast’s episodes',
       run: async (args) => {
-        const uri = stringArg(args, 'uri');
+        const uri = argString(args, 'uri');
         if (!uri || !uri.startsWith('spotify:show:')) {
           context.log.warn('spotify.show-episodes needs a show uri');
           return;
         }
         const showId = uri.slice('spotify:show:'.length);
-        const showName = stringArg(args, 'name') ?? null;
+        const showName = argString(args, 'name') ?? null;
 
         writeEpisodes(
           initialEpisodesState({ showId, showName, loading: true, items: [], error: null }),
@@ -511,7 +506,7 @@ export default definePlugin({
       id: 'spotify.play-episode',
       title: 'Spotify play episode',
       run: async (args) => {
-        const uri = stringArg(args, 'uri');
+        const uri = argString(args, 'uri');
         if (!uri) {
           context.log.warn('spotify.play-episode needs a uri');
           return;

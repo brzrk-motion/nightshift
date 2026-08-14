@@ -1,4 +1,4 @@
-import { definePlugin, type Json, type PluginContext } from '@nightshift/sdk';
+import { argString, definePlugin, type PluginContext } from '@nightshift/sdk';
 import { activateScene, checkConnection, listScenes } from './client.js';
 import {
   HOME_ASSISTANT_CONNECTION_ENTITY,
@@ -16,11 +16,6 @@ import {
 } from './storage.js';
 import { normalizeBaseUrl, UrlValidationError } from './url.js';
 import { ScenesWidget } from './widgets.js';
-
-function stringArg(args: Record<string, Json> | undefined, key: string): string | undefined {
-  const value = args?.[key];
-  return typeof value === 'string' && value.trim() !== '' ? value.trim() : undefined;
-}
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
@@ -157,8 +152,8 @@ export default definePlugin({
       id: 'home-assistant.configure',
       title: 'Configure Home Assistant',
       run: async (args) => {
-        const address = stringArg(args, 'address');
-        const token = stringArg(args, 'token');
+        const address = argString(args, 'address');
+        const token = argString(args, 'token');
         if (!address || !token) return;
 
         let baseUrl: string;
@@ -205,7 +200,7 @@ export default definePlugin({
       id: 'home-assistant.activate-scene',
       title: 'Activate Home Assistant scene',
       run: async (args) => {
-        const entityId = stringArg(args, 'entity_id');
+        const entityId = argString(args, 'entity_id');
         if (!entityId) {
           context.log.warn('home-assistant.activate-scene missing entity_id');
           return;

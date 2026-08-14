@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-// Builds and runs every MCP server in mcp/, then supervises them.
+// Builds and runs every MCP server in mcp/.
 //
 //   pnpm mcp:up                      # build, launch, print the endpoint table
-//   pnpm mcp:up --check              # build, verify each server answers, exit
+//   pnpm mcp:up --check              # build, poll /health on each server, exit
 //   pnpm mcp:up --write-cursor-config
 //   pnpm mcp:up --only context --no-build
 //
@@ -18,23 +18,22 @@ import { spawn } from 'node:child_process';
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createStatusWriter, runTurboBuild } from './scripts/run-turbo-build.mjs';
 
 const root = dirname(fileURLToPath(import.meta.url));
 const interactive = process.stderr.isTTY === true;
+const status = createStatusWriter();
 
 const HOST = '127.0.0.1';
 const BASE_PORT = 7411;
 const HEALTH_TIMEOUT_MS = 30_000;
 const HEALTH_INTERVAL_MS = 200;
-/** A child that dies this soon after starting is treated as a failure to start. */
-const CRASH_WINDOW_MS = 5_000;
-const MAX_RESTARTS = 3;
 
 const MIN_NODE_MAJOR = 22;
 
 const USAGE = `Usage: pnpm mcp:up [options]
 
-  --check                Verify every server starts and answers, then exit
+  --check                Verify every server starts and /health reports ok, then exit
   --only <id>            Run just one server (repeatable)
   --no-build             Skip the build; use whatever is in dist/
   --write-cursor-config  Write .cursor/mcp.json from the endpoints, then exit
@@ -118,48 +117,16 @@ function discover() {
   return servers.sort((a, b) => a.id.localeCompare(b.id));
 }
 
-function status(text) {
-  if (!interactive) return;
-  process.stderr.write(text ? `\u001b[2m${text}\u001b[0m\r` : '\r\u001b[2K');
-}
-
 function label(server) {
   return interactive ? `\u001b[2m[${server.id}]\u001b[0m` : `[${server.id}]`;
 }
 
 /** Builds the given packages with Turbo, staying silent unless it fails. */
 async function build(servers) {
-  // Bypass `.bin/turbo(.cmd)` — invoke the JS entry with this node so Windows
-  // never needs a shell (and never splits `C:\Program Files\...`).
-  const turbo = join(root, 'node_modules', 'turbo', 'bin', 'turbo');
-  if (!existsSync(turbo)) {
-    process.stderr.write('mcp-up: dependencies are missing. Run `pnpm install` first.\n');
-    return false;
-  }
-
-  status('building…');
-  const filters = servers.flatMap((server) => ['--filter', `${server.package}...`]);
-  const code = await new Promise((resolve, reject) => {
-    const child = spawn(
-      process.execPath,
-      [turbo, 'run', 'build', ...filters, '--output-logs=errors-only'],
-      {
-        cwd: root,
-        stdio: ['ignore', 'pipe', 'pipe'],
-      },
-    );
-    let output = '';
-    child.stdout.on('data', (chunk) => (output += chunk));
-    child.stderr.on('data', (chunk) => (output += chunk));
-    child.on('error', reject);
-    child.on('close', (exit) => {
-      if (exit !== 0) process.stderr.write(output);
-      resolve(exit ?? 0);
-    });
+  const code = await runTurboBuild(root, {
+    filters: servers.map((server) => `${server.package}...`),
+    label: 'mcp-up',
   });
-  status('');
-
-  if (code !== 0) process.stderr.write('mcp-up: build failed; not starting.\n');
   return code === 0;
 }
 
@@ -190,64 +157,33 @@ function spawnServer(server) {
   return child;
 }
 
-/** True when something is already serving /health on this port. */
-async function probeExisting(server) {
-  try {
-    const response = await fetch(`http://${HOST}:${server.port}/health`, {
-      signal: AbortSignal.timeout(2_000),
-    });
-    if (!response.ok) return null;
-    const body = await response.json();
-    return body?.status === 'ok' ? body : null;
-  } catch {
-    return null;
-  }
+function isChildAlive(state) {
+  const child = state.child;
+  return Boolean(child && child.exitCode === null && child.signalCode === null);
 }
 
 /**
- * Starts a child unless the port is already occupied by a healthy server.
- * Returns `{ external: true }` when reusing an existing listener.
+ * Spawns one server. Unexpected exits set `failed` so startup can fail cleanly;
+ * `onUnexpectedExit` is for long-lived mode (stop siblings, then exit).
+ * `listening` flips when the child logs that it bound its HTTP port — required
+ * so /health from another process cannot look like a successful start.
  */
-async function startServer(server) {
-  const existing = await probeExisting(server);
-  if (existing) {
-    process.stderr.write(`${label(server)} already listening on port ${server.port}; reusing it\n`);
-    return { server, child: null, restarts: 0, stopped: false, failed: false, external: true };
-  }
-  return supervise(server);
-}
-
-/**
- * Keeps one server running. A crash is restarted with a short backoff until it
- * has failed to stay up MAX_RESTARTS times, so a broken server reports itself
- * instead of spinning forever.
- */
-function supervise(server) {
-  const state = { server, child: null, restarts: 0, stopped: false, failed: false };
-
-  const start = () => {
-    const startedAt = Date.now();
-    state.child = spawnServer(server);
-    state.child.on('exit', (code, signal) => {
-      if (state.stopped) return;
-      const lived = Date.now() - startedAt;
-      const reason = signal ? `signal ${signal}` : `exit code ${code}`;
-      if (lived < CRASH_WINDOW_MS) state.restarts += 1;
-      else state.restarts = 0;
-
-      if (state.restarts > MAX_RESTARTS) {
-        state.failed = true;
-        process.stderr.write(
-          `${label(server)} gave up after ${MAX_RESTARTS} restarts (${reason})\n`,
-        );
-        return;
-      }
-      process.stderr.write(`${label(server)} exited (${reason}); restarting\n`);
-      setTimeout(start, 250 * state.restarts).unref?.();
-    });
+function startServer(server, onUnexpectedExit) {
+  const child = spawnServer(server);
+  const state = { server, child, stopped: false, failed: false, listening: false };
+  const serving = `serving on http://${HOST}:${server.port}/`;
+  const markListening = (chunk) => {
+    if (String(chunk).includes(serving)) state.listening = true;
   };
-
-  start();
+  child.stdout.on('data', markListening);
+  child.stderr.on('data', markListening);
+  child.on('exit', (code, signal) => {
+    if (state.stopped) return;
+    state.failed = true;
+    const reason = signal ? `signal ${signal}` : `exit code ${code}`;
+    process.stderr.write(`${label(server)} exited (${reason})\n`);
+    onUnexpectedExit?.(state);
+  });
   return state;
 }
 
@@ -257,7 +193,6 @@ async function stopAll(states) {
       (state) =>
         new Promise((done) => {
           state.stopped = true;
-          if (state.external) return done();
           const child = state.child;
           if (!child || child.exitCode !== null || child.signalCode !== null) return done();
           const force = setTimeout(() => child.kill('SIGKILL'), 3_000);
@@ -274,68 +209,25 @@ async function stopAll(states) {
 async function waitForHealth(state, deadline) {
   const url = `http://${HOST}:${state.server.port}/health`;
   for (;;) {
-    if (state.failed) return { ok: false, detail: 'failed to start' };
+    if (state.failed || !isChildAlive(state)) return { ok: false, detail: 'failed to start' };
     try {
       const response = await fetch(url, { signal: AbortSignal.timeout(2_000) });
-      if (response.ok) return { ok: true, detail: await response.json() };
-    } catch {
-      // Not listening yet — unless we spawned into a port something else owns.
-      if (state.child && !state.external) {
-        const existing = await probeExisting(state.server);
-        if (existing) {
-          process.stderr.write(
-            `${label(state.server)} port ${state.server.port} is in use; reusing the listener already there\n`,
-          );
-          state.external = true;
-          state.child?.kill('SIGTERM');
-          state.child = null;
-          return { ok: true, detail: existing };
+      // HTTP 200 + status ok is not enough alone: the port may belong to another
+      // process while our child is still starting (or about to fail on bind).
+      // Require the child to have logged that it is serving.
+      if (response.ok && state.listening) {
+        const body = await response.json();
+        if (state.failed || !isChildAlive(state) || !state.listening) {
+          return { ok: false, detail: 'failed to start' };
         }
+        if (body?.status === 'ok') return { ok: true, detail: body };
       }
+    } catch {
+      // Not listening yet.
     }
     if (Date.now() > deadline) return { ok: false, detail: 'timed out waiting for /health' };
     await new Promise((resume) => setTimeout(resume, HEALTH_INTERVAL_MS));
   }
-}
-
-/** One real MCP exchange, so --check proves the protocol works and not just the port. */
-async function listTools(server) {
-  const response = await fetch(`http://${HOST}:${server.port}/mcp`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', accept: 'application/json, text/event-stream' },
-    body: JSON.stringify({
-      jsonrpc: '2.0',
-      id: 1,
-      method: 'initialize',
-      params: {
-        protocolVersion: '2025-06-18',
-        capabilities: {},
-        clientInfo: { name: 'mcp-up', version: '1.0.0' },
-      },
-    }),
-    signal: AbortSignal.timeout(10_000),
-  });
-  if (!response.ok) throw new Error(`initialize returned ${response.status}`);
-
-  const tools = await fetch(`http://${HOST}:${server.port}/mcp`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', accept: 'application/json, text/event-stream' },
-    body: JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'tools/list' }),
-    signal: AbortSignal.timeout(10_000),
-  });
-  const payload = parseRpc(await tools.text());
-  const names = payload?.result?.tools?.map((tool) => tool.name) ?? [];
-  if (names.length === 0) throw new Error('tools/list returned no tools');
-  return names;
-}
-
-/** Reads a JSON-RPC reply from either a JSON body or a single SSE frame. */
-function parseRpc(body) {
-  const line = body
-    .split('\n')
-    .map((entry) => (entry.startsWith('data: ') ? entry.slice(6) : entry))
-    .find((entry) => entry.trim().startsWith('{'));
-  return line ? JSON.parse(line) : null;
 }
 
 function printTable(rows) {
@@ -420,8 +312,19 @@ async function main() {
   }
 
   const states = [];
-  for (const server of servers) states.push(await startServer(server));
+  let live = false;
+  let exiting = false;
+  const onUnexpectedExit = () => {
+    // During startup, waitForHealth/main see `failed` and stopAll themselves.
+    if (!live || exiting) return;
+    exiting = true;
+    void stopAll(states).then(() => process.exit(1));
+  };
+  for (const server of servers) states.push(startServer(server, onUnexpectedExit));
+
   const shutdown = () => {
+    if (exiting) return;
+    exiting = true;
     void stopAll(states).then(() => process.exit(0));
   };
   process.once('SIGINT', shutdown);
@@ -432,25 +335,15 @@ async function main() {
   const results = [];
   for (const state of states) {
     const health = await waitForHealth(state, deadline);
-    let tools = [];
-    let detail = health.ok ? 'ready' : String(health.detail);
-
-    if (health.ok) {
-      try {
-        tools = await listTools(state.server);
-      } catch (error) {
-        detail = `unhealthy: ${error.message}`;
-      }
-    }
+    const ok = health.ok && !state.failed;
 
     results.push({
       id: state.server.id,
       port: state.server.port,
       url: `http://${HOST}:${state.server.port}/mcp`,
-      ok: health.ok && tools.length > 0,
-      status: detail,
-      tools,
-      index: health.ok ? health.detail?.index : undefined,
+      ok,
+      status: ok ? 'ready' : state.failed ? 'failed to start' : String(health.detail),
+      index: ok ? health.detail?.index : undefined,
     });
   }
   status('');
@@ -460,14 +353,7 @@ async function main() {
   if (options.json) {
     process.stdout.write(`${JSON.stringify({ servers: results }, null, 2)}\n`);
   } else {
-    printTable(
-      results.map((result) => [
-        result.id,
-        result.port,
-        result.url,
-        result.ok ? `${result.status} — ${result.tools.length} tools` : result.status,
-      ]),
-    );
+    printTable(results.map((result) => [result.id, result.port, result.url, result.status]));
   }
 
   if (options.writeCursorConfig && healthy.length > 0) {
@@ -485,6 +371,7 @@ async function main() {
     return 1;
   }
 
+  live = true;
   process.stderr.write('mcp-up: running. Press Ctrl-C to stop.\n');
   await new Promise(() => {});
   return 0;

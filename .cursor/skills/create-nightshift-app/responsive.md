@@ -65,7 +65,9 @@ See `plugins/spotify/src/{format.ts,widgets.tsx}`.
 
 For a widget with a hero that must shrink through several treatments. Enumerate the rungs
 richest-first, measure each against the cells available, take the first that fits.
-`plugins/weather/src/scale.ts` in full; the shape:
+Prefer Pattern 1 breakpoints when coarse tiers are enough — weather's now-widget
+(`plugins/weather/src/scale.ts`) does that now. Reach for a measured ladder only when
+a breakpoint table would hide real fit bugs; the shape:
 
 ```ts
 const LADDER: readonly Rung[] = [

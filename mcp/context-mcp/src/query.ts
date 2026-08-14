@@ -1,5 +1,7 @@
+import { z } from 'zod';
+
 import { type CodeIndex } from './store.js';
-import { type LanguageId, type SymbolKind, type SymbolRecord } from './types.js';
+import { SYMBOL_KINDS, type LanguageId, type SymbolKind, type SymbolRecord } from './types.js';
 
 export interface QueryContext {
   index: CodeIndex;
@@ -11,15 +13,23 @@ export const DEFAULT_SYMBOL_LIMIT = 50;
 export const DEFAULT_REFERENCE_LIMIT = 200;
 export const MAX_SLICE_LINES = 400;
 
-export interface SearchSymbolsInput {
-  /** Case-insensitive match on the symbol name. Omit to list everything. */
-  name?: string | undefined;
+const kindSchema = z.enum(SYMBOL_KINDS);
+const pathGlob = z
+  .string()
+  .describe('Glob over repository-relative paths, e.g. "packages/**/*.ts".');
+
+export const searchSymbolsInputSchema = z.object({
+  name: z.string().optional().describe('Case-insensitive match; exact names rank first.'),
+  // Keep the Zod array mutable so MCP JSON Schema does not emit `readOnly: true`
+  // (Zod's `.readonly()` would), while the exported input type stays `readonly`.
+  kinds: z.array(kindSchema).optional().describe('Restrict to these kinds of definition.'),
+  path: pathGlob.optional(),
+  exportedOnly: z.boolean().optional().describe('Only symbols exported from their module.'),
+  limit: z.number().int().positive().optional().describe('Defaults to 50.'),
+});
+export type SearchSymbolsInput = Omit<z.infer<typeof searchSymbolsInputSchema>, 'kinds'> & {
   kinds?: readonly SymbolKind[] | undefined;
-  /** Glob over the repository-relative path, e.g. `packages/*` + `/**` + `/*.ts`. */
-  path?: string | undefined;
-  exportedOnly?: boolean | undefined;
-  limit?: number | undefined;
-}
+};
 
 export interface SearchSymbolsResult {
   total: number;
@@ -92,18 +102,23 @@ export function fileOutline(context: QueryContext, file: string): FileOutlineRes
   };
 }
 
-export interface GetSymbolInput {
-  name: string;
-  /** Narrow to one file when the same name is defined in several. */
-  file?: string | undefined;
-  kind?: SymbolKind | undefined;
-  /** Extra lines above and below the definition. */
-  contextLines?: number | undefined;
-  /** Include the comment block above the definition. Defaults to true. */
-  includeDoc?: boolean | undefined;
-  /** How many definitions to return when the name is ambiguous. Defaults to 3. */
-  limit?: number | undefined;
-}
+export const getSymbolInputSchema = z.object({
+  name: z.string().describe('The symbol name, matched case-insensitively.'),
+  file: z.string().optional().describe('Disambiguate when the name is defined in several files.'),
+  kind: kindSchema.optional(),
+  contextLines: z
+    .number()
+    .int()
+    .min(0)
+    .optional()
+    .describe('Extra lines above and below. Defaults to 0.'),
+  includeDoc: z
+    .boolean()
+    .optional()
+    .describe('Include the comment block above the definition. Defaults to true.'),
+  limit: z.number().int().positive().optional().describe('Definitions to return. Defaults to 3.'),
+});
+export type GetSymbolInput = z.infer<typeof getSymbolInputSchema>;
 
 export interface SymbolSource extends ReadLinesResult {
   symbol: SymbolRecord;
@@ -152,13 +167,16 @@ export interface ReferenceHit {
   text?: string;
 }
 
-export interface FindReferencesInput {
-  name: string;
-  path?: string | undefined;
-  /** Include the source line of each hit. Defaults to true. */
-  includeLines?: boolean | undefined;
-  limit?: number | undefined;
-}
+export const findReferencesInputSchema = z.object({
+  name: z.string().describe('The exact identifier, case-sensitive.'),
+  path: pathGlob.optional(),
+  includeLines: z
+    .boolean()
+    .optional()
+    .describe('Include the source line of each hit. Defaults to true.'),
+  limit: z.number().int().positive().optional().describe('Defaults to 200.'),
+});
+export type FindReferencesInput = z.infer<typeof findReferencesInputSchema>;
 
 export interface FindReferencesResult {
   name: string;
@@ -221,11 +239,20 @@ export async function findReferences(
   return { name: input.name, total, truncated: total > limit, hits: shown };
 }
 
-export interface ReadLinesInput {
-  file: string;
-  startLine: number;
-  endLine: number;
-}
+export const readLinesInputSchema = z.object({
+  file: z.string().describe('Repository-relative path.'),
+  startLine: z.number().int().positive().describe('1-based, inclusive.'),
+  endLine: z.number().int().positive().describe('1-based, inclusive.'),
+});
+export type ReadLinesInput = z.infer<typeof readLinesInputSchema>;
+
+export const fileOutlineInputSchema = z.object({
+  file: z.string().describe('Repository-relative path.'),
+});
+
+export const reindexInputSchema = z.object({
+  file: z.string().optional().describe('Reindex just this path. Omit to reindex the whole tree.'),
+});
 
 export interface ReadLinesResult {
   file: string;

@@ -82,6 +82,23 @@ describe('wireCountdownPlugin', () => {
     expect(entities.get(ENTITY)).toMatchObject({ completedToday: 0 });
   });
 
+  it('ignores storage blobs without a date field', async () => {
+    const { context, entities, storageData } = createPluginTestContext();
+    storageData.set('progress', { completedToday: 5 });
+
+    await wireCountdownPlugin({
+      context,
+      entity: { id: ENTITY },
+      reducers: {
+        initialState: (stored) =>
+          initialState(typeof stored?.completedToday === 'number' ? stored.completedToday : 0),
+        tick,
+      },
+    });
+
+    expect(entities.get(ENTITY)).toMatchObject({ completedToday: 0 });
+  });
+
   it('ticks, persists on completion, and cleans up on teardown', async () => {
     const { context, entities, storageData, disposers } = createPluginTestContext();
     const { read, write } = await wireCountdownPlugin({

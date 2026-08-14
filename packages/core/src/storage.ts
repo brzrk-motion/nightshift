@@ -1,6 +1,4 @@
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
+import { isRecord } from './yamlUtils.js';
 
 /**
  * Defensive parse of a versioned storage blob. Unknown version, corrupt shapes,
