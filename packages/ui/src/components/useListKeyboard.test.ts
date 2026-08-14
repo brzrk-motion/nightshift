@@ -26,11 +26,16 @@ describe('moveListSelection', () => {
 });
 
 describe('handleListNavigationKey', () => {
-  it('maps j/k and arrow keys to selection changes', () => {
-    expect(handleListNavigationKey('j', {}, 5, 1, {})?.selectedIndex).toBe(2);
-    expect(handleListNavigationKey('k', {}, 5, 1, {})?.selectedIndex).toBe(0);
-    expect(handleListNavigationKey('down', {}, 5, 1, {})?.selectedIndex).toBe(2);
-    expect(handleListNavigationKey('up', {}, 5, 1, {})?.selectedIndex).toBe(0);
+  it('maps j/k and arrow keys to selection changes with deltas', () => {
+    expect(handleListNavigationKey('j', {}, 5, 1, {})).toEqual({ selectedIndex: 2, delta: 1 });
+    expect(handleListNavigationKey('k', {}, 5, 1, {})).toEqual({ selectedIndex: 0, delta: -1 });
+    expect(handleListNavigationKey('down', {}, 5, 1, {})).toEqual({ selectedIndex: 2, delta: 1 });
+    expect(handleListNavigationKey('up', {}, 5, 1, {})).toEqual({ selectedIndex: 0, delta: -1 });
+  });
+
+  it('still reports a delta at list bounds', () => {
+    expect(handleListNavigationKey('up', {}, 5, 0, {})).toEqual({ selectedIndex: 0, delta: -1 });
+    expect(handleListNavigationKey('down', {}, 5, 4, {})).toEqual({ selectedIndex: 4, delta: 1 });
   });
 
   it('fires activate, edit, and add actions', () => {
