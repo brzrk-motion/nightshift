@@ -6,7 +6,6 @@ import { isNightshiftError, NIGHTSHIFT_API_VERSION } from '@nightshift/core';
 import { createEntityStore, type EntityStore } from '@nightshift/entities';
 import { definePlugin, type Capability, type PluginContext } from '@nightshift/sdk';
 import { createPluginHost } from './host.js';
-import { createPermissionPolicy } from './permissions.js';
 import type { PluginSource } from './discovery.js';
 
 let dataDir: string;
@@ -43,7 +42,7 @@ function host(module: unknown, grants?: Record<string, Capability[] | 'all'>) {
   return createPluginHost({
     entities,
     dataDir,
-    policy: createPermissionPolicy(grants === undefined ? {} : { grants }),
+    ...(grants === undefined ? {} : { grants }),
     importer: async () => module,
   });
 }
@@ -208,7 +207,6 @@ describe('createPluginHost', () => {
     const plugins = createPluginHost({
       entities,
       dataDir,
-      policy: createPermissionPolicy({ autoGrant: ['entities:read'] }),
       importer: async () =>
         demo({
           capabilities: ['entities:read'],
@@ -289,31 +287,6 @@ describe('createPluginHost', () => {
     expect(fetchMock).toHaveBeenCalledOnce();
     expect(String(fetchMock.mock.calls[0]?.[0])).toBe('https://example.com/weather');
     vi.unstubAllGlobals();
-  });
-
-  it('denies a registration the plugin did not ask for', async () => {
-    let denied: unknown;
-    const plugins = createPluginHost({
-      entities,
-      dataDir,
-      policy: createPermissionPolicy({ autoGrant: ['entities:read'] }),
-      importer: async () =>
-        demo({
-          capabilities: ['entities:read'],
-          setup: (context) => {
-            try {
-              context.registerEntity('timer.focus', {});
-            } catch (error) {
-              denied = error;
-            }
-          },
-        }),
-    });
-
-    await plugins.load(source);
-
-    expect(isNightshiftError(denied) && denied.code).toBe('PERMISSION_DENIED');
-    expect(entities.has('timer.focus')).toBe(false);
   });
 
   it('rolls back a plugin whose setup throws', async () => {

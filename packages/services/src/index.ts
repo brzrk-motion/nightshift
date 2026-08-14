@@ -30,10 +30,8 @@ export {
 export {
   assertCapability,
   AUTO_GRANTED,
-  createPermissionPolicy,
-  SENSITIVE,
-  type PermissionPolicy,
-  type PermissionPolicyOptions,
+  granted,
+  missing,
   type PluginGrant,
 } from './plugins/permissions.js';
 export { createPluginStorage, storagePath, type PluginStorageOptions } from './plugins/storage.js';

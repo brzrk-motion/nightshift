@@ -20,7 +20,7 @@ import {
 } from '@nightshift/sdk';
 import type { Logger } from '../logger.js';
 import { createNullLogger } from '../logger.js';
-import { assertCapability, createPermissionPolicy, type PermissionPolicy } from './permissions.js';
+import { assertCapability, missing, type PluginGrant } from './permissions.js';
 import { createPluginStorage } from './storage.js';
 import type { PluginSource } from './discovery.js';
 import { resolvePluginSpecifier, type ResolveBase } from './resolve.js';
@@ -87,7 +87,7 @@ export interface PluginHostOptions {
   entities: EntityStore;
   /** Where per-plugin storage files go. */
   dataDir: string;
-  policy?: PermissionPolicy;
+  grants?: Record<string, PluginGrant>;
   log?: Logger;
   /**
    * Where bare specifiers are resolved from, most specific first — normally
@@ -131,15 +131,15 @@ function pluginFrom(module: unknown, source: PluginSource): Plugin {
 function guardEntities(
   entities: EntityStore,
   pluginId: string,
-  policy: PermissionPolicy,
+  grants: Record<string, PluginGrant>,
   owned: Set<EntityId>,
 ): EntityStore {
   const read = <T>(fn: () => T): T => {
-    assertCapability(policy, pluginId, 'entities:read');
+    assertCapability(pluginId, 'entities:read', grants);
     return fn();
   };
   const write = <T>(fn: () => T): T => {
-    assertCapability(policy, pluginId, 'entities:write');
+    assertCapability(pluginId, 'entities:write', grants);
     return fn();
   };
 
@@ -181,7 +181,7 @@ function guardEntities(
  */
 export function createPluginHost(options: PluginHostOptions): PluginHost {
   const log = options.log ?? createNullLogger();
-  const policy = options.policy ?? createPermissionPolicy();
+  const grants = options.grants ?? {};
   const bases = options.resolveFrom ?? [];
   const load =
     options.importer ??
@@ -217,13 +217,13 @@ export function createPluginHost(options: PluginHostOptions): PluginHost {
         );
       }
 
-      const missing = policy.missing(manifest.id, manifest.capabilities);
-      if (missing.length > 0) {
+      const denied = missing(manifest.id, manifest.capabilities, grants);
+      if (denied.length > 0) {
         throw new NightshiftError(
           'PERMISSION_DENIED',
-          `Plugin "${manifest.id}" needs capabilities it has not been granted: ${missing.join(', ')}.`,
+          `Plugin "${manifest.id}" needs capabilities it has not been granted: ${denied.join(', ')}.`,
           {
-            hint: `Add "${manifest.id}": [${missing.map((entry) => `"${entry}"`).join(', ')}] to "pluginPermissions" in config.json.`,
+            hint: `Add "${manifest.id}": [${denied.map((entry) => `"${entry}"`).join(', ')}] to "pluginPermissions" in config.json.`,
           },
         );
       }
@@ -239,7 +239,7 @@ export function createPluginHost(options: PluginHostOptions): PluginHost {
       });
 
       const requires = (capability: Capability): void =>
-        assertCapability(policy, manifest.id, capability);
+        assertCapability(manifest.id, capability, grants);
 
       const context: PluginContext = {
         manifest,
@@ -257,7 +257,7 @@ export function createPluginHost(options: PluginHostOptions): PluginHost {
               : { key: `${manifest.id}:${notifyOptions.key}` }),
           });
         },
-        entities: guardEntities(options.entities, manifest.id, policy, owned),
+        entities: guardEntities(options.entities, manifest.id, grants, owned),
         storage: createPluginStorage({ dataDir: options.dataDir, pluginId: manifest.id }),
         registerCommand(command) {
           requires('commands:register');
