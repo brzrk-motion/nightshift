@@ -352,6 +352,9 @@ importers:
 
   plugins/home-assistant:
     dependencies:
+      '@nightshift/plugin-shared':
+        specifier: workspace:*
+        version: link:../_shared
       '@nightshift/sdk':
         specifier: workspace:*
         version: link:../../packages/sdk
@@ -399,6 +402,9 @@ importers:
 
   plugins/spotify:
     dependencies:
+      '@nightshift/plugin-shared':
+        specifier: workspace:*
+        version: link:../_shared
       '@nightshift/sdk':
         specifier: workspace:*
         version: link:../../packages/sdk

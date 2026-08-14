@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import { activateScene, checkConnection, HomeAssistantApiError, listScenes } from './client.js';
+import { HttpError } from '@nightshift/plugin-shared';
+import { activateScene, checkConnection, listScenes } from './client.js';
 
 describe('checkConnection', () => {
   it('succeeds on HTTP 200', async () => {
@@ -19,7 +20,7 @@ describe('checkConnection', () => {
     const fetchFn = vi.fn(async () => new Response('Unauthorized', { status: 401 }));
     await expect(checkConnection(fetchFn, 'http://192.168.1.10:8123', 'bad')).rejects.toMatchObject(
       {
-        name: 'HomeAssistantApiError',
+        name: 'HttpError',
         status: 401,
       },
     );
@@ -57,11 +58,9 @@ describe('listScenes', () => {
     expect(scenes).toEqual([{ entityId: 'scene.focus', name: 'Focus', state: 'scening' }]);
   });
 
-  it('throws HomeAssistantApiError on non-OK', async () => {
+  it('throws HttpError on non-OK', async () => {
     const fetchFn = vi.fn(async () => new Response('nope', { status: 500 }));
-    await expect(listScenes(fetchFn, 'http://ha:8123', 'tok')).rejects.toBeInstanceOf(
-      HomeAssistantApiError,
-    );
+    await expect(listScenes(fetchFn, 'http://ha:8123', 'tok')).rejects.toBeInstanceOf(HttpError);
   });
 });
 

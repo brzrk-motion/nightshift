@@ -1,11 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
+import { HttpError } from '@nightshift/plugin-shared';
 import {
-  SpotifyApiError,
   fetchCurrentlyPlaying,
   fetchPlaylists,
   fetchShowEpisodes,
   fetchShows,
   formatProgress,
+  isSpotifyNoActiveDevice,
   mapCurrentlyPlaying,
   nextApiPath,
   parseSpotifyErrorMessage,
@@ -55,15 +56,17 @@ describe('parseSpotifyErrorMessage', () => {
   });
 });
 
-describe('SpotifyApiError', () => {
+describe('HttpError (Spotify)', () => {
   it('flags NO_ACTIVE_DEVICE 404s', () => {
-    const error = new SpotifyApiError(
+    const error = new HttpError(
       404,
       JSON.stringify({
         error: { message: 'No active device found', reason: 'NO_ACTIVE_DEVICE' },
       }),
+      'No active device found (NO_ACTIVE_DEVICE)',
+      'NO_ACTIVE_DEVICE',
     );
-    expect(error.noActiveDevice).toBe(true);
+    expect(isSpotifyNoActiveDevice(error)).toBe(true);
     expect(error.message).toContain('No active device found');
   });
 });
@@ -163,7 +166,38 @@ describe('play', () => {
     });
 
     await expect(play(fetchFn, 'token')).rejects.toMatchObject({
-      noActiveDevice: true,
+      reason: 'NO_ACTIVE_DEVICE',
+      message: expect.stringContaining('Open the Spotify app'),
+    });
+  });
+
+  it('remaps API NO_ACTIVE_DEVICE responses to the device hint', async () => {
+    const fetchFn = vi.fn(async (url: string) => {
+      if (url.includes('/me/player/devices')) {
+        return new Response(
+          JSON.stringify({
+            devices: [{ id: 'dev-1', name: 'Laptop', is_active: true }],
+          }),
+          { status: 200 },
+        );
+      }
+      if (url.includes('/me/player/play')) {
+        return new Response(
+          JSON.stringify({
+            error: {
+              status: 404,
+              message: 'Player command failed: No active device found',
+              reason: 'NO_ACTIVE_DEVICE',
+            },
+          }),
+          { status: 404 },
+        );
+      }
+      throw new Error(`unexpected ${url}`);
+    });
+
+    await expect(play(fetchFn, 'token')).rejects.toMatchObject({
+      reason: 'NO_ACTIVE_DEVICE',
       message: expect.stringContaining('Open the Spotify app'),
     });
   });

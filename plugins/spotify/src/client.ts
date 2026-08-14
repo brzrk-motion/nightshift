@@ -1,3 +1,10 @@
+import {
+  authorizedFetch,
+  ensureOk,
+  HttpError,
+  httpErrorFromResponse,
+  type HttpErrorMessageFormatter,
+} from '@nightshift/plugin-shared';
 import type { PluginFetch, PluginFetchInit } from '@nightshift/sdk';
 import type {
   SpotifyItemKind,
@@ -8,28 +15,6 @@ import type {
 import { initialLibraryState, initialPlayerState } from './entity.js';
 
 const API = 'https://api.spotify.com/v1';
-
-export class SpotifyApiError extends Error {
-  readonly status: number;
-  readonly body: string;
-  readonly reason: string | null;
-
-  constructor(status: number, body: string, message?: string, reason?: string | null) {
-    super(message ?? parseSpotifyErrorMessage(status, body).message);
-    this.name = 'SpotifyApiError';
-    this.status = status;
-    this.body = body;
-    this.reason = reason ?? parseSpotifyErrorMessage(status, body).reason;
-  }
-
-  get premiumRequired(): boolean {
-    return this.status === 403;
-  }
-
-  get noActiveDevice(): boolean {
-    return this.status === 404 && this.reason === 'NO_ACTIVE_DEVICE';
-  }
-}
 
 /** Pull Spotify's `{ error: { message, reason } }` out of a response body. */
 export function parseSpotifyErrorMessage(
@@ -58,34 +43,29 @@ export function parseSpotifyErrorMessage(
   };
 }
 
+/** Keep Spotify's machine `reason` on {@link HttpError} so remaps (no-device hint) still work. */
+const spotifyErrorMessage: HttpErrorMessageFormatter = (status, body) =>
+  parseSpotifyErrorMessage(status, body);
+
 async function api(
   fetchFn: PluginFetch,
   accessToken: string,
   path: string,
   init?: PluginFetchInit,
 ): Promise<Response> {
-  const response = await fetchFn(`${API}${path}`, {
-    ...init,
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      Accept: 'application/json',
-      ...(init?.body === undefined ? {} : { 'Content-Type': 'application/json' }),
-      ...init?.headers,
-    },
-  });
-  return response;
+  return authorizedFetch(fetchFn, accessToken, `${API}${path}`, init);
 }
 
 async function readError(response: Response): Promise<never> {
-  const body = await response.text();
-  const parsed = parseSpotifyErrorMessage(response.status, body);
-  throw new SpotifyApiError(response.status, body, parsed.message, parsed.reason);
+  throw await httpErrorFromResponse(response, spotifyErrorMessage);
 }
 
-/** Empty 204/200 responses are success for player control endpoints. */
-async function ensureOk(response: Response): Promise<void> {
-  if (response.status === 204 || response.ok) return;
-  await readError(response);
+function isPremiumRequired(error: HttpError): boolean {
+  return error.status === 403;
+}
+
+function isNoActiveDevice(error: HttpError): boolean {
+  return error.status === 404 && error.reason === 'NO_ACTIVE_DEVICE';
 }
 
 export interface SpotifyDevice {
@@ -238,7 +218,7 @@ export async function play(
 ): Promise<void> {
   const deviceId = await resolveDeviceId(fetchFn, accessToken, options.deviceId);
   if (!deviceId) {
-    throw new SpotifyApiError(404, '', NO_DEVICE_HINT, 'NO_ACTIVE_DEVICE');
+    throw new HttpError(404, '', NO_DEVICE_HINT, 'NO_ACTIVE_DEVICE');
   }
 
   const payload: Record<string, unknown> = {};
@@ -251,10 +231,10 @@ export async function play(
     ...(body === undefined ? {} : { body }),
   });
   try {
-    await ensureOk(response);
+    await ensureOk(response, spotifyErrorMessage);
   } catch (error) {
-    if (error instanceof SpotifyApiError && error.noActiveDevice) {
-      throw new SpotifyApiError(404, error.body, NO_DEVICE_HINT, 'NO_ACTIVE_DEVICE');
+    if (error instanceof HttpError && isNoActiveDevice(error)) {
+      throw new HttpError(404, error.body, NO_DEVICE_HINT, 'NO_ACTIVE_DEVICE');
     }
     throw error;
   }
@@ -274,7 +254,7 @@ export async function playContext(
     const showId = uri.slice('spotify:show:'.length);
     const uris = await fetchShowEpisodeUris(fetchFn, accessToken, showId);
     if (uris.length === 0) {
-      throw new SpotifyApiError(404, '', 'That podcast has no playable episodes.');
+      throw new HttpError(404, '', 'That podcast has no playable episodes.');
     }
     await play(fetchFn, accessToken, { uris });
     return;
@@ -344,14 +324,14 @@ async function playerControl(
 ): Promise<void> {
   const deviceId = await resolveDeviceId(fetchFn, accessToken);
   if (!deviceId) {
-    throw new SpotifyApiError(404, '', NO_DEVICE_HINT, 'NO_ACTIVE_DEVICE');
+    throw new HttpError(404, '', NO_DEVICE_HINT, 'NO_ACTIVE_DEVICE');
   }
   const response = await api(fetchFn, accessToken, withDeviceQuery(path, deviceId), { method });
   try {
-    await ensureOk(response);
+    await ensureOk(response, spotifyErrorMessage);
   } catch (error) {
-    if (error instanceof SpotifyApiError && error.noActiveDevice) {
-      throw new SpotifyApiError(404, error.body, NO_DEVICE_HINT, 'NO_ACTIVE_DEVICE');
+    if (error instanceof HttpError && isNoActiveDevice(error)) {
+      throw new HttpError(404, error.body, NO_DEVICE_HINT, 'NO_ACTIVE_DEVICE');
     }
     throw error;
   }
@@ -484,4 +464,12 @@ export function formatProgress(progressMs: number | null, durationMs: number | n
   };
   if (progressMs === null && durationMs === null) return '—';
   return `${fmt(progressMs ?? 0)} / ${fmt(durationMs ?? 0)}`;
+}
+
+export function isSpotifyPremiumRequired(error: unknown): boolean {
+  return error instanceof HttpError && isPremiumRequired(error);
+}
+
+export function isSpotifyNoActiveDevice(error: unknown): boolean {
+  return error instanceof HttpError && isNoActiveDevice(error);
 }

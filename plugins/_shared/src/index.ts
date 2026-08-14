@@ -1,5 +1,14 @@
 export { todayKey } from './dates.js';
 export {
+  authorizedFetch,
+  bearerHeaders,
+  ensureOk,
+  HttpError,
+  httpErrorFromResponse,
+  type HttpErrorDetails,
+  type HttpErrorMessageFormatter,
+} from './http-client.js';
+export {
   formatDuration,
   pauseIfRunning,
   sessionProgress,

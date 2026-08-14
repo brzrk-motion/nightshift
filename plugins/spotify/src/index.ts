@@ -1,11 +1,12 @@
+import { HttpError } from '@nightshift/plugin-shared';
 import { argString, definePlugin, type PluginContext } from '@nightshift/sdk';
 import { ensureAccessToken, startConnectFlow } from './auth.js';
 import {
-  SpotifyApiError,
   fetchCurrentlyPlaying,
   fetchLibrary,
   fetchProfile,
   fetchShowEpisodes,
+  isSpotifyPremiumRequired,
   pause,
   play,
   playContext,
@@ -136,10 +137,10 @@ export default definePlugin({
         return await fn(ensured.token);
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
-        const premiumRequired = error instanceof SpotifyApiError && error.premiumRequired;
+        const premiumRequired = isSpotifyPremiumRequired(error);
         const authLost =
           /refresh failed|Not connected|401/i.test(message) ||
-          (error instanceof SpotifyApiError && error.status === 401);
+          (error instanceof HttpError && error.status === 401);
         // Only what the widget has to draw a form for belongs on the entity. A
         // request that failed is transient, so it goes to the notification
         // stack rather than a warning line wedged into the player.
@@ -172,7 +173,7 @@ export default definePlugin({
             });
           }
         } catch (error) {
-          if (error instanceof SpotifyApiError && error.premiumRequired) {
+          if (isSpotifyPremiumRequired(error)) {
             writeSession({
               ...readSession(),
               status: 'ready',
