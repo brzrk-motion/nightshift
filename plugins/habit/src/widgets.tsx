@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import {
   Button,
+  clipText,
   EmptyState,
   TextInput,
   useCommands,
@@ -15,7 +16,6 @@ import {
   resolveDensity,
   rollingWindow,
   todayKey,
-  truncateName,
   type HabitDensity,
 } from './layout.js';
 import { isCompleted } from './habits.js';
@@ -115,7 +115,7 @@ function HabitRow({
   return (
     <box style={{ flexDirection: 'row', gap: 1, alignItems: 'center', overflow: 'hidden' }}>
       <text fg={theme.colors.text}>
-        {truncateName(habit.name, nameWidth).padEnd(Math.min(nameWidth, habit.name.length + 1))}
+        {clipText(habit.name, nameWidth).padEnd(Math.min(nameWidth, habit.name.length + 1))}
       </text>
       {dates.map((date) => {
         const done = isCompleted(state, habit.id, date);

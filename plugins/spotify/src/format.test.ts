@@ -1,12 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { initialPlayerState } from './entity.js';
-import {
-  clip,
-  interpolateProgress,
-  pollIntervalMs,
-  progressRatio,
-  resolveLayout,
-} from './format.js';
+import { interpolateProgress, pollIntervalMs, progressRatio, resolveLayout } from './format.js';
 
 describe('resolveLayout', () => {
   it('falls back to compact in a small slot', () => {
@@ -78,17 +72,5 @@ describe('progressRatio', () => {
 describe('pollIntervalMs', () => {
   it('polls faster while playing', () => {
     expect(pollIntervalMs(true)).toBeLessThan(pollIntervalMs(false));
-  });
-});
-
-describe('clip', () => {
-  it('leaves short text alone', () => {
-    expect(clip('Focus', 10)).toBe('Focus');
-  });
-
-  it('ellipsises text that does not fit', () => {
-    expect(clip('Deep Work Sessions', 8)).toBe('Deep Wo…');
-    expect(clip('anything', 1)).toBe('…');
-    expect(clip('anything', 0)).toBe('');
   });
 });
