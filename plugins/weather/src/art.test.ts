@@ -42,6 +42,12 @@ describe('weather art', () => {
     expect(weatherArt('storm')[0]).toContain('.--.');
   });
 
+  it('picks large or small art by size', () => {
+    expect(weatherArt('clear')).toBe(WEATHER_ART.clear);
+    expect(weatherArt('clear', 'large')).toBe(WEATHER_ART.clear);
+    expect(weatherArt('clear', 'small')).toBe(WEATHER_ART_SMALL.clear);
+  });
+
   it('formats digits for the block ascii-font', () => {
     expect(heroDigits(22.4)).toBe('22');
     expect(heroDigits(null)).toBe('--');
