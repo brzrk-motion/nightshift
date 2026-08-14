@@ -13,3 +13,12 @@ export {
   type GeocodeFetch,
   type OpenMeteoGeocodeHit,
 } from './open-meteo-geocode.js';
+export {
+  isDatedProgress,
+  wireCountdownPlugin,
+  type CountdownEntityConfig,
+  type CountdownReducers,
+  type CountdownWire,
+  type DatedProgress,
+  type WireCountdownPluginOptions,
+} from './wireCountdownPlugin.js';

@@ -1,4 +1,5 @@
-import { definePlugin, type Json, type PluginContext } from '@nightshift/sdk';
+import { definePlugin, type PluginContext } from '@nightshift/sdk';
+import { wireCountdownPlugin } from '@nightshift/plugin-shared';
 import {
   initialState,
   POMODORO_ENTITY,
@@ -10,26 +11,8 @@ import {
   tickSession,
   todayKey,
   type PomodoroPhase,
-  type PomodoroState,
 } from './timer.js';
 import { SessionWidget, TodayWidget } from './widgets.js';
-
-interface StoredProgress {
-  date: string;
-  completedPomodorosToday: number;
-  cycleCount: number;
-  [key: string]: Json;
-}
-
-function isStoredProgress(value: unknown): value is StoredProgress {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    typeof (value as StoredProgress).date === 'string' &&
-    typeof (value as StoredProgress).completedPomodorosToday === 'number' &&
-    typeof (value as StoredProgress).cycleCount === 'number'
-  );
-}
 
 const PHASE_NOTIFY_SLUG: Record<PomodoroPhase, string> = {
   work: 'work',
@@ -69,32 +52,31 @@ export default definePlugin({
   ],
 
   async setup(context: PluginContext) {
-    const stored = await context.storage.get<StoredProgress>('progress');
-    const sameDay = stored && isStoredProgress(stored) && stored.date === todayKey();
-    const completedPomodorosToday = sameDay ? stored.completedPomodorosToday : 0;
-    const cycleCount = sameDay ? stored.cycleCount : 0;
-
-    context.registerEntity(POMODORO_ENTITY, initialState(completedPomodorosToday, cycleCount), {
-      title: 'Pomodoro session',
-      unit: 'seconds',
-      owner: 'pomodoro',
-    });
-
-    const read = (): PomodoroState =>
-      context.entities.get<PomodoroState>(POMODORO_ENTITY)?.state ?? initialState();
-    const write = (next: PomodoroState): void => void context.entities.set(POMODORO_ENTITY, next);
-
-    const persistProgress = (state: PomodoroState): void => {
-      context.storage
-        .set('progress', {
+    const { read, write } = await wireCountdownPlugin({
+      context,
+      entity: {
+        id: POMODORO_ENTITY,
+        meta: { title: 'Pomodoro session', unit: 'seconds', owner: 'pomodoro' },
+      },
+      reducers: {
+        initialState: (stored) =>
+          initialState(
+            typeof stored?.completedPomodorosToday === 'number'
+              ? stored.completedPomodorosToday
+              : 0,
+            typeof stored?.cycleCount === 'number' ? stored.cycleCount : 0,
+          ),
+        tick: tickSession,
+        persistOnTick: (_before, after) =>
+          after.status === 'phaseComplete' && after.phase === 'work',
+        toStoredProgress: (state) => ({
           date: todayKey(),
           completedPomodorosToday: state.completedPomodorosToday,
           cycleCount: state.cycleCount,
-        })
-        .catch((error: unknown) => {
-          context.log.warn('Could not save today’s pomodoro progress', { error: `${error}` });
-        });
-    };
+        }),
+      },
+      persistFailedMessage: 'Could not save today’s pomodoro progress',
+    });
 
     context.registerCommand({
       id: 'pomodoro.start',
@@ -121,19 +103,6 @@ export default definePlugin({
       title: 'Skip pomodoro phase',
       run: () => write(skipPhase(read())),
     });
-
-    const timer = setInterval(() => {
-      const before = read();
-      const after = tickSession(before, 1);
-      if (after === before) return;
-      write(after);
-
-      if (after.status === 'phaseComplete' && after.phase === 'work') {
-        persistProgress(after);
-      }
-    }, 1000);
-    timer.unref?.();
-    context.own(() => clearInterval(timer));
 
     context.registerWidget({
       type: 'pomodoro.session',
