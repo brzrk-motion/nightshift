@@ -157,7 +157,16 @@ function spawnServer(server) {
   return child;
 }
 
-function startServer(server) {
+function isChildAlive(state) {
+  const child = state.child;
+  return Boolean(child && child.exitCode === null && child.signalCode === null);
+}
+
+/**
+ * Spawns one server. Unexpected exits set `failed` so startup can fail cleanly;
+ * `onUnexpectedExit` is for long-lived mode (stop siblings, then exit).
+ */
+function startServer(server, onUnexpectedExit) {
   const child = spawnServer(server);
   const state = { server, child, stopped: false, failed: false };
   child.on('exit', (code, signal) => {
@@ -165,7 +174,7 @@ function startServer(server) {
     state.failed = true;
     const reason = signal ? `signal ${signal}` : `exit code ${code}`;
     process.stderr.write(`${label(server)} exited (${reason})\n`);
-    process.exit(1);
+    onUnexpectedExit?.(state);
   });
   return state;
 }
@@ -192,10 +201,17 @@ async function stopAll(states) {
 async function waitForHealth(state, deadline) {
   const url = `http://${HOST}:${state.server.port}/health`;
   for (;;) {
-    if (state.failed) return { ok: false, detail: 'failed to start' };
+    if (state.failed || !isChildAlive(state)) return { ok: false, detail: 'failed to start' };
     try {
       const response = await fetch(url, { signal: AbortSignal.timeout(2_000) });
-      if (response.ok) return { ok: true, detail: await response.json() };
+      if (response.ok) {
+        const detail = await response.json();
+        // Port may already be owned by something else; our child then dies on bind.
+        if (state.failed || !isChildAlive(state)) {
+          return { ok: false, detail: 'failed to start' };
+        }
+        if (detail?.status === 'ok') return { ok: true, detail };
+      }
     } catch {
       // Not listening yet.
     }
@@ -325,8 +341,20 @@ async function main() {
     return 1;
   }
 
-  const states = servers.map((server) => startServer(server));
+  const states = [];
+  let live = false;
+  let exiting = false;
+  const onUnexpectedExit = () => {
+    // During startup, waitForHealth/main see `failed` and stopAll themselves.
+    if (!live || exiting) return;
+    exiting = true;
+    void stopAll(states).then(() => process.exit(1));
+  };
+  for (const server of servers) states.push(startServer(server, onUnexpectedExit));
+
   const shutdown = () => {
+    if (exiting) return;
+    exiting = true;
     void stopAll(states).then(() => process.exit(0));
   };
   process.once('SIGINT', shutdown);
@@ -340,22 +368,23 @@ async function main() {
     let tools = [];
     let detail = health.ok ? 'ready' : String(health.detail);
 
-    if (health.ok) {
+    if (health.ok && !state.failed) {
       try {
         tools = await listTools(state.server);
       } catch (error) {
         detail = `unhealthy: ${error.message}`;
       }
     }
+    if (state.failed) detail = 'failed to start';
 
     results.push({
       id: state.server.id,
       port: state.server.port,
       url: `http://${HOST}:${state.server.port}/mcp`,
-      ok: health.ok && tools.length > 0,
+      ok: health.ok && !state.failed && tools.length > 0,
       status: detail,
       tools,
-      index: health.ok ? health.detail?.index : undefined,
+      index: health.ok && !state.failed ? health.detail?.index : undefined,
     });
   }
   status('');
@@ -390,6 +419,7 @@ async function main() {
     return 1;
   }
 
+  live = true;
   process.stderr.write('mcp-up: running. Press Ctrl-C to stop.\n');
   await new Promise(() => {});
   return 0;
