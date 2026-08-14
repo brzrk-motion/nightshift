@@ -1,14 +1,9 @@
-import { definePlugin, type Json, type PluginContext } from '@nightshift/sdk';
+import { argString, definePlugin, type PluginContext } from '@nightshift/sdk';
 import { HABIT_ENTITY, initialState, type HabitState } from './entity.js';
 import { addHabit, removeHabit, renameHabit, toggleCompletion } from './habits.js';
 import { parseStored, serializeState, STORAGE_KEY } from './storage.js';
 import { todayKey } from './layout.js';
 import { HabitTrackerWidget } from './widgets.js';
-
-function stringArg(args: Record<string, Json> | undefined, key: string): string {
-  const value = args?.[key];
-  return typeof value === 'string' ? value : '';
-}
 
 export default definePlugin({
   id: 'habit',
@@ -51,7 +46,7 @@ export default definePlugin({
       id: 'habit.add',
       title: 'Add habit',
       run: (args) => {
-        write(addHabit(read(), stringArg(args, 'name')));
+        write(addHabit(read(), argString(args, 'name') ?? ''));
       },
     });
 
@@ -59,10 +54,10 @@ export default definePlugin({
       id: 'habit.toggle',
       title: 'Toggle habit day',
       run: (args) => {
-        const id = stringArg(args, 'id');
-        const dateArg = stringArg(args, 'date');
+        const id = argString(args, 'id') ?? '';
+        const dateArg = argString(args, 'date');
         const today = todayKey();
-        const date = dateArg === '' ? today : dateArg;
+        const date = dateArg ?? today;
         write(toggleCompletion(read(), id, date, today));
       },
     });
@@ -71,7 +66,7 @@ export default definePlugin({
       id: 'habit.rename',
       title: 'Rename habit',
       run: (args) => {
-        write(renameHabit(read(), stringArg(args, 'id'), stringArg(args, 'name')));
+        write(renameHabit(read(), argString(args, 'id') ?? '', argString(args, 'name') ?? ''));
       },
     });
 
@@ -79,7 +74,7 @@ export default definePlugin({
       id: 'habit.remove',
       title: 'Remove habit',
       run: (args) => {
-        write(removeHabit(read(), stringArg(args, 'id')));
+        write(removeHabit(read(), argString(args, 'id') ?? ''));
       },
     });
 

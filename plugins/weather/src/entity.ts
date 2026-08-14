@@ -130,32 +130,14 @@ export function initialNowState(units: WeatherUnits = 'metric'): WeatherNowState
   };
 }
 
-/** JSON-safe storage shape for slots (without live status noise). */
-export interface StoredLocation {
-  id: string;
-  query: string;
-  label: string;
-  placeName: string;
-  latitude: number;
-  longitude: number;
-  temperature: number | null;
-  feelsLike: number | null;
-  humidity: number | null;
-  windSpeed: number | null;
-  windDirection: number | null;
-  condition: string;
-  weatherCode: number | null;
-  sunrise: string | null;
-  sunset: string | null;
-  days: WeatherDay[];
-  hours: WeatherHour[];
-  updatedAt: string | null;
-  [key: string]: Json;
-}
+/** Persisted location slot — same fields as {@link WeatherLocation} minus live status. */
+export type StoredWeatherLocation = {
+  [K in keyof WeatherLocation as K extends 'status' | 'error' ? never : K]: WeatherLocation[K];
+};
 
 export interface StoredWeather {
   units: WeatherUnits;
   primaryId: string;
-  locations: Record<string, StoredLocation>;
+  locations: Record<string, StoredWeatherLocation>;
   [key: string]: Json;
 }

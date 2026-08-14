@@ -1,5 +1,5 @@
 import { join } from 'node:path';
-import { definePlugin, type Json, type PluginContext } from '@nightshift/sdk';
+import { argString, definePlugin, type PluginContext } from '@nightshift/sdk';
 import { defaultCatalogDir, loadCatalog, toPublicClips, type CatalogEntry } from './catalog.js';
 import { loadClip, readClipBytes } from './decode.js';
 import {
@@ -20,11 +20,6 @@ import {
 import { Mixer } from './mixer.js';
 import { createDeviceSink, NullSink, type AudioSink } from './sink.js';
 import { PlayerWidget } from './widgets.js';
-
-function stringArg(args: Record<string, Json> | undefined, key: string): string | undefined {
-  const value = args?.[key];
-  return typeof value === 'string' && value.trim() !== '' ? value.trim() : undefined;
-}
 
 function outputMessage(kind: OutputKind): string | null {
   if (kind === 'silent') return 'No audio device — playback is silent.';
@@ -338,7 +333,7 @@ export default definePlugin({
       id: 'ambient-noise.select',
       title: 'Select ambient clip',
       run: async (args) => {
-        const id = stringArg(args, 'id');
+        const id = argString(args, 'id');
         if (!id) return;
         await selectClipId(id, true);
       },

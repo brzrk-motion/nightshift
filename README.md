@@ -459,7 +459,7 @@ pnpm mcp:up --only context --no-build
 
 ```
 SERVER   PORT  ENDPOINT                   STATUS
-context  7411  http://127.0.0.1:7411/mcp  ready — 7 tools
+context  7411  http://127.0.0.1:7411/mcp  ready
 ```
 
 `mcp-up` discovers servers by scanning `mcp/*/package.json` for an `mcp` block:

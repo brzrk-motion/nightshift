@@ -19,7 +19,6 @@ export {
 export {
   deleteTheme,
   loadThemes,
-  mergeThemes,
   parseTheme,
   saveTheme,
   serializeTheme,

@@ -2,28 +2,28 @@ import { readFile } from 'node:fs/promises';
 import { basename, extname } from 'node:path';
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 import {
+  assertRecord,
+  configFail,
   deleteYamlResource,
   loadYamlDir,
   NightshiftError,
   saveYamlResource,
 } from '@nightshift/core';
-import {
-  BUILT_IN_THEMES,
-  HEX_COLOR,
-  THEME_COLOR_KEYS,
-  type Theme,
-  type ThemeColors,
-} from '../theme.js';
+import { BUILT_IN_THEMES, HEX_COLOR, THEME_COLOR_KEYS, type ThemeColors } from '../theme.js';
 import type { ThemeSpec } from './schema.js';
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
+const CONFIG_HINT = 'See the theme format in the Themes screen contract.';
 
 function fail(path: string, expected: string): never {
-  throw new NightshiftError('CONFIG_INVALID', `${path} must be ${expected}.`, {
-    hint: 'See the theme format in the Themes screen contract.',
-  });
+  configFail(path, expected, CONFIG_HINT);
+}
+
+function assertMapping(
+  value: unknown,
+  path: string,
+  expected: string,
+): asserts value is Record<string, unknown> {
+  assertRecord(value, path, expected, CONFIG_HINT);
 }
 
 function normalizeHex(value: string, path: string): string {
@@ -35,7 +35,7 @@ function normalizeHex(value: string, path: string): string {
 }
 
 function parseColors(input: unknown, label: string): ThemeColors {
-  if (!isRecord(input)) fail(`${label}.colors`, 'an object of color keys');
+  assertMapping(input, `${label}.colors`, 'an object of color keys');
 
   const colors = {} as ThemeColors;
   for (const key of THEME_COLOR_KEYS) {
@@ -68,7 +68,7 @@ export function parseTheme(source: string, options: ParseThemeOptions = {}): The
     });
   }
 
-  if (!isRecord(document)) fail(label, 'a YAML mapping');
+  assertMapping(document, label, 'a YAML mapping');
 
   const name = document['name'] ?? options.name;
   if (typeof name !== 'string' || name.trim() === '') fail(`${label}.name`, 'a name');
@@ -140,19 +140,6 @@ export interface ThemeLoadResult {
 export async function loadThemes(directory: string): Promise<ThemeLoadResult> {
   const { items, failed } = await loadYamlDir(directory, loadThemeFile);
   return { themes: items, failed };
-}
-
-/**
- * Merges user themes over built-ins by name. User files replace built-ins
- * of the same name rather than appearing alongside them.
- */
-export function mergeThemes(
-  userThemes: readonly ThemeSpec[],
-  builtIn: readonly Theme[],
-): ThemeSpec[] {
-  const registry = new Map<string, ThemeSpec>(builtIn.map((theme) => [theme.name, theme]));
-  for (const theme of userThemes) registry.set(theme.name, theme);
-  return [...registry.values()].sort((a, b) => a.name.localeCompare(b.name));
 }
 
 export { BUILT_IN_THEMES };
