@@ -1,31 +1,47 @@
+import { type McpServer } from '@modelcontextprotocol/server';
 import { beforeAll, describe, expect, it } from 'vitest';
 
 import { type QueryContext } from './query.js';
-import { createContextServer } from './server.js';
+import { createContextServer, registerTools } from './server.js';
 import { makeTestIndex } from './testFixtures.js';
-import { createTools, type Tool } from './tools.js';
 
 const SOURCES: Record<string, string> = {
   'src/timer.ts': ['export function tick(): number {', '  return 1;', '}'].join('\n'),
 };
 
-let tools: Map<string, Tool>;
+type ToolHandler = (input: unknown) => Promise<{
+  content: { type: 'text'; text: string }[];
+  isError?: boolean;
+}>;
+
+let tools: Map<string, ToolHandler>;
 let context: QueryContext;
+
+function captureTools(queryContext: QueryContext): Map<string, ToolHandler> {
+  const captured = new Map<string, ToolHandler>();
+  const server = {
+    registerTool(name: string, _meta: unknown, handler: ToolHandler) {
+      captured.set(name, handler);
+    },
+  } as McpServer;
+  registerTools(server, queryContext);
+  return captured;
+}
 
 beforeAll(async () => {
   context = await makeTestIndex(SOURCES);
-  tools = new Map(createTools(context).map((tool) => [tool.name, tool]));
+  tools = captureTools(context);
 });
 
 async function call(name: string, input: unknown = {}): Promise<unknown> {
   const tool = tools.get(name);
   if (!tool) throw new Error(`no such tool: ${name}`);
-  const result = await tool.handler(input);
+  const result = await tool(input);
   expect(result.isError).toBeUndefined();
   return JSON.parse(result.content[0]?.text ?? 'null');
 }
 
-describe('createTools', () => {
+describe('registerTools', () => {
   it('exposes exactly the documented tool set', () => {
     expect([...tools.keys()]).toEqual([
       'index_status',
@@ -39,15 +55,21 @@ describe('createTools', () => {
   });
 
   it('every tool has a description the agent can choose from', () => {
-    for (const tool of tools.values()) {
-      expect(tool.description.length).toBeGreaterThan(40);
-      expect(tool.title).not.toBe('');
-    }
+    const server = {
+      registerTool(
+        name: string,
+        meta: { description: string; title: string },
+        _handler: ToolHandler,
+      ) {
+        expect(meta.description.length).toBeGreaterThan(40);
+        expect(meta.title).not.toBe('');
+        expect(tools.has(name)).toBe(true);
+      },
+    } as McpServer;
+    registerTools(server, context);
   });
 
   it('explains an unindexed file instead of failing', async () => {
-    // Tool-layer only: query.fileOutline returns undefined; the adapter maps that
-    // to a structured error payload agents can act on.
     expect(await call('file_outline', { file: 'src/missing.ts' })).toMatchObject({
       file: 'src/missing.ts',
       error: expect.stringContaining('Not indexed'),
@@ -55,14 +77,13 @@ describe('createTools', () => {
   });
 
   it('rejects invalid arguments with a readable message', async () => {
-    const result = await tools.get('read_lines')?.handler({ file: 'src/timer.ts', startLine: 0 });
+    const result = await tools.get('read_lines')?.({ file: 'src/timer.ts', startLine: 0 });
 
     expect(result?.isError).toBe(true);
     expect(result?.content[0]?.text).toContain('Invalid arguments');
   });
 
   it('reports when reindex cannot pick up a path', async () => {
-    // Tool-layer only: index.update returns undefined; the adapter shapes the miss.
     expect(await call('reindex', { file: 'src/nope.ts' })).toMatchObject({ indexed: false });
   });
 });
