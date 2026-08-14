@@ -154,5 +154,6 @@ export {
   type RuntimeSupport,
 } from './app/runtime.js';
 export { startApp, type AppHandle, type StartAppOptions } from './app/start.js';
+export { useRenderer } from '@opentui/react';
 
 export * from './components/index.js';
