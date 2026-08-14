@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { TextInput } from '../../components/controls.js';
 import { List } from '../../components/Table.js';
 import { useRuntime, useTheme } from '../context.js';
-import { filterCommands } from './filterCommands.js';
 import { CommandPickerListKeys } from './CommandPickerListKeys.js';
 
 export interface CommandPickerProps {
@@ -29,7 +28,7 @@ export function CommandPicker({
 
   const results = useMemo(() => {
     if (!runtime || !focused) return [];
-    return filterCommands(runtime.commands.list(), query);
+    return runtime.commands.search(query, { limit: 12 });
   }, [focused, query, runtime]);
 
   useEffect(() => {

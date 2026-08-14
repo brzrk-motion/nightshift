@@ -42,7 +42,7 @@ export function CommandPalette({
   const [cursor, setCursor] = useState(0);
 
   const results = useMemo(
-    () => (open ? commands.search(query).slice(0, limit) : []),
+    () => (open ? commands.search(query, { limit }) : []),
     [commands, limit, open, query],
   );
 

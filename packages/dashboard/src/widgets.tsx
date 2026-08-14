@@ -72,7 +72,7 @@ function Entities({ width }: WidgetProps): ReactNode {
 
 function Commands({ width }: WidgetProps): ReactNode {
   const runtime = useRuntime();
-  const commands = runtime?.commands.search('').slice(0, Math.max(1, width / 10)) ?? [];
+  const commands = runtime?.commands.search('', { limit: Math.max(1, width / 10) }) ?? [];
 
   return (
     <List
