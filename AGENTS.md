@@ -78,10 +78,10 @@ Concretely:
 - Bundled plugins depend on `@nightshift/sdk` at runtime (matching what a
   third-party plugin is allowed to depend on). They may also depend on
   `@nightshift/plugin-shared` for duplicated pure helpers (countdown formatting,
-  date keys, pause/tick skeletons — see `plugins/_shared`) and, via the
-  `@nightshift/plugin-shared/timer-session` subpath, shared timer session/today
-  widgets. Keep the package root free of React so pure helper imports do not
-  load the SDK/OpenTUI. That package is not a loadable plugin (no
+  date keys, pause/tick skeletons, bearer HTTP client helpers — see
+  `plugins/_shared`) and, via the `@nightshift/plugin-shared/timer-session`
+  subpath, shared timer session/today widgets. Keep the package root free of
+  React so pure helper imports do not load the SDK/OpenTUI. That package is not a loadable plugin (no
   `definePlugin`); do not list it in `config.json`'s `plugins` array. `@nightshift/entities` and `@nightshift/ui` appear only as
   `devDependencies`, for types in tests. `plugins/weather` and `plugins/clock`
   additionally declare the `network` capability and use `context.fetch` —
@@ -329,8 +329,9 @@ and is optional — not configured in this repo.
 
 A plugin's allowed imports from Nightshift are `@nightshift/sdk`
 (`packages/sdk/src/index.ts`) and, for shared helpers among bundled plugins
-only, `@nightshift/plugin-shared` (pure countdown helpers from the package
-root; timer session widgets from `@nightshift/plugin-shared/timer-session`).
+only, `@nightshift/plugin-shared` (pure helpers from the package root —
+countdown, dates, Open-Meteo geocode, bearer HTTP client; timer session
+widgets from `@nightshift/plugin-shared/timer-session`).
 The SDK module does two things:
 
 1. **Defines the runtime contract**: `definePlugin()`, `PluginManifest`,
