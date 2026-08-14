@@ -28,4 +28,5 @@ export {
   type DeleteYamlResourceOptions,
   type YamlDirLoadResult,
 } from './yamlResource.js';
+export { assertRecord, configFail, isRecord, type ConfigFailOptions } from './yamlUtils.js';
 export { ansi, shouldUseColor, type AnsiFormat, type ShouldUseColorOptions } from './ansi.js';

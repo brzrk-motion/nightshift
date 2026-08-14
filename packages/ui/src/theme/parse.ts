@@ -2,6 +2,8 @@ import { readFile } from 'node:fs/promises';
 import { basename, extname } from 'node:path';
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 import {
+  assertRecord,
+  configFail,
   deleteYamlResource,
   loadYamlDir,
   NightshiftError,
@@ -16,14 +18,18 @@ import {
 } from '../theme.js';
 import type { ThemeSpec } from './schema.js';
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
+const CONFIG_HINT = 'See the theme format in the Themes screen contract.';
 
 function fail(path: string, expected: string): never {
-  throw new NightshiftError('CONFIG_INVALID', `${path} must be ${expected}.`, {
-    hint: 'See the theme format in the Themes screen contract.',
-  });
+  configFail(path, expected, CONFIG_HINT);
+}
+
+function assertMapping(
+  value: unknown,
+  path: string,
+  expected: string,
+): asserts value is Record<string, unknown> {
+  assertRecord(value, path, expected, CONFIG_HINT);
 }
 
 function normalizeHex(value: string, path: string): string {
@@ -35,7 +41,7 @@ function normalizeHex(value: string, path: string): string {
 }
 
 function parseColors(input: unknown, label: string): ThemeColors {
-  if (!isRecord(input)) fail(`${label}.colors`, 'an object of color keys');
+  assertMapping(input, `${label}.colors`, 'an object of color keys');
 
   const colors = {} as ThemeColors;
   for (const key of THEME_COLOR_KEYS) {
@@ -68,7 +74,7 @@ export function parseTheme(source: string, options: ParseThemeOptions = {}): The
     });
   }
 
-  if (!isRecord(document)) fail(label, 'a YAML mapping');
+  assertMapping(document, label, 'a YAML mapping');
 
   const name = document['name'] ?? options.name;
   if (typeof name !== 'string' || name.trim() === '') fail(`${label}.name`, 'a name');
