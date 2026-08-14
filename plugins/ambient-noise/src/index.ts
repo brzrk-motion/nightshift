@@ -1,5 +1,6 @@
 import { join } from 'node:path';
 import { argString, definePlugin, type PluginContext } from '@nightshift/sdk';
+import { drainOrAbort } from './abortRace.js';
 import { defaultCatalogDir, loadCatalog, toPublicClips, type CatalogEntry } from './catalog.js';
 import { loadClip, readClipBytes } from './decode.js';
 import {
@@ -114,13 +115,6 @@ export default definePlugin({
       };
     };
 
-    const whenAborted = (signal: AbortSignal): Promise<void> => {
-      if (signal.aborted) return Promise.resolve();
-      return new Promise((resolve) => {
-        signal.addEventListener('abort', () => resolve(), { once: true });
-      });
-    };
-
     const delay = (ms: number, signal: AbortSignal): Promise<void> => {
       if (signal.aborted) return Promise.resolve();
       return new Promise((resolve) => {
@@ -186,9 +180,10 @@ export default definePlugin({
             mixer.tick(CHUNK_FRAMES);
             reportWriteError();
             const drain = mixer.waitForDrain();
-            // Race abort so pause/teardown is not blocked on an in-flight
-            // device write (which would let a second pump start mid-drain).
-            if (drain) await Promise.race([drain, whenAborted(signal)]);
+            // Abort must win over an in-flight device write so pause can
+            // start a new pump — but remove the listener when drain wins,
+            // or every chunk leaks an abort handler for the session.
+            if (drain) await drainOrAbort(drain, signal);
             else await delay(CHUNK_MS, signal);
           }
         } finally {

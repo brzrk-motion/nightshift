@@ -150,11 +150,11 @@ export class Mixer {
 
   pause(): void {
     this.playing = false;
-    // Drop anything not yet handed to the device so pause is snappy and a
-    // follow-up play cannot share the previous write generation's queue.
+    // Drop anything not yet handed to the device so pause is snappy.
+    // Leave `inflight` alone: nulling it would let the next play call
+    // sink.write while the previous device op is still draining.
     this.writeGen += 1;
     this.queued = [];
-    this.inflight = null;
     if (this.incoming) {
       this.primary = this.incoming;
       this.incoming = null;
@@ -271,7 +271,11 @@ export class Mixer {
         this.flushQueuedSync();
         return;
       }
-      this.inflight = this.watch(result, this.writeGen);
+      const gen = this.writeGen;
+      // Capture the promise identity so pause can leave inflight set and we
+      // still clear the correct slot (and flush a newer generation's queue).
+      const op: Promise<void> = this.watch(result, gen, () => op);
+      this.inflight = op;
     } catch (error: unknown) {
       this.failSink(error);
     }
@@ -285,7 +289,11 @@ export class Mixer {
     }
   }
 
-  private async watch(first: Promise<void>, gen: number): Promise<void> {
+  private async watch(
+    first: Promise<void>,
+    gen: number,
+    getOp: () => Promise<void>,
+  ): Promise<void> {
     try {
       await first;
       while (this.queued.length > 0 && this.writeGen === gen) {
@@ -298,7 +306,14 @@ export class Mixer {
       this.queued = [];
       this.failSink(error);
     } finally {
-      if (this.writeGen === gen) this.inflight = null;
+      if (this.inflight === getOp()) {
+        this.inflight = null;
+        // PCM queued by a newer play while this op was draining.
+        if (this.queued.length > 0) {
+          const next = this.queued.shift();
+          if (next) this.dispatch(next);
+        }
+      }
     }
   }
 

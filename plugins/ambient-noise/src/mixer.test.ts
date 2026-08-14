@@ -167,6 +167,44 @@ describe('Mixer', () => {
     expect(mixer.playing).toBe(false);
   });
 
+  it('does not overlap device writes across pause and play', async () => {
+    let concurrent = 0;
+    let maxConcurrent = 0;
+    let writes = 0;
+    let release!: () => void;
+    const firstWrite = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const sink: AudioSink = {
+      backend: 'device',
+      write: () => {
+        writes += 1;
+        concurrent += 1;
+        maxConcurrent = Math.max(maxConcurrent, concurrent);
+        const done = writes === 1 ? firstWrite : Promise.resolve();
+        return done.finally(() => {
+          concurrent -= 1;
+        });
+      },
+      close() {},
+    };
+    const mixer = new Mixer(sink);
+    mixer.load('a', toneBuffer(32, 100));
+    mixer.play('a');
+    mixer.tick(4);
+    expect(writes).toBe(1);
+    mixer.pause();
+    mixer.play('a');
+    mixer.tick(4);
+    // Second write must wait for the in-flight device op.
+    expect(writes).toBe(1);
+    expect(maxConcurrent).toBe(1);
+    release();
+    await mixer.waitForDrain();
+    expect(writes).toBe(2);
+    expect(maxConcurrent).toBe(1);
+  });
+
   it('falls back to a silent sink when device writes reject', async () => {
     const sink: AudioSink = {
       backend: 'device',
